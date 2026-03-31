@@ -1,14 +1,12 @@
-import { MarketingHeader } from "@/components/marketing/shared/header";
 import { Footer } from "@/components/marketing/shared/footer";
 
-export default function MarketingLayout({
+export default function LegalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <>
-      <MarketingHeader />
       {children}
       <Footer />
     </>

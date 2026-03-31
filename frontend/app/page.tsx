@@ -1,10 +1,10 @@
-import { ModeToggle } from "@/components/shared/mode-toggle";
-import Image from "next/image";
+import { ThemeToggle } from "@/components/shared/ThemeToggler";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-    <ModeToggle/>
+    <div className="flex flex-col flex-1 items-center justify-center">
+      <ThemeToggle />
+      <p className="text-primary">wiwiiwiw</p>
     </div>
   );
 }
