@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/shared/ThemeToggler";
 
-// ─── Inline brand icons (lucide-react 1.x removed brand icons) ───────────────
-
 function GitHubIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -31,8 +29,6 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
 const links = {
   product: [
     { label: "Pricing", href: "/pricing" },
@@ -57,7 +53,7 @@ function FooterLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="group relative inline-flex w-fit text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+      className="group relative inline-flex w-fit text-sm text-muted-foreground   duration-200 hover:text-foreground"
     >
       {label}
       <span className="absolute -bottom-px left-0 h-px w-0 bg-foreground transition-all duration-300 group-hover:w-full" />
@@ -94,7 +90,7 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  className="text-muted-foreground hover:text-foreground   duration-200"
                 >
                   <Icon className="w-4 h-4" />
                 </a>

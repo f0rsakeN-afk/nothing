@@ -17,14 +17,14 @@ export default function LoginPage() {
 
       {/* Right — auth panel */}
       <div className="flex min-h-dvh flex-col items-center justify-center bg-card px-8 py-14 lg:border-l lg:border-border">
-        <div className="w-full max-w-[340px] flex flex-col gap-8">
+        <div className="w-full max-w-[400px] flex flex-col gap-8">
           {/* Logo (mobile only — hidden on desktop since left panel has it) */}
           <Link
             href="/"
             className="flex items-center gap-2 group lg:hidden w-fit mx-auto"
           >
             <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-60" />
-            <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
+            <span className="text-sm font-semibold text-foreground   duration-200 group-hover:text-muted-foreground">
               Nothing
             </span>
           </Link>
@@ -47,14 +47,14 @@ export default function LoginPage() {
             By continuing, you agree to our{" "}
             <Link
               href="/legal/terms"
-              className="underline underline-offset-4 hover:text-foreground transition-colors duration-200"
+              className="underline underline-offset-4 hover:text-foreground   duration-200"
             >
               Terms of Service
             </Link>{" "}
             and{" "}
             <Link
               href="/legal/policy"
-              className="underline underline-offset-4 hover:text-foreground transition-colors duration-200"
+              className="underline underline-offset-4 hover:text-foreground   duration-200"
             >
               Privacy Policy
             </Link>
@@ -66,7 +66,7 @@ export default function LoginPage() {
             Don&apos;t have an account?{" "}
             <Link
               href="/signup"
-              className="font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors duration-200"
+              className="font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground   duration-200"
             >
               Sign up
             </Link>

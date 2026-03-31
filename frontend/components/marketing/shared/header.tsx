@@ -14,29 +14,18 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/shared/ThemeToggler";
+import Logo from "@/components/shared/Logo";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const NAV_LINKS = [
-  { label: "Pricing",   href: "/pricing" },
+  { label: "Pricing", href: "/pricing" },
   { label: "Changelog", href: "/changelog" },
-  { label: "Status",    href: "/status" },
-  { label: "Contact",   href: "/contact" },
+  { label: "Status", href: "/status" },
+  { label: "Contact", href: "/contact" },
 ] as const;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function Logo() {
-  return (
-    <Link href="/" className="flex items-center gap-2 shrink-0 group">
-      {/* Replace with actual logo */}
-      <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-70" />
-      <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
-        Nothing
-      </span>
-    </Link>
-  );
-}
 
 function NavLink({
   href,
@@ -53,8 +42,10 @@ function NavLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`relative text-sm transition-colors duration-200 group ${
-        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+      className={`relative text-sm   duration-200 group ${
+        active
+          ? "text-foreground"
+          : "text-muted-foreground hover:text-foreground"
       }`}
     >
       {label}
@@ -79,7 +70,6 @@ export function MarketingHeader() {
   return (
     <header className="border-b border-border sticky top-0 z-50 bg-background/90 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
-
         <Logo />
 
         {/* Desktop nav */}
@@ -97,10 +87,10 @@ export function MarketingHeader() {
         {/* Desktop right actions */}
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost">
             <Link href="/login">Sign in</Link>
           </Button>
-          <Button size="sm" asChild>
+          <Button>
             <Link href="/signup">Get started</Link>
           </Button>
         </div>
@@ -119,8 +109,8 @@ export function MarketingHeader() {
 
             <SheetContent side="right" className="w-72 px-0 py-0">
               <SheetHeader className="px-5 pt-5 pb-4">
-                <SheetTitle asChild>
-                  <div onClick={closeSheet}>
+                <SheetTitle>
+                  <div onClick={closeSheet} className="cursor-pointer">
                     <Logo />
                   </div>
                 </SheetTitle>
@@ -135,7 +125,7 @@ export function MarketingHeader() {
                     key={item.href}
                     href={item.href}
                     onClick={closeSheet}
-                    className={`flex items-center w-full px-3 py-2 rounded-md text-sm transition-colors duration-150 ${
+                    className={`flex items-center w-full px-3 py-2 rounded-md text-sm   duration-150 ${
                       pathname === item.href
                         ? "bg-muted text-foreground font-medium"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -150,17 +140,20 @@ export function MarketingHeader() {
 
               {/* Mobile CTA */}
               <div className="flex flex-col gap-2 px-5 py-4">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/login" onClick={closeSheet}>Sign in</Link>
+                <Button variant="outline" className="w-full">
+                  <Link href="/login" onClick={closeSheet}>
+                    Sign in
+                  </Link>
                 </Button>
-                <Button className="w-full" asChild>
-                  <Link href="/signup" onClick={closeSheet}>Get started</Link>
+                <Button className="w-full">
+                  <Link href="/signup" onClick={closeSheet}>
+                    Get started
+                  </Link>
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
         </div>
-
       </div>
     </header>
   );

@@ -26,7 +26,7 @@ function OAuthButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex flex-1 h-11 items-center justify-center rounded-full border border-border bg-background transition-colors duration-150 hover:bg-muted cursor-pointer"
+      className="flex flex-1 h-11 w-11 items-center justify-center rounded-full border border-border bg-background   duration-150 hover:bg-muted cursor-pointer"
     >
       {icon}
     </button>
@@ -36,7 +36,6 @@ function OAuthButton({
 // ─── Form ─────────────────────────────────────────
 
 export function LoginForm() {
-  const [showEmailForm, setShowEmailForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const togglePassword = useCallback(() => setShowPassword((v) => !v), []);
@@ -63,17 +62,19 @@ export function LoginForm() {
   return (
     <div className="flex flex-col gap-3">
       {/* OAuth */}
-      <div className="flex gap-3">
-        <OAuthButton
-          icon={<GoogleIcon className="w-5 h-5" />}
-          label="Continue with Google"
-          onClick={() => {}}
-        />
-        <OAuthButton
-          icon={<GitHubIcon className="w-5 h-5 text-foreground" />}
-          label="Continue with GitHub"
-          onClick={() => {}}
-        />
+      <div className="w-full flex justify-center">
+        <div className="flex items-center gap-3">
+          <OAuthButton
+            icon={<GoogleIcon className="w-5 h-5" />}
+            label="Continue with Google"
+            onClick={() => {}}
+          />
+          <OAuthButton
+            icon={<GitHubIcon className="w-5 h-5 text-foreground" />}
+            label="Continue with GitHub"
+            onClick={() => {}}
+          />
+        </div>
       </div>
 
       {/* Divider */}
@@ -85,98 +86,90 @@ export function LoginForm() {
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      {/* Conditional */}
-      {!showEmailForm ? (
-        <button
-          type="button"
-          onClick={() => setShowEmailForm(true)}
-          className="w-full h-11 rounded-xl border border-border bg-background px-4 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 text-left cursor-pointer"
-        >
-          Continue with email
-        </button>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            noValidate
-            className="flex flex-col gap-3"
-          >
-            {/* Email */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                autoFocus
-                disabled={isSubmitting}
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  href="/forgotpassword"
-                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors duration-200"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  disabled={isSubmitting}
-                  className="pr-10"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={togglePassword}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-
-              {errors.password && (
-                <p className="text-xs text-destructive">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-
-            {/* Submit */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-10"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Signing in…
-                </>
-              ) : (
-                "Sign in"
-              )}
-            </Button>
-          </form>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-3"
+      >
+        {/* Email */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="email" className="font-medium text-xs">
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autoFocus
+            disabled={isSubmitting}
+            className="h-10 rounded-lg"
+            {...register("email")}
+          />
+          {errors.email && (
+            <p className="text-[10px] font-medium text-destructive">
+              {errors.email.message}
+            </p>
+          )}
         </div>
-      )}
+
+        {/* Password */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="font-medium text-xs">
+              Password
+            </Label>
+            <Link
+              href="/forgotpassword"
+              className="text-[10px] font-medium text-muted-foreground hover:text-foreground underline underline-offset-4   duration-200"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              className="h-10 rounded-lg pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={togglePassword}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground  "
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+
+          {errors.password && (
+            <p className="text-[10px] font-medium text-destructive">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
+
+        {/* Submit */}
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full h-11 rounded-xl font-semibold mt-2"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin mr-2" /> Signing in…
+            </>
+          ) : (
+            "Sign in"
+          )}
+        </Button>
+      </form>
     </div>
   );
 }

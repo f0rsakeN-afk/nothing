@@ -102,7 +102,7 @@ function SuccessView({ onReset }: { onReset: () => void }) {
       </div>
       <button
         onClick={onReset}
-        className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors mt-2"
+        className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground   mt-2"
       >
         Send another message
       </button>
@@ -128,8 +128,8 @@ export function ContactForm() {
     [],
   );
 
-  const handleTopicChange = useCallback((value: string) => {
-    setForm((prev) => ({ ...prev, topic: value }));
+  const handleTopicChange = useCallback((value: string | null) => {
+    setForm((prev) => ({ ...prev, topic: value || "" }));
     setErrors((prev) => ({ ...prev, topic: "" }));
   }, []);
 
@@ -245,7 +245,7 @@ export function ContactForm() {
             Message <RequiredMark />
           </Label>
           <span
-            className={`text-xs tabular-nums transition-colors ${
+            className={`text-xs tabular-nums   ${
               charsNearMax ? "text-destructive" : "text-muted-foreground"
             }`}
           >

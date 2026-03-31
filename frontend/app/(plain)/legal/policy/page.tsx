@@ -341,7 +341,7 @@ export default function PolicyPage() {
                     Policy, please contact us at{" "}
                     <a
                       href="mailto:privacy@example.com"
-                      className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+                      className="text-foreground underline underline-offset-4 hover:text-muted-foreground  "
                     >
                       privacy@example.com
                     </a>
