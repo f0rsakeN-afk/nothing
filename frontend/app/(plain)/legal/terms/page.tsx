@@ -45,7 +45,7 @@ export default function TermsPage() {
   return (
     <>
     <TermsJsonLd />
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-dvh bg-background text-foreground">
       <LegalHeader currentPage="terms" />
 
       <div className="max-w-5xl mx-auto px-6 py-12 lg:py-16">

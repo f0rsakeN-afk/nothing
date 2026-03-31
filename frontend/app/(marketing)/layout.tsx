@@ -1,3 +1,4 @@
+import { MarketingHeader } from "@/components/marketing/shared/header";
 import { Footer } from "@/components/marketing/shared/footer";
 
 export default function MarketingLayout({
@@ -7,6 +8,7 @@ export default function MarketingLayout({
 }) {
   return (
     <>
+      <MarketingHeader />
       {children}
       <Footer />
     </>

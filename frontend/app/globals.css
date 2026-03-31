@@ -73,6 +73,11 @@
   --color-destructive-foreground: var(--destructive-foreground);
 }
 
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
 :root {
   --background: oklch(0.9195 0.0169 88.0030);
   --foreground: oklch(0.2350 0 0);

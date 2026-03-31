@@ -95,7 +95,7 @@ export default function ChangelogPage() {
     <>
       <ChangelogJsonLd />
 
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-dvh bg-background text-foreground">
         <header className="border-b border-border bg-background/90 backdrop-blur-md sticky top-0 z-10">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center">
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
