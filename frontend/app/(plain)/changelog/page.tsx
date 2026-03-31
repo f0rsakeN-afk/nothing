@@ -13,12 +13,24 @@ const entries: ChangelogEntry[] = [
     description:
       "A big round of performance improvements, a refined UI across key surfaces, and several long-requested fixes.",
     changes: [
-      { type: "feature",     text: "Added dark / light theme toggle with animated transition" },
-      { type: "feature",     text: "New changelog page with full release history" },
-      { type: "improvement", text: "Reduced initial bundle size by 38% via code splitting" },
-      { type: "improvement", text: "Smoother page transitions using Framer Motion" },
-      { type: "fix",         text: "Hydration mismatch on theme initialization resolved" },
-      { type: "fix",         text: "Footer links now correctly resolve on all routes" },
+      {
+        type: "feature",
+        text: "Added dark / light theme toggle with animated transition",
+      },
+      { type: "feature", text: "New changelog page with full release history" },
+      {
+        type: "improvement",
+        text: "Reduced initial bundle size by 38% via code splitting",
+      },
+      {
+        type: "improvement",
+        text: "Smoother page transitions using Framer Motion",
+      },
+      {
+        type: "fix",
+        text: "Hydration mismatch on theme initialization resolved",
+      },
+      { type: "fix", text: "Footer links now correctly resolve on all routes" },
     ],
   },
   {
@@ -28,11 +40,26 @@ const entries: ChangelogEntry[] = [
     description:
       "Shipped the Terms of Service and Privacy Policy pages, plus a first pass at user account settings.",
     changes: [
-      { type: "feature",     text: "Terms of Service page with scrollable table of contents" },
-      { type: "feature",     text: "Privacy Policy page — full GDPR-aligned content" },
-      { type: "feature",     text: "Active section highlighting in legal page sidebar" },
-      { type: "improvement", text: "Inter font replacing Geist for improved readability" },
-      { type: "fix",         text: "Mobile padding inconsistencies on legal pages fixed" },
+      {
+        type: "feature",
+        text: "Terms of Service page with scrollable table of contents",
+      },
+      {
+        type: "feature",
+        text: "Privacy Policy page — full GDPR-aligned content",
+      },
+      {
+        type: "feature",
+        text: "Active section highlighting in legal page sidebar",
+      },
+      {
+        type: "improvement",
+        text: "Inter font replacing Geist for improved readability",
+      },
+      {
+        type: "fix",
+        text: "Mobile padding inconsistencies on legal pages fixed",
+      },
     ],
   },
   {
@@ -42,11 +69,20 @@ const entries: ChangelogEntry[] = [
     description:
       "Introduced authentication flows — login, signup, email verification, and password reset.",
     changes: [
-      { type: "feature",     text: "Login and signup pages with Zod form validation" },
-      { type: "feature",     text: "Email verification flow" },
-      { type: "feature",     text: "Forgot password and reset password pages" },
-      { type: "improvement", text: "Consistent error messaging across all auth forms" },
-      { type: "fix",         text: "Redirect loop after login on protected routes resolved" },
+      {
+        type: "feature",
+        text: "Login and signup pages with Zod form validation",
+      },
+      { type: "feature", text: "Email verification flow" },
+      { type: "feature", text: "Forgot password and reset password pages" },
+      {
+        type: "improvement",
+        text: "Consistent error messaging across all auth forms",
+      },
+      {
+        type: "fix",
+        text: "Redirect loop after login on protected routes resolved",
+      },
     ],
   },
   {
@@ -60,7 +96,10 @@ const entries: ChangelogEntry[] = [
       { type: "feature", text: "Tailwind CSS v4 with oklch color system" },
       { type: "feature", text: "shadcn/ui component library integrated" },
       { type: "feature", text: "Dark mode support via next-themes" },
-      { type: "feature", text: "SEO-ready layout with OpenGraph and Twitter card metadata" },
+      {
+        type: "feature",
+        text: "SEO-ready layout with OpenGraph and Twitter card metadata",
+      },
     ],
   },
 ];
@@ -100,7 +139,7 @@ export default function ChangelogPage() {
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center">
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
               <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-70" />
-              <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
+              <span className="text-sm font-semibold text-foreground   duration-200 group-hover:text-muted-foreground">
                 Nothing
               </span>
             </Link>

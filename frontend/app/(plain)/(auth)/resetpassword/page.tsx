@@ -22,7 +22,6 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
 
   return (
     <div className="relative min-h-dvh bg-background flex flex-col items-center justify-center px-4 py-16 overflow-hidden">
-
       {/* Ambient glow */}
       <div
         aria-hidden="true"
@@ -37,22 +36,23 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
 
       {/* Content */}
       <div className="relative z-10 flex w-full max-w-[360px] flex-col items-center gap-6">
-
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-60" />
-          <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
+          <span className="text-sm font-semibold text-foreground   duration-200 group-hover:text-muted-foreground">
             Nothing
           </span>
         </Link>
 
         {/* Card */}
         <div className="w-full rounded-2xl border border-border bg-card px-7 py-8 shadow-xl shadow-black/5 dark:shadow-black/25 ring-1 ring-border/40">
-
           {/* Icon + heading */}
           <div className="flex flex-col items-center text-center gap-3 mb-7">
             <div className="h-11 w-11 rounded-xl border border-border bg-muted flex items-center justify-center shadow-sm">
-              <ShieldCheck className="w-[18px] h-[18px] text-foreground" strokeWidth={1.75} />
+              <ShieldCheck
+                className="w-[18px] h-[18px] text-foreground"
+                strokeWidth={1.75}
+              />
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-foreground">
@@ -72,12 +72,11 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
           Didn&apos;t request a reset?{" "}
           <Link
             href="/login"
-            className="font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors duration-200"
+            className="font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground   duration-200"
           >
             Sign in
           </Link>
         </p>
-
       </div>
     </div>
   );

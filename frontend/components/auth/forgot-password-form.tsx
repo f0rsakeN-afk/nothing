@@ -46,7 +46,7 @@ function SuccessView({
         <button
           type="button"
           onClick={onRetry}
-          className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          className="text-foreground underline underline-offset-4 hover:text-muted-foreground  "
         >
           send it again
         </button>
@@ -55,7 +55,7 @@ function SuccessView({
 
       <Link
         href="/login"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground   duration-200"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back to sign in
@@ -103,7 +103,7 @@ export function ForgotPasswordForm() {
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email" className="text-sm font-medium">
+        <Label htmlFor="email" className="font-medium text-xs">
           Email address
         </Label>
         <Input
@@ -114,23 +114,24 @@ export function ForgotPasswordForm() {
           autoFocus
           disabled={isSubmitting}
           aria-invalid={!!errors.email}
-          className="h-10"
+          className="h-10 rounded-lg"
           {...register("email")}
         />
         {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
+          <p className="text-[10px] font-medium text-destructive">
+            {errors.email.message}
+          </p>
         )}
       </div>
 
       <Button
         type="submit"
         disabled={isSubmitting}
-        size="lg"
-        className="w-full h-10 font-medium mt-1"
+        className="w-full h-11 rounded-xl font-semibold mt-1"
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
             Sending link…
           </>
         ) : (
@@ -140,7 +141,7 @@ export function ForgotPasswordForm() {
 
       <Link
         href="/login"
-        className="inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 mt-1"
+        className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground   duration-200 mt-1"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back to sign in

@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-60" />
-          <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
+          <span className="text-sm font-semibold text-foreground   duration-200 group-hover:text-muted-foreground">
             Nothing
           </span>
         </Link>
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
           Remember your password?{" "}
           <Link
             href="/login"
-            className="font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors duration-200"
+            className="font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground   duration-200"
           >
             Sign in
           </Link>

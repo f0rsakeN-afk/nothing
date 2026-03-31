@@ -10,17 +10,17 @@ import type { ChangelogEntry, ChangeType } from "@/types/changelog";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TAG_STYLES: Record<ChangeType, string> = {
-  feature:     "bg-primary text-primary-foreground",
+  feature: "bg-primary text-primary-foreground",
   improvement: "bg-muted text-foreground border border-border",
-  fix:         "bg-muted text-muted-foreground border border-border",
-  breaking:    "bg-destructive text-destructive-foreground",
+  fix: "bg-muted text-muted-foreground border border-border",
+  breaking: "bg-destructive text-destructive-foreground",
 };
 
 const TAG_LABEL: Record<ChangeType, string> = {
-  feature:     "Feature",
+  feature: "Feature",
   improvement: "Improvement",
-  fix:         "Fix",
-  breaking:    "Breaking",
+  fix: "Fix",
+  breaking: "Breaking",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,15 +49,16 @@ interface ChangelogListProps {
 }
 
 export function ChangelogList({ entries }: ChangelogListProps) {
-  const [query, setQuery]     = useState("");
+  const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
-  const inputRef              = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Global "/" keybind — focuses search unless user is already in an input
   const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
-    const tag    = target.tagName.toLowerCase();
-    if (tag === "input" || tag === "textarea" || target.isContentEditable) return;
+    const tag = target.tagName.toLowerCase();
+    if (tag === "input" || tag === "textarea" || target.isContentEditable)
+      return;
     if (e.key === "/") {
       e.preventDefault();
       inputRef.current?.focus();
@@ -77,12 +78,12 @@ export function ChangelogList({ entries }: ChangelogListProps) {
         inputRef.current?.blur();
       }
     },
-    []
+    [],
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value),
-    []
+    [],
   );
 
   const handleClear = useCallback(() => {
@@ -96,8 +97,8 @@ export function ChangelogList({ entries }: ChangelogListProps) {
     return entries.filter((entry) => matchesQuery(entry, q));
   }, [entries, query]);
 
-  const isSearching    = query.trim().length > 0;
-  const showKbdHint    = !focused && !isSearching;
+  const isSearching = query.trim().length > 0;
+  const showKbdHint = !focused && !isSearching;
 
   return (
     <div>
@@ -167,7 +168,10 @@ export function ChangelogList({ entries }: ChangelogListProps) {
                     <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md bg-muted text-foreground tracking-tight">
                       v{entry.version}
                     </span>
-                    <time dateTime={entry.date} className="text-xs text-muted-foreground/70">
+                    <time
+                      dateTime={entry.date}
+                      className="text-xs text-muted-foreground/70"
+                    >
                       {formatDate(entry.date)}
                     </time>
                   </div>
@@ -209,7 +213,7 @@ export function ChangelogList({ entries }: ChangelogListProps) {
           </p>
           <button
             onClick={handleClear}
-            className="mt-1 text-sm text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            className="mt-1 text-sm text-foreground underline underline-offset-4 hover:text-muted-foreground  "
           >
             Clear search
           </button>

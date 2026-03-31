@@ -35,7 +35,7 @@ export function LegalToc({ items }: { items: TocItem[] }) {
         <a
           key={item.id}
           href={`#${item.id}`}
-          className={`text-sm py-1 px-2 rounded-md transition-colors ${
+          className={`text-sm py-1 px-2 rounded-md   ${
             activeId === item.id
               ? "text-foreground bg-muted"
               : "text-muted-foreground hover:text-foreground"

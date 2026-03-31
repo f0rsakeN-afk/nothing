@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/shared/ThemeToggler";
+import Logo from "@/components/shared/Logo";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -25,18 +26,6 @@ const NAV_LINKS = [
 ] as const;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function Logo() {
-  return (
-    <Link href="/" className="flex items-center gap-2 shrink-0 group">
-      {/* Replace with actual logo */}
-      <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-70" />
-      <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
-        Nothing
-      </span>
-    </Link>
-  );
-}
 
 function NavLink({
   href,
@@ -53,7 +42,7 @@ function NavLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`relative text-sm transition-colors duration-200 group ${
+      className={`relative text-sm   duration-200 group ${
         active
           ? "text-foreground"
           : "text-muted-foreground hover:text-foreground"
@@ -120,8 +109,8 @@ export function MarketingHeader() {
 
             <SheetContent side="right" className="w-72 px-0 py-0">
               <SheetHeader className="px-5 pt-5 pb-4">
-                <SheetTitle asChild>
-                  <div onClick={closeSheet}>
+                <SheetTitle>
+                  <div onClick={closeSheet} className="cursor-pointer">
                     <Logo />
                   </div>
                 </SheetTitle>
@@ -136,7 +125,7 @@ export function MarketingHeader() {
                     key={item.href}
                     href={item.href}
                     onClick={closeSheet}
-                    className={`flex items-center w-full px-3 py-2 rounded-md text-sm transition-colors duration-150 ${
+                    className={`flex items-center w-full px-3 py-2 rounded-md text-sm   duration-150 ${
                       pathname === item.href
                         ? "bg-muted text-foreground font-medium"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"

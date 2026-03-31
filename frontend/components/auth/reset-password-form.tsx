@@ -53,15 +53,21 @@ function StrengthBar({ password }: { password: string }) {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+            className={`h-1 flex-1 rounded-full   duration-300 ${
               score >= i ? STRENGTH_COLOR[score] : "bg-muted"
             }`}
           />
         ))}
       </div>
-      <p className={`text-xs transition-colors duration-200 ${
-        score === 1 ? "text-destructive" : score === 2 ? "text-amber-500" : "text-green-500"
-      }`}>
+      <p
+        className={`text-xs   duration-200 ${
+          score === 1
+            ? "text-destructive"
+            : score === 2
+              ? "text-amber-500"
+              : "text-green-500"
+        }`}
+      >
         {STRENGTH_LABEL[score]}
       </p>
     </div>
@@ -73,10 +79,10 @@ function StrengthBar({ password }: { password: string }) {
 function SuccessView() {
   return (
     <div className="flex flex-col items-center text-center gap-5 py-2">
-      <div className="h-11 w-11 rounded-xl border border-border bg-muted flex items-center justify-center shadow-sm">
-        <CheckCircle2 className="w-5 h-5 text-green-500" strokeWidth={1.75} />
+      <div className="h-14 w-14 rounded-2xl border border-border bg-muted flex items-center justify-center shadow-sm">
+        <CheckCircle2 className="w-6 h-6 text-green-500" strokeWidth={2} />
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         <p className="text-base font-semibold text-foreground tracking-tight">
           Password updated
         </p>
@@ -88,7 +94,7 @@ function SuccessView() {
       </div>
       <Link
         href="/login"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors duration-200"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground   duration-200"
       >
         Continue to sign in
       </Link>
@@ -104,7 +110,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const togglePassword = useCallback(() => setShowPassword((v) => !v), []);
-  const toggleConfirm  = useCallback(() => setShowConfirm((v) => !v), []);
+  const toggleConfirm = useCallback(() => setShowConfirm((v) => !v), []);
 
   const {
     register,
@@ -132,11 +138,18 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (done) return <SuccessView />;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="flex flex-col gap-4"
+    >
       {/* New password */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password" className="text-sm font-medium">
+        <Label
+          htmlFor="password"
+          object-fill="password"
+          className="font-medium text-xs"
+        >
           New password
         </Label>
         <div className="relative">
@@ -148,14 +161,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
             autoFocus
             disabled={isSubmitting}
             aria-invalid={!!errors.password}
-            className="h-10 pr-10"
+            className="h-10 rounded-lg pr-10"
             {...register("password")}
           />
           <button
             type="button"
             tabIndex={-1}
             onClick={togglePassword}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground   duration-150"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (
@@ -166,7 +179,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
           </button>
         </div>
         {errors.password ? (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
+          <p className="text-[10px] font-medium text-destructive">
+            {errors.password.message}
+          </p>
         ) : (
           <StrengthBar password={passwordValue} />
         )}
@@ -174,7 +189,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       {/* Confirm password */}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="confirmPassword" className="text-sm font-medium">
+        <Label
+          htmlFor="confirmPassword"
+          object-fill="confirmPassword"
+          className="font-medium text-xs"
+        >
           Confirm password
         </Label>
         <div className="relative">
@@ -185,14 +204,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
             autoComplete="new-password"
             disabled={isSubmitting}
             aria-invalid={!!errors.confirmPassword}
-            className="h-10 pr-10"
+            className="h-10 rounded-lg pr-10"
             {...register("confirmPassword")}
           />
           <button
             type="button"
             tabIndex={-1}
             onClick={toggleConfirm}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-150"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground   duration-150"
             aria-label={showConfirm ? "Hide password" : "Show password"}
           >
             {showConfirm ? (
@@ -203,19 +222,20 @@ export function ResetPasswordForm({ token }: { token: string }) {
           </button>
         </div>
         {errors.confirmPassword && (
-          <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+          <p className="text-[10px] font-medium text-destructive">
+            {errors.confirmPassword.message}
+          </p>
         )}
       </div>
 
       <Button
         type="submit"
         disabled={isSubmitting}
-        size="lg"
-        className="w-full h-10 font-medium mt-1"
+        className="w-full h-11 rounded-xl font-semibold mt-1"
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
             Updating password…
           </>
         ) : (
@@ -225,7 +245,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       <Link
         href="/login"
-        className="inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+        className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground   duration-200"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back to sign in

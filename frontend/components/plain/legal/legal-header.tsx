@@ -10,7 +10,7 @@ export function LegalHeader({
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center min-w-0">
         <Link href="/" className="flex items-center gap-2 shrink-0 group">
           <div className="h-6 w-6 rounded-md bg-foreground transition-opacity duration-200 group-hover:opacity-70" />
-          <span className="text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-muted-foreground">
+          <span className="text-sm font-semibold text-foreground   duration-200 group-hover:text-muted-foreground">
             Nothing
           </span>
         </Link>

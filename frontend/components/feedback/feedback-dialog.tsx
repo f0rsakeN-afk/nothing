@@ -1,0 +1,200 @@
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Star, Loader2, MessageSquare } from "lucide-react";
+import { feedbackSchema, type FeedbackSchema } from "@/schemas/feedback.schema";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+interface FeedbackDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<FeedbackSchema>({
+    resolver: zodResolver(feedbackSchema),
+    defaultValues: {
+      rating: 0,
+      comment: "",
+      email: "",
+    },
+  });
+
+  const rating = watch("rating");
+
+  const onSubmit = async (data: FeedbackSchema) => {
+    setIsSubmitting(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("Feedback submitted:", data);
+      toast.success("Thank you for your feedback!");
+
+      // Reset and close
+      handleReset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to submit feedback");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    reset();
+    setHoverRating(0);
+  };
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleReset();
+        onOpenChange(open);
+      }}
+    >
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            Share your feedback
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            We value your thoughts! How can we make Eryx better for you?
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pt-4">
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-center block">
+                Overall Rating
+              </Label>
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    className="transition-transform active:scale-90"
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() =>
+                      setValue("rating", star, { shouldValidate: true })
+                    }
+                  >
+                    <Star
+                      className={cn(
+                        "w-8 h-8  ",
+                        (hoverRating || rating) >= star
+                          ? "fill-primary text-primary"
+                          : "fill-muted text-muted-foreground/30",
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+              {errors.rating && (
+                <p className="text-[10px] font-medium text-destructive text-center">
+                  {errors.rating.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="comment"
+                className={`text-xs ${errors.comment ? "text-destructive" : ""}`}
+              >
+                Your Comments
+              </Label>
+              <Textarea
+                id="comment"
+                placeholder="Tell us what you think..."
+                className={`min-h-[120px] resize-none rounded-lg text-sm ${
+                  errors.comment ? "border-destructive ring-destructive" : ""
+                }`}
+                {...register("comment")}
+              />
+              {errors.comment && (
+                <p className="text-[10px] font-medium text-destructive">
+                  {errors.comment.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="feedback-email"
+                className={`text-xs ${errors.email ? "text-destructive" : ""}`}
+              >
+                Email (Optional)
+              </Label>
+              <Input
+                id="feedback-email"
+                type="email"
+                placeholder="email@example.com"
+                className={`h-10 rounded-lg text-sm ${
+                  errors.email ? "border-destructive ring-destructive" : ""
+                }`}
+                {...register("email")}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+              className="rounded-xl h-10"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-xl h-10 px-8"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending
+                </>
+              ) : (
+                "Send Feedback"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
