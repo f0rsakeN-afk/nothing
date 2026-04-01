@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Archive,
   Download,
+  ExternalLink,
   MoreHorizontal,
   Pencil,
   Pin,
@@ -23,8 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { HistoryItem } from "./data";
-
-// ─── Code-split dialogs ───────────────────────────────────────────────────────
 
 const DeleteChatDialog = dynamic(
   () =>
@@ -49,8 +48,6 @@ const DownloadChatDialog = dynamic(
     })),
   { ssr: false },
 );
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatHistoryItem({ item }: { item: HistoryItem }) {
   // open state
@@ -85,7 +82,9 @@ export function ChatHistoryItem({ item }: { item: HistoryItem }) {
               href={`/chat/${item.id}`}
               className="flex min-w-0 items-center gap-2 pr-7"
             >
-              <span className="flex-1 truncate text-[12.5px]">{item.title}</span>
+              <span className="flex-1 truncate text-[12.5px]">
+                {item.title}
+              </span>
             </Link>
           }
           className="h-8 w-full text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent/40  "
@@ -98,7 +97,7 @@ export function ChatHistoryItem({ item }: { item: HistoryItem }) {
               "flex h-5 w-5 items-center justify-center rounded-md outline-none",
               "text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground",
               "opacity-0 transition-opacity duration-100",
-              "group-hover/menu-item:opacity-100 data-[popup-open]:opacity-100 focus-visible:opacity-100",
+              "group-hover/menu-item:opacity-100 data-popup-open:opacity-100 focus-visible:opacity-100",
             )}
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
@@ -114,6 +113,10 @@ export function ChatHistoryItem({ item }: { item: HistoryItem }) {
               <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer">
                 <Pin className="h-3.5 w-3.5 text-muted-foreground" />
                 Pin
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer">
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                Open in new tab
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2.5 text-[13px] cursor-pointer"
