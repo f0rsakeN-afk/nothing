@@ -1,0 +1,42 @@
+export const HEADING_PHRASES = [
+  // Straightforward
+  "How can I help you today?",
+  "What are you building?",
+  "How can I make this easier?",
+  "What problem can I solve?",
+  "How can I turn your idea into reality?",
+  "What can I simplify for you?",
+  "What's on your mind?",
+  "How can I level up your workflow?",
+  "What shall we figure out together?",
+  "How can I make you look brilliant today?",
+  "What chaos can I help you untangle?",
+  "Ready when you are.",
+  "What are we shipping today?",
+  "How can I save you a few hours?",
+  "What would you like to explore?",
+
+  // Funny / relatable
+  "Why is it broken this time?",
+  "Deadline in an hour. Let's go.",
+  "Your senior dev doesn't have to know.",
+  "Let's pretend you planned this.",
+  "Stack Overflow couldn't help. I might.",
+  "I won't judge your code. Much.",
+  "Need a rubber duck? I talk back.",
+  "What did you break now?",
+  "Copy-paste responsibly. I'll help.",
+  "Let's turn that spaghetti into something clean.",
+
+  // Gen-Z energy
+  "No cap, what do you need?",
+  "It's giving… productivity.",
+  "Main character energy. What's the move?",
+  "Bestie, what are we coding today?",
+  "Slay the sprint. What's first?",
+  "We are so back. What's the task?",
+  "Not me being your entire tech stack rn.",
+  "POV: you actually ship today.",
+  "Lowkey, what do you need?",
+  "The vibe is: let's build something.",
+] as const;
