@@ -6,10 +6,14 @@ import { ChatInput } from "@/components/main/home/chat-input";
 import { Chip } from "@/components/main/home/chip";
 import { PromptModal } from "@/components/main/home/prompt-modal";
 import { CHIPS, type ChipData } from "@/components/main/home/data";
+import { HEADING_PHRASES } from "@/components/main/home/data/headings";
 
 export default function HomePage() {
   const router = useRouter();
   const [input, setInput] = useState("");
+  const [heading] = useState(
+    () => HEADING_PHRASES[Math.floor(Math.random() * HEADING_PHRASES.length)],
+  );
   const [activeChip, setActiveChip] = useState<ChipData | null>(null);
 
   const handleSubmit = useCallback(
@@ -32,8 +36,11 @@ export default function HomePage() {
   return (
     <div className="flex h-full min-h-[calc(100dvh-3rem)] flex-col bg-background md:min-h-dvh">
       <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8">
-        <h1 className="mb-8 text-center text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-          How can I help you?
+        <h1
+          suppressHydrationWarning
+          className="mb-8 text-center text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+        >
+          {heading}
         </h1>
 
         <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
