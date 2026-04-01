@@ -45,3 +45,20 @@ export const HISTORY: HistoryGroup[] = [
     ],
   },
 ];
+export const PROJECTS: HistoryGroup[] = [
+  {
+    label: "Pinned",
+    items: [
+      { id: "p1", title: "Eryx AI Platform" },
+      { id: "p2", title: "Edge Network Design" },
+    ],
+  },
+  {
+    label: "Recent",
+    items: [
+      { id: "p3", title: "Auth Middleware Refactor" },
+      { id: "p4", title: "Database Migration v2" },
+      { id: "p5", title: "UI System Overhaul" },
+    ],
+  },
+];

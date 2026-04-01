@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { Copy, Check, Pencil, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AiResponseFormatter } from "./ai-response-formatter";
+import { MessageActions } from "./message-actions";
 
 export type MessageRole = "user" | "assistant";
 
@@ -14,40 +15,6 @@ export interface Message {
   isStreaming?: boolean; // true while SSE chunks are arriving
 }
 
-// ---------------------------------------------------------------------------
-// CopyButton — below every assistant message
-// ---------------------------------------------------------------------------
-
-const CopyButton = memo(function CopyButton({ content }: { content: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [content]);
-
-  return (
-    <button
-      onClick={handleCopy}
-      aria-label={copied ? "Copied" : "Copy response"}
-      className={cn(
-        "mt-3 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
-        "text-[12px] font-medium  ",
-        copied
-          ? "text-primary"
-          : "text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground",
-      )}
-    >
-      {copied ? (
-        <Check className="h-3.5 w-3.5" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-});
 
 // ---------------------------------------------------------------------------
 // UserMessage — with copy + inline edit
@@ -199,9 +166,9 @@ const AssistantMessage = memo(function AssistantMessage({
   isStreaming?: boolean;
 }) {
   return (
-    <div className="min-w-0">
+    <div className="group/assistant-msg min-w-0">
       <AiResponseFormatter content={content} isStreaming={isStreaming} />
-      {!isStreaming && <CopyButton content={content} />}
+      {!isStreaming && <MessageActions content={content} />}
     </div>
   );
 });

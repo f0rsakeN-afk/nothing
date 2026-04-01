@@ -37,8 +37,8 @@ import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/report/report-dialog";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { CustomizeDialog } from "@/components/customize/customize-dialog";
-import { PricingDialog } from "./dialogs/pricing-dialog";
-import { LogoutDialog } from "./dialogs/logout-dialog";
+import { PricingDialog } from "./dialogs/pricing/pricing-dialog";
+import { LogoutDialog } from "./dialogs/auth/logout-dialog";
 import { SettingsDialog } from "@/components/main/settings/settings-dialog";
 
 export function AppSidebarFooter() {
@@ -83,6 +83,7 @@ export function AppSidebarFooter() {
         {!isCollapsed && (
           <Button
             variant="outline"
+            onClick={openPricing}
             className="h-9 w-full border-sidebar-border bg-transparent text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground  "
           >
             Upgrade
