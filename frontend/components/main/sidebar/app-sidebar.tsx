@@ -40,7 +40,7 @@ export function AppSidebar() {
       setSelectedProject(project);
       setRenameProjectOpen(true);
     },
-    []
+    [],
   );
 
   const openDeleteProject = React.useCallback(
@@ -48,7 +48,7 @@ export function AppSidebar() {
       setSelectedProject(project);
       setDeleteProjectOpen(true);
     },
-    []
+    [],
   );
 
   return (
@@ -71,7 +71,6 @@ export function AppSidebar() {
 
         <AppSidebarFooter />
       </Sidebar>
-
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
