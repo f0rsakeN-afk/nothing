@@ -14,7 +14,6 @@ import {
   Heart,
   Ghost,
   Zap,
-  Terminal,
   Hash,
 } from "lucide-react";
 import {
