@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { TABS, type TabId } from "./data"
+import { motion } from "motion/react"
 
 interface SidebarTabsProps {
   activeTab: TabId
@@ -42,22 +43,32 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
 
   return (
     <SidebarGroup className="py-1 px-2">
-      <div className="grid grid-cols-3 gap-0.5 rounded-lg bg-sidebar-accent/30 p-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={cn(
-              "flex flex-col items-center gap-1 rounded-md py-2 text-[11px] font-medium transition-all duration-150",
-              activeTab === tab.id
-                ? "bg-sidebar text-sidebar-foreground shadow-sm"
-                : "text-sidebar-foreground/40 hover:text-sidebar-foreground/70"
-            )}
-          >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-3 rounded-lg bg-sidebar-accent/30 p-1">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "relative flex flex-col items-center gap-1 rounded-md py-2 text-[11px] font-medium transition-colors duration-150",
+                isActive
+                  ? "text-sidebar-foreground"
+                  : "text-sidebar-foreground/40 hover:text-sidebar-foreground/70"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-tab-pill"
+                  className="absolute inset-0 rounded-md bg-sidebar shadow-sm"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                />
+              )}
+              <tab.icon className="relative z-10 h-3.5 w-3.5" />
+              <span className="relative z-10">{tab.label}</span>
+            </button>
+          )
+        })}
       </div>
     </SidebarGroup>
   )

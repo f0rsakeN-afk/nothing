@@ -1,36 +1,38 @@
 "use client";
 
-import React, { memo, useState, useCallback, useContext, useMemo, useRef, useEffect } from "react";
+import React, {
+  memo,
+  useState,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useEffect,
+} from "react";
 import dynamic from "next/dynamic";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
-  vscDarkPlus,
-  vs,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
-import { useTheme } from "next-themes";
-import { Check, Copy, Volume2, ExternalLink, ZoomIn, Play, Pause, Info, Lightbulb, AlertCircle, AlertTriangle, Shield, MapPin, TrendingUp, PieChart as PieChartIcon, BarChart as BarChartIcon, Layout, FileText, Download, Share2, GanttChartSquare } from "lucide-react";
+  ExternalLink,
+  ZoomIn,
+  Play,
+  Pause,
+  Info,
+  Lightbulb,
+  AlertCircle,
+  AlertTriangle,
+  Shield,
+  MapPin,
+  FileText,
+  Download,
+  Share2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MediaContext, detectMediaType, type MediaItem } from "./media-context";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
-
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { CodeBlock } from "./format/code-block";
 
 const MediaModal = dynamic(
   () => import("./media-modal").then((m) => ({ default: m.MediaModal })),
@@ -38,80 +40,17 @@ const MediaModal = dynamic(
 );
 
 const EmailBox = dynamic(
-  () => import("./email-box").then((m) => ({ default: m.EmailBox })),
+  () => import("./format/email-box").then((m) => ({ default: m.EmailBox })),
   { ssr: false },
 );
 
-const CodeCopyButton = memo(function CodeCopyButton({
-  code,
-}: {
-  code: string;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [code]);
-
-  return (
-    <button
-      onClick={handleCopy}
-      aria-label={copied ? "Copied" : "Copy code"}
-      className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground/60   hover:bg-muted hover:text-muted-foreground"
-    >
-      {copied ? (
-        <Check className="h-3 w-3 text-primary" />
-      ) : (
-        <Copy className="h-3 w-3" />
-      )}
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// CodeBlock — memo'd, reads theme + shows copy button
-// ---------------------------------------------------------------------------
-
-interface CodeBlockProps {
-  language: string;
-  children: string;
-}
-
-const CodeBlock = memo(function CodeBlock({
-  language,
-  children,
-}: CodeBlockProps) {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-
-  return (
-    <div className="group mb-4 overflow-hidden rounded-xl border border-border bg-muted/20">
-      <div className="flex items-center justify-between border-b border-border/60 bg-muted/40 px-4 py-2">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-          {language}
-        </span>
-        <CodeCopyButton code={children} />
-      </div>
-      <SyntaxHighlighter
-        language={language}
-        style={isDark ? vscDarkPlus : vs}
-        customStyle={{
-          margin: 0,
-          padding: "1rem",
-          backgroundColor: "transparent",
-          fontSize: "13px",
-          lineHeight: "1.65",
-        }}
-        codeTagProps={{ style: { fontFamily: "var(--font-mono, monospace)" } }}
-      >
-        {children}
-      </SyntaxHighlighter>
-    </div>
-  );
-});
+const ChartVisualizer = dynamic(
+  () =>
+    import("./format/chart-visualizer").then((m) => ({
+      default: m.ChartVisualizer,
+    })),
+  { ssr: false },
+);
 
 // ---------------------------------------------------------------------------
 // YouTube helper — extracts video ID from watch / short / embed URLs
@@ -143,7 +82,11 @@ function getYouTubeId(url: string): string | null {
 // AudioPlayer — inline playback with wave visualizer
 // ---------------------------------------------------------------------------
 
-const WaveVisualizer = memo(function WaveVisualizer({ playing }: { playing: boolean }) {
+const WaveVisualizer = memo(function WaveVisualizer({
+  playing,
+}: {
+  playing: boolean;
+}) {
   return (
     <div className="flex items-center gap-[3.5px] h-6 px-1">
       {[...Array(16)].map((_, i) => (
@@ -151,11 +94,11 @@ const WaveVisualizer = memo(function WaveVisualizer({ playing }: { playing: bool
           key={i}
           className={cn(
             "w-[2px] bg-primary/40 rounded-full transition-all duration-300",
-            playing ? "animate-wave" : "h-1"
+            playing ? "animate-wave" : "h-1",
           )}
           style={{
             animationDelay: `${i * 0.08}s`,
-            height: playing ? undefined : '4px'
+            height: playing ? undefined : "4px",
           }}
         />
       ))}
@@ -163,7 +106,13 @@ const WaveVisualizer = memo(function WaveVisualizer({ playing }: { playing: bool
   );
 });
 
-const AudioPlayer = memo(function AudioPlayer({ src, title }: { src: string; title?: string }) {
+const AudioPlayer = memo(function AudioPlayer({
+  src,
+  title,
+}: {
+  src: string;
+  title?: string;
+}) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -189,7 +138,7 @@ const AudioPlayer = memo(function AudioPlayer({ src, title }: { src: string; tit
     if (isNaN(time)) return "0:00";
     const mins = Math.floor(time / 60);
     const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -201,7 +150,7 @@ const AudioPlayer = memo(function AudioPlayer({ src, title }: { src: string; tit
         onLoadedMetadata={onLoadedMetadata}
         onEnded={() => setPlaying(false)}
       />
-      
+
       <button
         onClick={togglePlay}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-95 shadow-sm"
@@ -222,7 +171,7 @@ const AudioPlayer = memo(function AudioPlayer({ src, title }: { src: string; tit
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-2 h-6">
           <WaveVisualizer playing={playing} />
         </div>
@@ -232,131 +181,16 @@ const AudioPlayer = memo(function AudioPlayer({ src, title }: { src: string; tit
 });
 
 // ---------------------------------------------------------------------------
-// ChartVisualizer — renders Bar, Line, or Doughnut charts from JSON
-// ---------------------------------------------------------------------------
-
-const ChartVisualizer = memo(function ChartVisualizer({ data }: { data: string }) {
-  const chartData = useMemo(() => {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
-    }
-  }, [data]);
-
-  if (!chartData || !chartData.type || !chartData.items) {
-    return <CodeBlock language="json">{data}</CodeBlock>;
-  }
-
-  const { type, items, title, xKey = "name", yKey = "value", startKey = "start", endKey = "end" } = chartData;
-  const colors = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899"];
-
-  // Gantt data processing
-  const processedItems = useMemo(() => {
-    if (type !== "gantt") return items;
-    return items.map((item: any) => ({
-      ...item,
-      duration: item[endKey] - item[startKey],
-      offset: item[startKey]
-    }));
-  }, [items, type, startKey, endKey]);
-
-  return (
-    <div className="my-6 rounded-xl border border-border bg-muted/20 p-6 shadow-sm transition-all hover:bg-muted/30">
-      <div className="mb-6 flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
-          {type === "bar" && <BarChartIcon className="h-4 w-4 text-primary" />}
-          {type === "line" && <TrendingUp className="h-4 w-4 text-primary" />}
-          {type === "pie" && <PieChartIcon className="h-4 w-4 text-primary" />}
-          {type === "gantt" && <GanttChartSquare className="h-4 w-4 text-primary" />}
-          {title || (type === "gantt" ? "Timeline" : "Data Visualization")}
-        </h4>
-      </div>
-      <div className="h-[300px] w-full min-w-0 overflow-hidden">
-        <ResponsiveContainer width="100%" height="100%">
-          {type === "line" ? (
-            <LineChart data={processedItems} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.4)" />
-              <XAxis 
-                dataKey={xKey} 
-                stroke="hsl(var(--foreground) / 0.8)" 
-                fontSize={11} 
-                tickLine={false} 
-                axisLine={false} 
-                dy={10} 
-              />
-              <YAxis 
-                stroke="hsl(var(--foreground) / 0.8)" 
-                fontSize={11} 
-                tickLine={false} 
-                axisLine={false} 
-              />
-              <RechartsTooltip 
-                contentStyle={{ backgroundColor: "hsl(var(--background))", borderRadius: "12px", border: "1px solid hsl(var(--border))", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
-                itemStyle={{ fontSize: "12px", color: "hsl(var(--foreground))" }}
-                cursor={{ stroke: "hsl(var(--primary))", strokeWidth: 1, strokeDasharray: "4 4" }}
-              />
-              <Line type="monotone" dataKey={yKey} stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0, fill: "#10b981" }} />
-            </LineChart>
-          ) : type === "pie" ? (
-            <PieChart>
-              <Pie data={processedItems} dataKey={yKey} nameKey={xKey} cx="50%" cy="50%" outerRadius={80} stroke="hsl(var(--background))" strokeWidth={2}>
-                {processedItems.map((_: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                ))}
-              </Pie>
-              <RechartsTooltip 
-                contentStyle={{ backgroundColor: "hsl(var(--background))", borderRadius: "12px", border: "1px solid hsl(var(--border))" }}
-                itemStyle={{ color: "hsl(var(--foreground))" }}
-              />
-            </PieChart>
-          ) : type === "gantt" ? (
-            <BarChart layout="vertical" data={processedItems} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border) / 0.4)" />
-              <XAxis type="number" hide />
-              <YAxis type="category" dataKey={xKey} stroke="hsl(var(--foreground) / 0.8)" fontSize={11} tickLine={false} axisLine={false} width={80} />
-              <RechartsTooltip 
-                cursor={{ fill: "transparent" }}
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload;
-                    return (
-                      <div className="rounded-lg border border-border bg-background p-2 shadow-md">
-                        <p className="text-xs font-bold text-foreground">{data[xKey]}</p>
-                        <p className="text-[11px] text-muted-foreground">{data[startKey]} - {data[endKey]}</p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Bar dataKey="offset" stackId="a" fill="transparent" />
-              <Bar dataKey="duration" stackId="a" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
-            </BarChart>
-          ) : (
-            <BarChart data={processedItems} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.4)" />
-              <XAxis dataKey={xKey} stroke="hsl(var(--foreground) / 0.8)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
-              <YAxis stroke="hsl(var(--foreground) / 0.8)" fontSize={11} tickLine={false} axisLine={false} />
-              <RechartsTooltip 
-                cursor={{ fill: "hsl(var(--muted) / 0.3)", radius: 4 }}
-                contentStyle={{ backgroundColor: "hsl(var(--background))", borderRadius: "12px", border: "1px solid hsl(var(--border))" }}
-                itemStyle={{ color: "hsl(var(--foreground))" }}
-              />
-              <Bar dataKey={yKey} fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
 // DocumentVisualizer — renders a formal document view for structured content
 // ---------------------------------------------------------------------------
 
-const DocumentVisualizer = memo(function DocumentVisualizer({ content, title }: { content: string; title?: string }) {
+const DocumentVisualizer = memo(function DocumentVisualizer({
+  content,
+  title,
+}: {
+  content: string;
+  title?: string;
+}) {
   return (
     <div className="my-8 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-primary/5 transition-all">
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-6 py-4">
@@ -365,8 +199,12 @@ const DocumentVisualizer = memo(function DocumentVisualizer({ content, title }: 
             <FileText className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground leading-none mb-1">{title || "Generated Document"}</h3>
-            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold">Official Output / Draft v1.0</p>
+            <h3 className="text-sm font-bold text-foreground leading-none mb-1">
+              {title || "Generated Document"}
+            </h3>
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold">
+              Official Output / Draft v1.0
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -389,11 +227,22 @@ const DocumentVisualizer = memo(function DocumentVisualizer({ content, title }: 
 // MapVisualizer — renders a stylized map card for location data
 // ---------------------------------------------------------------------------
 
-const MapVisualizer = memo(function MapVisualizer({ location }: { location: string }) {
+const MapVisualizer = memo(function MapVisualizer({
+  location,
+}: {
+  location: string;
+}) {
   return (
     <div className="my-6 overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm transition-all hover:bg-muted/30">
       <div className="relative h-48 w-full bg-slate-900/50">
-        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, hsl(var(--primary)) 1px, transparent 0)", backgroundSize: "20px 20px" }} />
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 2px 2px, hsl(var(--primary)) 1px, transparent 0)",
+            backgroundSize: "20px 20px",
+          }}
+        />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
             <div className="absolute -inset-4 animate-ping rounded-full bg-primary/20" />
@@ -402,8 +251,12 @@ const MapVisualizer = memo(function MapVisualizer({ location }: { location: stri
         </div>
       </div>
       <div className="p-4">
-        <h4 className="text-[14px] font-semibold text-foreground">{location}</h4>
-        <p className="mt-1 text-[12px] text-muted-foreground/80">Location visualized via system telemetry</p>
+        <h4 className="text-[14px] font-semibold text-foreground">
+          {location}
+        </h4>
+        <p className="mt-1 text-[12px] text-muted-foreground/80">
+          Location visualized via system telemetry
+        </p>
       </div>
     </div>
   );
@@ -551,7 +404,6 @@ const LinkRenderer = memo(function LinkRenderer({
   );
 });
 
-
 // ---------------------------------------------------------------------------
 // mdComponents — stable module-level object (never recreated)
 // ---------------------------------------------------------------------------
@@ -592,7 +444,9 @@ const mdComponents: Components = {
   // Paragraph — using <div> instead of <p> to allow block-level children
   // (e.g. AudioPlayer, charts) without causing invalid HTML nesting errors
   p: ({ children }) => (
-    <div className="mb-4 leading-7 text-foreground/90 last:mb-0">{children}</div>
+    <div className="mb-4 leading-7 text-foreground/90 last:mb-0">
+      {children}
+    </div>
   ),
 
   // Lists
@@ -629,7 +483,7 @@ const mdComponents: Components = {
               "text-[14px] leading-6 transition-colors",
               checked
                 ? "text-muted-foreground/40 line-through decoration-muted-foreground/30"
-                : "text-foreground/90"
+                : "text-foreground/90",
             )}
           >
             {children}
@@ -644,15 +498,30 @@ const mdComponents: Components = {
   blockquote: ({ children }) => {
     // Extract text content to detect GitHub-style alerts: [!NOTE], [!TIP], etc.
     const contentString = String(
-      Array.isArray(children) ? children[0]?.props?.children || "" : ""
+      Array.isArray(children) ? children[0]?.props?.children || "" : "",
     );
 
-    const alertMap: Record<string, { icon: any; color: string; label: string }> = {
+    const alertMap: Record<
+      string,
+      { icon: any; color: string; label: string }
+    > = {
       "[!NOTE]": { icon: Info, color: "text-blue-500", label: "Note" },
       "[!TIP]": { icon: Lightbulb, color: "text-emerald-500", label: "Tip" },
-      "[!IMPORTANT]": { icon: AlertCircle, color: "text-purple-500", label: "Important" },
-      "[!WARNING]": { icon: AlertTriangle, color: "text-amber-500", label: "Warning" },
-      "[!CAUTION]": { icon: Shield, color: "text-destructive", label: "Caution" },
+      "[!IMPORTANT]": {
+        icon: AlertCircle,
+        color: "text-purple-500",
+        label: "Important",
+      },
+      "[!WARNING]": {
+        icon: AlertTriangle,
+        color: "text-amber-500",
+        label: "Warning",
+      },
+      "[!CAUTION]": {
+        icon: Shield,
+        color: "text-destructive",
+        label: "Caution",
+      },
     };
 
     const firstLine = contentString.trim().split("\n")[0];
@@ -662,13 +531,20 @@ const mdComponents: Components = {
       const Icon = alert.icon;
       // Filter out the alert tag from children if it's the first text node
       return (
-        <div className={cn(
-          "my-6 flex gap-4 rounded-xl border border-l-4 border-border bg-muted/30 p-4 pt-3 shadow-sm",
-          alert.color.replace("text-", "border-l-")
-        )}>
+        <div
+          className={cn(
+            "my-6 flex gap-4 rounded-xl border border-l-4 border-border bg-muted/30 p-4 pt-3 shadow-sm",
+            alert.color.replace("text-", "border-l-"),
+          )}
+        >
           <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", alert.color)} />
           <div className="flex-1 space-y-1">
-            <p className={cn("text-[13px] font-bold uppercase tracking-wider", alert.color)}>
+            <p
+              className={cn(
+                "text-[13px] font-bold uppercase tracking-wider",
+                alert.color,
+              )}
+            >
               {alert.label}
             </p>
             <div className="text-[14.5px] leading-relaxed text-foreground/80 prose-p:my-0">
@@ -692,7 +568,10 @@ const mdComponents: Components = {
   section: ({ children, ...props }: any) => {
     if (props["data-footnotes"]) {
       return (
-        <section className="mt-12 border-t border-border/40 pt-6 text-muted-foreground" {...props}>
+        <section
+          className="mt-12 border-t border-border/40 pt-6 text-muted-foreground"
+          {...props}
+        >
           <h2 className="mb-4 text-[12px] font-bold uppercase tracking-widest text-muted-foreground/60">
             References
           </h2>
@@ -771,7 +650,9 @@ const mdComponents: Components = {
   // Table (GFM)
   table: ({ children }) => (
     <div className="my-6 w-full overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm">{children}</table>
+      <table className="w-full border-collapse text-left text-sm">
+        {children}
+      </table>
     </div>
   ),
   thead: ({ children }) => (
