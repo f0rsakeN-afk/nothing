@@ -28,7 +28,7 @@ import type { HistoryItem } from "./data";
 
 const DeleteChatDialog = dynamic(
   () =>
-    import("./dialogs/delete-chat-dialog").then((m) => ({
+    import("./dialogs/chat/delete-chat").then((m) => ({
       default: m.DeleteChatDialog,
     })),
   { ssr: false },
@@ -36,7 +36,7 @@ const DeleteChatDialog = dynamic(
 
 const RenameChatDialog = dynamic(
   () =>
-    import("./dialogs/rename-chat-dialog").then((m) => ({
+    import("./dialogs/chat/rename-chat").then((m) => ({
       default: m.RenameChatDialog,
     })),
   { ssr: false },
@@ -44,7 +44,7 @@ const RenameChatDialog = dynamic(
 
 const DownloadChatDialog = dynamic(
   () =>
-    import("./dialogs/download-chat-dialog").then((m) => ({
+    import("./dialogs/chat/download-chat").then((m) => ({
       default: m.DownloadChatDialog,
     })),
   { ssr: false },
@@ -80,16 +80,16 @@ export function ChatHistoryItem({ item }: { item: HistoryItem }) {
     <>
       <SidebarMenuItem>
         <SidebarMenuButton
-          asChild
+          render={
+            <Link
+              href={`/chat/${item.id}`}
+              className="flex min-w-0 items-center gap-2 pr-7"
+            >
+              <span className="flex-1 truncate text-[12.5px]">{item.title}</span>
+            </Link>
+          }
           className="h-8 w-full text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent/40  "
-        >
-          <Link
-            href={`/chat/${item.id}`}
-            className="flex min-w-0 items-center gap-2 pr-7"
-          >
-            <span className="flex-1 truncate text-[12.5px]">{item.title}</span>
-          </Link>
-        </SidebarMenuButton>
+        />
 
         <DropdownMenu>
           <DropdownMenuTrigger
