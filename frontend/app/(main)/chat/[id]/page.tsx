@@ -87,10 +87,10 @@ export default function ChatPage() {
   }, []);
 
   return (
-    <div className="flex h-[calc(100dvh-3rem)] flex-col bg-background md:h-dvh">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       {/* ── Scrollable messages ────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full xl:max-w-3xl px-2 py-2">
+      <div className="flex-1 overflow-y-auto h-64">
+        <div className="mx-auto w-full max-w-3xl px-4 md:px-0 py-2">
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -98,22 +98,19 @@ export default function ChatPage() {
               onEdit={handleEdit}
             />
           ))}
-          <div ref={bottomRef} />
+          {/* <div ref={bottomRef} /> */}
         </div>
       </div>
 
       {/* ── Sticky input ───────────────────────────────────── */}
       <div className="shrink-0">
-        <div className="mx-auto w-full xl:max-w-3xl px-2 xl:px-0 py-2">
+        <div className="mx-auto w-full max-w-3xl px-4 md:px-0 py-2">
           <ChatInput
             value={input}
             onChange={setInput}
             onSubmit={handleSubmit}
             placeholder="Ask a follow-up…"
           />
-          <p className="mt-2 text-center text-[10px] text-muted-foreground/25">
-            Eryx can make mistakes.
-          </p>
         </div>
       </div>
     </div>

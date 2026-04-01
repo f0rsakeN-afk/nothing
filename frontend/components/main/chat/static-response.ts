@@ -5,6 +5,36 @@ Here's a comprehensive breakdown covering all response types. I'll walk through 
 
 ---
 
+## Tasks & Progress
+
+- [x] Initial research and planning
+- [/] **Core implementation** (in progress)
+- [ ] Final testing and polish
+- [ ] User feedback loop
+
+---
+
+## Email Template (Editable)
+
+Need to send a quick request? Tweak this template directly in the chat:
+
+\`\`\`email
+Subject: Sick Leave Request — [Your Name]
+
+Dear [Manager's Name],
+
+I hope you are doing well. I am writing to inform you that I am currently unwell and will not be able to attend work today. I would like to request sick leave for [date].
+
+I will keep you updated on my condition and let you know if I need additional time to recover. In the meantime, I will ensure that any urgent tasks are managed as best as possible.
+
+Thank you for your understanding.
+
+Sincerely,
+[Your Name]
+\`\`\`
+
+---
+
 ## Images
 
 Here's a sample architecture diagram:
@@ -17,7 +47,7 @@ You can click any image to view it full-size and download it.
 
 ## Video & Audio
 
-Sample media files from the backend:
+Sample media files from the backend (click to play directly):
 
 [Watch — architecture walkthrough](https://www.youtube.com/watch?v=BVD-NPcRaRw&list=RDBVD-NPcRaRw&start_radio=1&pp=oAcB)
 
@@ -58,14 +88,8 @@ A well-designed cache has multiple layers:
 
 ## Code Examples
 
-Inline code: call \`crypto.randomUUID()\` to generate a unique ID, or use \`Date.now()\` for a timestamp-based one.
+Inline code: call \`crypto.randomUUID()\` to generate a unique ID.
 
-
-**TypeScript — event types:**
-
-\`\`\`typescript
-console.log("hello naresh")
-\`\`\`
 
 **TypeScript — event types:**
 
@@ -86,32 +110,6 @@ async function publishEvent(event: OrderEvent): Promise<void> {
     value: JSON.stringify(event),
   });
 }
-\`\`\`
-
-**Python — order service:**
-
-\`\`\`python
-from dataclasses import dataclass, field
-from datetime import datetime
-from uuid import uuid4
-
-@dataclass
-class Order:
-    id: str
-    user_id: str
-    total: float
-    created_at: datetime = field(default_factory=datetime.utcnow)
-
-class OrderService:
-    def __init__(self, repo, broker):
-        self.repo = repo
-        self.broker = broker
-
-    async def create_order(self, user_id: str, items: list) -> Order:
-        order = Order(id=uuid4().hex, user_id=user_id, total=sum(i.price for i in items))
-        await self.repo.save(order)
-        await self.broker.publish("order.created", order)
-        return order
 \`\`\`
 
 **SQL — fulfillment query:**
@@ -153,10 +151,86 @@ ORDER BY o.created_at DESC;
 
 ---
 
-## Summary
+### 1. Data Visualization
 
-- Keep services **stateless** — store session data externally
-- Cache **aggressively** at the edges, lazily near the database
-- Prefer **async messaging** for cross-service workflows
-- Use **strong types** for event payloads to catch schema drift early
+Here is the projected growth of the project over the next two quarters:
+
+\`\`\`chart
+{
+  "type": "line",
+  "title": "Revenue Growth (Q1-Q2)",
+  "items": [
+    {"name": "Jan", "value": 4000},
+    {"name": "Feb", "value": 3000},
+    {"name": "Mar", "value": 5000},
+    {"name": "Apr", "value": 4500},
+    {"name": "May", "value": 6000},
+    {"name": "Jun", "value": 8500}
+  ]
+}
+\`\`\`
+
+And the market share distribution:
+
+\`\`\`chart
+{
+  "type": "pie",
+  "title": "Market Share",
+  "items": [
+    {"name": "Eryx AI", "value": 45},
+    {"name": "Competitor A", "value": 25},
+    {"name": "Competitor B", "value": 20},
+    {"name": "Others", "value": 10}
+  ]
+}
+\`\`\`
+
+### 2. Mathematical Notation
+
+The core algorithm is based on the following relationship:
+
+$$
+E = mc^2 + \int_{a}^{b} f(x) dx
+$$
+
+You can also include inline math like $\sqrt{x^2 + y^2} = r$ within your technical explanations.
+
+### 3. Geographical Context
+
+The main research hub is located here:
+
+\`\`\`map
+Silicon Valley, California, USA
+\`\`\`
+
+### 4. Complex Structures
+
+- **Project Milestones**
+  - **Phase 1: Foundation**
+    - [x] Initial design system
+    - [x] Core authentication
+    - [ ] Database migration
+  - **Phase 2: Visualization**
+    - [x] Add chart support
+    - [x] Integrate KaTeX math
+- **Technical Requirements**
+  1. **Performance**: Must load in < 200ms
+  2. **Scalability**: Support 10k concurrent users
+
+## Advanced Callouts & Footnotes
+
+> [!NOTE]
+> This is a professional note about the system architecture. It uses the new GitHub-style alert syntax supported by our enhanced \`AiResponseFormatter\` [^1].
+
+> [!TIP]
+> You can now use \`> [!TIP]\` to provide helpful suggestions to users with a distinct emerald theme.
+
+> [!WARNING]
+> Critical warnings like this one use the amber theme and a triangle icon to grab immediate attention.
+
+## Conclusion
+
+Our new response formatting system is now enterprise-grade, supporting everything from \`inline snapshots\` to academic citations, interactive charts, and real-time geographical markers.
+
+[^1]: Scientific references and citations are now styled with superscript markers and a dedicated reference section at the bottom.
 `;
