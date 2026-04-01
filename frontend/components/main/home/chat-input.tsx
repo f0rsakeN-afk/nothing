@@ -9,6 +9,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AnimatedPlaceholder } from "@/components/ui/animated-placeholder";
+
+const PLACEHOLDERS = [
+  "Ask anything…",
+  "What are you building today?",
+  "Explain this like I'm five…",
+  "Why is my code crying at 2am?",
+  "Debug this, please. I'm begging.",
+  "Help me write something brilliant…",
+  "What's the best way to do this?",
+  "I swear this worked yesterday…",
+  "Turn this chaos into something clean.",
+  "Summarize, simplify, or just vibe with me.",
+];
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,23 +141,32 @@ export function ChatInput({
         )}
       >
         {/* ── Textarea ──────────────────────────────────────────── */}
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onCompositionStart={() => setIsComposing(true)}
-          onCompositionEnd={() => setIsComposing(false)}
-          placeholder={placeholder}
-          rows={1}
-          className={cn(
-            "block w-full resize-none bg-transparent",
-            "px-4 pt-4 pb-2",
-            "text-[14px] leading-relaxed text-foreground",
-            "placeholder:text-muted-foreground/40",
-            "outline-none hide-scrollbar",
-          )}
-        />
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
+            placeholder=""
+            aria-label={placeholder}
+            rows={1}
+            className={cn(
+              "block w-full resize-none bg-transparent",
+              "px-4 pt-4 pb-2",
+              "text-[14px] leading-relaxed text-foreground",
+              "outline-none hide-scrollbar",
+            )}
+          />
+          <div className="pointer-events-none absolute left-0 top-0 px-4 pt-4">
+            <AnimatedPlaceholder
+              placeholders={PLACEHOLDERS}
+              active={isEmpty}
+              className="m-0 text-[14px] leading-relaxed text-muted-foreground/40"
+            />
+          </div>
+        </div>
 
         {/* ── Toolbar ───────────────────────────────────────────── */}
         <div className="flex items-center gap-0.5 px-3 pb-3 pt-1">
