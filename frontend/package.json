@@ -14,6 +14,7 @@
     "@types/katex": "0.16.7",
     "@types/mermaid": "^9.2.0",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@xyflow/react": "^12.10.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "input-otp": "^1.4.2",

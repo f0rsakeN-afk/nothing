@@ -6,11 +6,16 @@ import { useSearchParams } from "next/navigation";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { STATIC_RESPONSE } from "@/components/main/chat/static-response";
 import type { Message } from "@/components/main/chat/chat-message";
+import {
+  SplitViewProvider,
+  useSplitView,
+} from "@/components/main/chat/split-view-context";
+import { Network, X } from "lucide-react";
+import { CreditsButton } from "@/components/main/header/credits-button";
+import { NotificationsButton } from "@/components/main/header/notifications-button";
 
 // ---------------------------------------------------------------------------
 // Code-split heavy components
-// ChatMessage pulls in AiResponseFormatter → react-markdown + syntax
-// highlighter, so we lazy-load it. The skeleton prevents layout shift.
 // ---------------------------------------------------------------------------
 
 const ChatMessage = dynamic(
@@ -35,32 +40,92 @@ const ChatMessage = dynamic(
   },
 );
 
+const SystemDesignCanvas = dynamic(
+  () =>
+    import("@/components/main/chat/format/system-design").then((m) => ({
+      default: m.SystemDesignCanvas,
+    })),
+  { ssr: false },
+);
+
 // ---------------------------------------------------------------------------
-// Page
+// Split panel
 // ---------------------------------------------------------------------------
 
-export default function ChatPage() {
+function SplitPanel() {
+  const splitView = useSplitView();
+
+  // useMemo must be called unconditionally — before any early return
+  const nodes = React.useMemo(() => {
+    try {
+      return JSON.parse(splitView?.splitView?.rawData ?? "")?.nodes ?? [];
+    } catch {
+      return [];
+    }
+  }, [splitView?.splitView?.rawData]);
+
+  if (!splitView?.splitView) return null;
+
+  const { title, description, rawData } = splitView.splitView;
+
+  return (
+    <div className="flex flex-col w-1/2 shrink-0 border-l border-border bg-card/30 animate-in slide-in-from-right-4 duration-200">
+      {/* Panel header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/60 shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Network className="w-4 h-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-[13px] font-semibold text-foreground truncate">
+              {title || "System Design"}
+            </h3>
+            {description && (
+              <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+                {description}
+              </p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => splitView.closeSplitView()}
+          className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          aria-label="Close split view"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Canvas fills the rest */}
+      <div className="flex-1 min-h-0">
+        <SystemDesignCanvas data={rawData} nodes={nodes} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Inner page (needs access to split view context)
+// ---------------------------------------------------------------------------
+
+function ChatPageInner() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
+  const splitView = useSplitView();
 
-  // Seed messages: user's initial prompt + static assistant response.
-  // useMemo so this only runs once per mount — the deps never change after
-  // the initial render (initialQuery comes from the URL).
   const seedMessages = React.useMemo<Message[]>(
     () => [
       { id: crypto.randomUUID(), role: "user", content: initialQuery },
       { id: crypto.randomUUID(), role: "assistant", content: STATIC_RESPONSE },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [], // intentionally empty — URL param is stable for the lifetime of this page
+    [],
   );
 
   const [messages, setMessages] = React.useState<Message[]>(seedMessages);
   const [input, setInput] = React.useState("");
-
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever a new message arrives
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -87,32 +152,54 @@ export default function ChatPage() {
   }, []);
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      {/* ── Scrollable messages ────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto hide-scrollbar h-64">
-        <div className="mx-auto w-full max-w-3xl sm:px-4 md:px-0 py-2">
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              onEdit={handleEdit}
+    <div className="flex h-dvh overflow-hidden bg-background">
+      {/* ── Chat column ───────────────────────────────────── */}
+      <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
+        {!splitView?.splitView && (
+          <div className="absolute right-4 top-2 z-10 flex items-center gap-1.5">
+            <CreditsButton />
+            <NotificationsButton />
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto hide-scrollbar">
+          <div className="mx-auto w-full max-w-3xl px-4 py-2">
+            {messages.map((message) => (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                onEdit={handleEdit}
+              />
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        </div>
+
+        <div className="shrink-0">
+          <div className="mx-auto w-full max-w-3xl px-4 py-2">
+            <ChatInput
+              value={input}
+              onChange={setInput}
+              onSubmit={handleSubmit}
+              placeholder="Ask a follow-up…"
             />
-          ))}
-          {/* <div ref={bottomRef} /> */}
+          </div>
         </div>
       </div>
 
-      {/* ── Sticky input ───────────────────────────────────── */}
-      <div className="shrink-0">
-        <div className="mx-auto w-full max-w-3xl px-2 md:px-0 py-2">
-          <ChatInput
-            value={input}
-            onChange={setInput}
-            onSubmit={handleSubmit}
-            placeholder="Ask a follow-up…"
-          />
-        </div>
-      </div>
+      {/* ── Split panel ───────────────────────────────────── */}
+      <SplitPanel />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page export — wraps everything in SplitViewProvider
+// ---------------------------------------------------------------------------
+
+export default function ChatPage() {
+  return (
+    <SplitViewProvider>
+      <ChatPageInner />
+    </SplitViewProvider>
   );
 }

@@ -327,4 +327,98 @@ async function streamChat(prompt: string) {
   }
 }
 \`\`\`
+
+---
+
+## 17. System Design
+
+\`\`\`system-design
+{
+  "title": "URL Shortener — Distributed Architecture",
+  "description": "Handles 10B+ redirects/day with sub-10ms p99 latency",
+  "nodes": [
+    { "id": "client",    "type": "client",       "label": "Browser / App",      "x": 0,    "y": 180 },
+    { "id": "dns",       "type": "cdn",           "label": "DNS + CDN",          "description": "Global edge routing", "x": 240,  "y": 40  },
+    { "id": "lb",        "type": "loadbalancer",  "label": "Load Balancer",      "x": 240,  "y": 180 },
+    { "id": "api",       "type": "apigateway",    "label": "API Gateway",        "description": "Auth, rate limiting", "x": 480,  "y": 180 },
+    { "id": "shortener", "type": "service",       "label": "Shortener Service",  "description": "Encodes long URLs",   "x": 720,  "y": 60  },
+    { "id": "redirect",  "type": "service",       "label": "Redirect Service",   "description": "302 → destination",  "x": 720,  "y": 300 },
+    { "id": "cache",     "type": "cache",         "label": "Redis Cluster",      "description": "Hot URLs, 1h TTL",   "x": 960,  "y": 60  },
+    { "id": "db",        "type": "database",      "label": "Cassandra",          "description": "URL mappings",       "x": 960,  "y": 220 },
+    { "id": "kafka",     "type": "queue",         "label": "Kafka",              "description": "Click event stream", "x": 960,  "y": 380 },
+    { "id": "worker",    "type": "worker",        "label": "Analytics Worker",   "x": 1200, "y": 380 },
+    { "id": "storage",   "type": "storage",       "label": "S3 / Analytics DB",  "x": 1200, "y": 500 }
+  ],
+  "edges": [
+    { "source": "client",    "target": "dns",       "label": "Static assets" },
+    { "source": "client",    "target": "lb",        "label": "HTTPS" },
+    { "source": "lb",        "target": "api" },
+    { "source": "api",       "target": "shortener", "label": "POST /shorten" },
+    { "source": "api",       "target": "redirect",  "label": "GET /:code" },
+    { "source": "shortener", "target": "db",        "label": "Write" },
+    { "source": "redirect",  "target": "cache",     "label": "Cache hit", "animated": true },
+    { "source": "redirect",  "target": "db",        "label": "Cache miss" },
+    { "source": "redirect",  "target": "kafka",     "label": "Click event", "animated": true },
+    { "source": "kafka",     "target": "worker",    "animated": true },
+    { "source": "worker",    "target": "storage",   "label": "Aggregate" }
+  ]
+}
+\`\`\`
+
+---
+
+## 18. System Design (Complex Flow)
+
+\`\`\`system-design
+{
+  "title": "AI-Powered E-Commerce Platform",
+  "description": "Multi-region, event-driven with real-time recommendations and full observability",
+  "nodes": [
+    { "id": "web",        "type": "web",          "label": "Web App",            "description": "Next.js / SSR",              "x": 0,    "y": 100 },
+    { "id": "mobile",     "type": "mobile",       "label": "Mobile App",         "description": "iOS & Android",              "x": 0,    "y": 300 },
+    { "id": "cdn",        "type": "cdn",          "label": "CDN",                "description": "CloudFront edge",            "x": 250,  "y": 0   },
+    { "id": "lb",         "type": "loadbalancer", "label": "Load Balancer",      "description": "L7, health checks",          "x": 250,  "y": 200 },
+    { "id": "gateway",    "type": "apigateway",   "label": "API Gateway",        "description": "Auth, rate limit, routing",  "x": 500,  "y": 200 },
+    { "id": "auth",       "type": "auth",         "label": "Auth Service",       "description": "JWT + OAuth2",               "x": 750,  "y": 40  },
+    { "id": "products",   "type": "service",      "label": "Product Service",    "description": "Catalog & inventory",        "x": 750,  "y": 160 },
+    { "id": "orders",     "type": "service",      "label": "Order Service",      "description": "Checkout & fulfillment",     "x": 750,  "y": 280 },
+    { "id": "payments",   "type": "payment",      "label": "Payment Service",    "description": "Stripe, fraud detection",    "x": 750,  "y": 400 },
+    { "id": "notify",     "type": "notification", "label": "Notify Service",     "description": "Email, SMS, push",           "x": 750,  "y": 520 },
+    { "id": "redis",      "type": "redis",        "label": "Redis Cluster",      "description": "Sessions + hot cache",       "x": 1000, "y": 40  },
+    { "id": "postgres",   "type": "postgresql",   "label": "PostgreSQL",         "description": "Orders, users, inventory",   "x": 1000, "y": 200 },
+    { "id": "kafka",      "type": "kafka",        "label": "Kafka",              "description": "Event backbone",             "x": 1000, "y": 380 },
+    { "id": "s3",         "type": "s3",           "label": "S3",                 "description": "Media, receipts, exports",   "x": 1000, "y": 540 },
+    { "id": "recommender","type": "llm",          "label": "Recommender",        "description": "Collab filtering + LLM",     "x": 1250, "y": 80  },
+    { "id": "search",     "type": "elasticsearch","label": "Elasticsearch",      "description": "Full-text product search",   "x": 1250, "y": 260 },
+    { "id": "worker",     "type": "worker",       "label": "Event Worker",       "description": "Async job processor",        "x": 1250, "y": 440 },
+    { "id": "dw",         "type": "datawarehouse","label": "Data Warehouse",     "description": "BigQuery analytics",         "x": 1500, "y": 260 },
+    { "id": "monitoring", "type": "grafana",      "label": "Grafana",            "description": "Dashboards & alerting",      "x": 1500, "y": 440 }
+  ],
+  "edges": [
+    { "source": "web",        "target": "cdn",        "label": "Assets" },
+    { "source": "web",        "target": "lb",         "label": "HTTPS" },
+    { "source": "mobile",     "target": "lb",         "label": "HTTPS" },
+    { "source": "lb",         "target": "gateway" },
+    { "source": "gateway",    "target": "auth",       "label": "Verify JWT",     "animated": true },
+    { "source": "gateway",    "target": "products",   "label": "GET /products" },
+    { "source": "gateway",    "target": "orders",     "label": "POST /orders" },
+    { "source": "gateway",    "target": "payments",   "label": "POST /pay" },
+    { "source": "auth",       "target": "redis",      "label": "Session",        "animated": true },
+    { "source": "products",   "target": "redis",      "label": "Cache",          "animated": true },
+    { "source": "products",   "target": "postgres",   "label": "Read/Write" },
+    { "source": "products",   "target": "search",     "label": "Index sync" },
+    { "source": "orders",     "target": "postgres",   "label": "Write" },
+    { "source": "orders",     "target": "kafka",      "label": "order.placed",   "animated": true },
+    { "source": "payments",   "target": "kafka",      "label": "payment.done",   "animated": true },
+    { "source": "payments",   "target": "postgres",   "label": "Write" },
+    { "source": "kafka",      "target": "worker",     "label": "Consume",        "animated": true },
+    { "source": "kafka",      "target": "recommender","label": "User events",    "animated": true },
+    { "source": "recommender","target": "redis",      "label": "Cache recs" },
+    { "source": "worker",     "target": "notify",     "label": "Trigger",        "animated": true },
+    { "source": "worker",     "target": "dw",         "label": "Aggregate" },
+    { "source": "worker",     "target": "s3",         "label": "Receipts" },
+    { "source": "monitoring", "target": "postgres",   "label": "Metrics" }
+  ]
+}
+\`\`\`
 `;

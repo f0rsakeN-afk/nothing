@@ -7,6 +7,8 @@ import { Chip } from "@/components/main/home/chip";
 import { PromptModal } from "@/components/main/home/prompt-modal";
 import { CHIPS, type ChipData } from "@/components/main/home/data";
 import { HEADING_PHRASES } from "@/components/main/home/data/headings";
+import { CreditsButton } from "@/components/main/header/credits-button";
+import { NotificationsButton } from "@/components/main/header/notifications-button";
 
 export default function HomePage() {
   const router = useRouter();
@@ -34,7 +36,11 @@ export default function HomePage() {
   const handleModalClose = useCallback(() => setActiveChip(null), []);
 
   return (
-    <div className="flex h-full min-h-[calc(100dvh-3rem)] flex-col bg-background md:min-h-dvh">
+    <div className="relative flex h-full min-h-[calc(100dvh-3rem)] flex-col bg-background md:min-h-dvh">
+      <div className="absolute right-4 top-2 z-10 flex items-center gap-1.5">
+        <CreditsButton />
+        <NotificationsButton />
+      </div>
       <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8">
         <h1
           suppressHydrationWarning

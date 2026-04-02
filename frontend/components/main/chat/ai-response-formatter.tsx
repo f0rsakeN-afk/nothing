@@ -105,6 +105,13 @@ const DiffViewer = dynamic(
   () => import("./format/diff-viewer").then((m) => ({ default: m.DiffViewer })),
   { ssr: false },
 );
+const SystemDesignDiagram = dynamic(
+  () =>
+    import("./format/system-design").then((m) => ({
+      default: m.SystemDesignDiagram,
+    })),
+  { ssr: false },
+);
 
 // ---------------------------------------------------------------------------
 // YouTube helper — extracts video ID from watch / short / embed URLs
@@ -557,25 +564,13 @@ const mdComponents: Components = {
 
     const alertMap: Record<
       string,
-      { icon: any; color: string; label: string }
+      { icon: any; color: string; label: string; accent: string }
     > = {
-      "[!NOTE]": { icon: Info, color: "text-blue-500", label: "Note" },
-      "[!TIP]": { icon: Lightbulb, color: "text-emerald-500", label: "Tip" },
-      "[!IMPORTANT]": {
-        icon: AlertCircle,
-        color: "text-purple-500",
-        label: "Important",
-      },
-      "[!WARNING]": {
-        icon: AlertTriangle,
-        color: "text-amber-500",
-        label: "Warning",
-      },
-      "[!CAUTION]": {
-        icon: Shield,
-        color: "text-destructive",
-        label: "Caution",
-      },
+      "[!NOTE]":      { icon: Info,          color: "text-blue-500",    label: "Note",      accent: "#3b82f6" },
+      "[!TIP]":       { icon: Lightbulb,     color: "text-emerald-500", label: "Tip",       accent: "#10b981" },
+      "[!IMPORTANT]": { icon: AlertCircle,   color: "text-purple-500",  label: "Important", accent: "#a855f7" },
+      "[!WARNING]":   { icon: AlertTriangle, color: "text-amber-500",   label: "Warning",   accent: "#f59e0b" },
+      "[!CAUTION]":   { icon: Shield,        color: "text-red-500",     label: "Caution",   accent: "#ef4444" },
     };
 
     const firstLine = contentString.trim().split("\n")[0];
@@ -586,10 +581,12 @@ const mdComponents: Components = {
       // Filter out the alert tag from children if it's the first text node
       return (
         <div
-          className={cn(
-            "my-6 flex gap-4 rounded-xl border border-l-4 border-border bg-muted/30 p-4 pt-3 shadow-sm",
-            alert.color.replace("text-", "border-l-"),
-          )}
+          className="my-6 flex gap-4 rounded-xl border border-l-4 p-4 pt-3 shadow-sm"
+          style={{
+            borderColor: `${alert.accent}30`,
+            borderLeftColor: alert.accent,
+            backgroundColor: `${alert.accent}0d`,
+          }}
         >
           <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", alert.color)} />
           <div className="flex-1 space-y-1">
@@ -643,7 +640,7 @@ const mdComponents: Components = {
 
   // Code — handles both inline and fenced blocks
   code: function Code({ className, children, ...props }) {
-    const match = /language-(\w+)/.exec(className ?? "");
+    const match = /language-([\w-]+)/.exec(className ?? "");
     const language = match?.[1];
 
     if (language) {
@@ -691,6 +688,10 @@ const mdComponents: Components = {
         return <PersonaCard data={String(children).replace(/\n$/, "")} />;
       if (language === "diff")
         return <DiffViewer code={String(children).replace(/\n$/, "")} />;
+      if (language === "system-design")
+        return (
+          <SystemDesignDiagram data={String(children).replace(/\n$/, "")} />
+        );
       return (
         <CodeBlock language={language}>
           {String(children).replace(/\n$/, "")}

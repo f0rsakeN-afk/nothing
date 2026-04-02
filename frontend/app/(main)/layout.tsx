@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/main/sidebar/app-sidebar";
-import { CreditsButton } from "@/components/main/header/credits-button";
-import { NotificationsButton } from "@/components/main/header/notifications-button";
 import "../../styles/hide-scrollbar.css";
 
 export default async function MainLayout({
@@ -22,12 +20,6 @@ export default async function MainLayout({
           <SidebarTrigger className="-ml-1" />
           <span className="text-sm font-medium text-foreground">Eryx</span>
         </header>
-
-        {/* Credits + notifications — float top-right over content */}
-        <div className="absolute right-4 top-2 z-10 flex items-center gap-1.5">
-          <CreditsButton />
-          <NotificationsButton />
-        </div>
 
         {children}
       </SidebarInset>
