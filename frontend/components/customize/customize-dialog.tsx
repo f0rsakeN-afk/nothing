@@ -86,7 +86,6 @@ export function CustomizeDialog({
     handleSubmit,
     setValue,
     watch,
-    reset,
     formState: { errors },
   } = useForm<CustomizeSchema>({
     resolver: zodResolver(customizeSchema),

@@ -9,6 +9,7 @@ import { SidebarTabs } from "./sidebar-tabs";
 import { SidebarHistory } from "./sidebar-history";
 import { AppSidebarFooter } from "./sidebar-footer";
 import { SearchDialog } from "./dialogs/search-dialog";
+import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import { type TabId } from "./data";
 import CreateProjectDialog from "./dialogs/projects/create-project";
 import RenameProjectModal from "./dialogs/projects/rename-project";
@@ -30,6 +31,9 @@ export function AppSidebar() {
   } | null>(null);
 
   const openSearch = React.useCallback(() => setSearchOpen(true), []);
+
+  useKeyboardShortcut("k", openSearch, { meta: true, ignoreInputs: false });
+  useKeyboardShortcut("k", openSearch, { ctrl: true, ignoreInputs: false });
 
   const openCreateProject = React.useCallback(() => {
     setCreateProjectOpen(true);

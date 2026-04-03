@@ -13,6 +13,7 @@ import {
 import { Network, X } from "lucide-react";
 import { CreditsButton } from "@/components/main/header/credits-button";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
+import { randomUUID } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Code-split heavy components
@@ -115,8 +116,8 @@ function ChatPageInner() {
 
   const seedMessages = React.useMemo<Message[]>(
     () => [
-      { id: crypto.randomUUID(), role: "user", content: initialQuery },
-      { id: crypto.randomUUID(), role: "assistant", content: STATIC_RESPONSE },
+      { id: randomUUID(), role: "user", content: initialQuery },
+      { id: randomUUID(), role: "assistant", content: STATIC_RESPONSE },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -155,14 +156,14 @@ function ChatPageInner() {
     <div className="flex h-dvh overflow-hidden bg-background">
       {/* ── Chat column ───────────────────────────────────── */}
       <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
-        {!splitView?.splitView && (
+        {/* {!splitView?.splitView && (
           <div className="absolute right-4 top-2 z-10 flex items-center gap-1.5">
             <CreditsButton />
             <NotificationsButton />
           </div>
-        )}
+        )} */}
         <div className="flex-1 overflow-y-auto hide-scrollbar">
-          <div className="mx-auto w-full max-w-3xl px-4 py-2">
+          <div className="mx-auto w-full max-w-3xl px-2 py-2">
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
@@ -170,12 +171,12 @@ function ChatPageInner() {
                 onEdit={handleEdit}
               />
             ))}
-            <div ref={bottomRef} />
+            {/* <div ref={bottomRef} /> */}
           </div>
         </div>
 
         <div className="shrink-0">
-          <div className="mx-auto w-full max-w-3xl px-4 py-2">
+          <div className="mx-auto w-full max-w-3xl px-2 py-2">
             <ChatInput
               value={input}
               onChange={setInput}

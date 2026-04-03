@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
 import { Copy, SendHorizontal, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

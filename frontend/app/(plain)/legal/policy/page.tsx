@@ -1,7 +1,6 @@
 import { LegalHeader } from "@/components/plain/legal/legal-header";
 import { LegalSection } from "@/components/plain/legal/legal-section";
 import { LegalToc } from "@/components/plain/legal/legal-toc";
-import Link from "next/link";
 
 function PolicyJsonLd() {
   const jsonLd = {
@@ -57,7 +56,7 @@ export default function PolicyPage() {
     <>
       <PolicyJsonLd />
       <div className="min-h-dvh bg-background text-foreground">
-        <LegalHeader currentPage="policy" />
+        <LegalHeader />
 
         <div className="max-w-5xl mx-auto px-6 py-12 lg:py-16">
           <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-16">

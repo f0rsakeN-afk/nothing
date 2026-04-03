@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Flag, Loader2, ImagePlus, X, Paperclip } from "lucide-react";
+import { Loader2, ImagePlus, X } from "lucide-react";
 import { reportSchema, type ReportSchema } from "@/schemas/report.schema";
 
 import {
@@ -12,7 +12,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";

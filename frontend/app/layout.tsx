@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { PageTransitionProvider } from "@/components/shared/page-transition-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -34,7 +35,7 @@ export default function RootLayout({
     >
       <body className="min-h-dvh flex flex-col bg-background text-foreground font-sans">
         <ThemeProvider defaultTheme="dark" attribute="class">
-          {children}
+          <PageTransitionProvider>{children}</PageTransitionProvider>
         </ThemeProvider>
       </body>
     </html>

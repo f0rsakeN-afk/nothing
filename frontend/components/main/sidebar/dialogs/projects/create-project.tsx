@@ -2,8 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion, AnimatePresence } from "motion/react";
-import { Loader2, Plus, X, FolderPlus } from "lucide-react";
+import { Loader2, FolderPlus } from "lucide-react";
 
 import {
   Dialog,
