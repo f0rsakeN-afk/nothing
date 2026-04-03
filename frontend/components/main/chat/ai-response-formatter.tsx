@@ -7,7 +7,6 @@ import React, {
   useContext,
   useMemo,
   useRef,
-  useEffect,
 } from "react";
 import dynamic from "next/dynamic";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -109,6 +108,34 @@ const SystemDesignDiagram = dynamic(
   () =>
     import("./format/system-design").then((m) => ({
       default: m.SystemDesignDiagram,
+    })),
+  { ssr: false },
+);
+const StepsVisualizer = dynamic(
+  () => import("./format/steps").then((m) => ({ default: m.StepsVisualizer })),
+  { ssr: false },
+);
+const StatusBoard = dynamic(
+  () =>
+    import("./format/status-board").then((m) => ({ default: m.StatusBoard })),
+  { ssr: false },
+);
+const ChecklistVisualizer = dynamic(
+  () =>
+    import("./format/checklist").then((m) => ({
+      default: m.ChecklistVisualizer,
+    })),
+  { ssr: false },
+);
+const CommandVisualizer = dynamic(
+  () =>
+    import("./format/command").then((m) => ({ default: m.CommandVisualizer })),
+  { ssr: false },
+);
+const ChangelogVisualizer = dynamic(
+  () =>
+    import("./format/changelog").then((m) => ({
+      default: m.ChangelogVisualizer,
     })),
   { ssr: false },
 );
@@ -566,11 +593,36 @@ const mdComponents: Components = {
       string,
       { icon: any; color: string; label: string; accent: string }
     > = {
-      "[!NOTE]":      { icon: Info,          color: "text-blue-500",    label: "Note",      accent: "#3b82f6" },
-      "[!TIP]":       { icon: Lightbulb,     color: "text-emerald-500", label: "Tip",       accent: "#10b981" },
-      "[!IMPORTANT]": { icon: AlertCircle,   color: "text-purple-500",  label: "Important", accent: "#a855f7" },
-      "[!WARNING]":   { icon: AlertTriangle, color: "text-amber-500",   label: "Warning",   accent: "#f59e0b" },
-      "[!CAUTION]":   { icon: Shield,        color: "text-red-500",     label: "Caution",   accent: "#ef4444" },
+      "[!NOTE]": {
+        icon: Info,
+        color: "text-blue-500",
+        label: "Note",
+        accent: "#3b82f6",
+      },
+      "[!TIP]": {
+        icon: Lightbulb,
+        color: "text-emerald-500",
+        label: "Tip",
+        accent: "#10b981",
+      },
+      "[!IMPORTANT]": {
+        icon: AlertCircle,
+        color: "text-purple-500",
+        label: "Important",
+        accent: "#a855f7",
+      },
+      "[!WARNING]": {
+        icon: AlertTriangle,
+        color: "text-amber-500",
+        label: "Warning",
+        accent: "#f59e0b",
+      },
+      "[!CAUTION]": {
+        icon: Shield,
+        color: "text-red-500",
+        label: "Caution",
+        accent: "#ef4444",
+      },
     };
 
     const firstLine = contentString.trim().split("\n")[0];
@@ -691,6 +743,20 @@ const mdComponents: Components = {
       if (language === "system-design")
         return (
           <SystemDesignDiagram data={String(children).replace(/\n$/, "")} />
+        );
+      if (language === "steps")
+        return <StepsVisualizer data={String(children).replace(/\n$/, "")} />;
+      if (language === "status")
+        return <StatusBoard data={String(children).replace(/\n$/, "")} />;
+      if (language === "checklist")
+        return (
+          <ChecklistVisualizer data={String(children).replace(/\n$/, "")} />
+        );
+      if (language === "command")
+        return <CommandVisualizer data={String(children).replace(/\n$/, "")} />;
+      if (language === "changelog")
+        return (
+          <ChangelogVisualizer data={String(children).replace(/\n$/, "")} />
         );
       return (
         <CodeBlock language={language}>

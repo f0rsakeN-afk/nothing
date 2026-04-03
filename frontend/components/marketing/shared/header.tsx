@@ -68,8 +68,8 @@ export function MarketingHeader() {
   const closeSheet = useCallback(() => setOpen(false), []);
 
   return (
-    <header className="border-b border-border sticky top-0 z-50 bg-background/90 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
+    <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
         <Logo />
 
         {/* Desktop nav */}

@@ -23,6 +23,8 @@
   },
   "registries": {
     "@magicui": "https://magicui.design/r/{name}",
-    "@diceui": "https://diceui.com/r/{name}.json"
+    "@diceui": "https://diceui.com/r/{name}.json",
+    "@spectrumui": "https://ui.spectrumhq.in/r/{name}.json",
+    "@odysseyui": "https://www.odysseyui.com/r/{name}.json"
   }
 }

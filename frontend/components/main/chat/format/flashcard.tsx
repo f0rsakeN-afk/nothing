@@ -2,7 +2,6 @@
 
 import { memo, useMemo, useState, useCallback } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
 
 interface Flashcard {

@@ -9,6 +9,7 @@ import { CHIPS, type ChipData } from "@/components/main/home/data";
 import { HEADING_PHRASES } from "@/components/main/home/data/headings";
 import { CreditsButton } from "@/components/main/header/credits-button";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
+import { randomUUID } from "@/lib/utils";
 
 export default function HomePage() {
   const router = useRouter();
@@ -20,9 +21,7 @@ export default function HomePage() {
 
   const handleSubmit = useCallback(
     (value: string) => {
-      router.push(
-        `/chat/${crypto.randomUUID()}?q=${encodeURIComponent(value)}`,
-      );
+      router.push(`/chat/${randomUUID()}?q=${encodeURIComponent(value)}`);
     },
     [router],
   );

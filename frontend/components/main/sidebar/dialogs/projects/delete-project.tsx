@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import { Loader2, Trash2, AlertTriangle } from "lucide-react";
 
 import {
@@ -14,7 +13,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 
 interface DeleteProjectModalProps {
   open: boolean;

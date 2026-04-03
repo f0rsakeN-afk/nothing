@@ -1,10 +1,6 @@
 import Link from "next/link";
 
-export function LegalHeader({
-  currentPage,
-}: {
-  currentPage: "terms" | "policy";
-}) {
+export function LegalHeader() {
   return (
     <header className="border-b border-border sticky top-0 z-10 bg-background/90 backdrop-blur-md">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center min-w-0">

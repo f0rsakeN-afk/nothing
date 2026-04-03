@@ -16,6 +16,8 @@ import {
   Sun,
   Moon,
   MessageSquare,
+  UserCircle,
+  Keyboard,
 } from "lucide-react";
 
 import {
@@ -40,6 +42,9 @@ import { CustomizeDialog } from "@/components/customize/customize-dialog";
 import { PricingDialog } from "./dialogs/pricing/pricing-dialog";
 import { LogoutDialog } from "./dialogs/auth/logout-dialog";
 import { SettingsDialog } from "@/components/main/settings/settings-dialog";
+import { AccountDialog } from "@/components/main/account/account-dialog";
+import { ShortcutsDialog } from "@/components/main/sidebar/dialogs/shortcuts-dialog";
+import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 
 export function AppSidebarFooter() {
   const router = useRouter();
@@ -52,18 +57,31 @@ export function AppSidebarFooter() {
     React.useState<boolean>(false);
   const [logoutAlertOpen, setLogoutAlertOpen] = React.useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = React.useState<boolean>(false);
+  const [accountOpen, setAccountOpen] = React.useState<boolean>(false);
+  const [shortcutsOpen, setShortcutsOpen] = React.useState<boolean>(false);
   const isCollapsed = state === "collapsed";
 
   const toggleTheme = React.useCallback(() => {
     setTheme(theme === "light" ? "dark" : "light");
   }, [theme, setTheme]);
 
-  const openSettings = React.useCallback(() => setSettingsOpen(true), []);
-  const openCustomize = React.useCallback(() => setCustomizeOpen(true), []);
-  const openPricing = React.useCallback(() => setPricingDialogOpen(true), []);
-  const openFeedback = React.useCallback(() => setFeedbackOpen(true), []);
-  const openReport = React.useCallback(() => setReportOpen(true), []);
-  const openLogout = React.useCallback(() => setLogoutAlertOpen(true), []);
+  const openSettings   = React.useCallback(() => setSettingsOpen(true), []);
+  const openAccount    = React.useCallback(() => setAccountOpen(true), []);
+  const openCustomize  = React.useCallback(() => setCustomizeOpen(true), []);
+  const openPricing    = React.useCallback(() => setPricingDialogOpen(true), []);
+  const openFeedback   = React.useCallback(() => setFeedbackOpen(true), []);
+  const openReport     = React.useCallback(() => setReportOpen(true), []);
+  const openLogout     = React.useCallback(() => setLogoutAlertOpen(true), []);
+  const openShortcuts  = React.useCallback(() => setShortcutsOpen(true), []);
+
+  // ── Global keyboard shortcuts ──────────────────────────────────────────
+  useKeyboardShortcut(",", openSettings, { meta: true });
+  useKeyboardShortcut(",", openSettings, { ctrl: true });
+  useKeyboardShortcut("a", openAccount,  { meta: true,  shift: true });
+  useKeyboardShortcut("a", openAccount,  { ctrl: true,  shift: true });
+  useKeyboardShortcut("f", openFeedback, { meta: true,  shift: true });
+  useKeyboardShortcut("f", openFeedback, { ctrl: true,  shift: true });
+  useKeyboardShortcut("?", openShortcuts);
 
   const goToLanding = React.useCallback(() => router.push("/"), [router]);
   const openTerms = React.useCallback(
@@ -128,6 +146,13 @@ export function AppSidebarFooter() {
               </DropdownMenuLabel>
               <DropdownMenuItem
                 className="gap-2.5 text-[13px] cursor-pointer"
+                onClick={openAccount}
+              >
+                <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                Account
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2.5 text-[13px] cursor-pointer"
                 onClick={openSettings}
               >
                 <Settings className="h-3.5 w-3.5 text-muted-foreground" />
@@ -139,6 +164,14 @@ export function AppSidebarFooter() {
               >
                 <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
                 Customize AI
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2.5 text-[13px] cursor-pointer"
+                onClick={openShortcuts}
+              >
+                <Keyboard className="h-3.5 w-3.5 text-muted-foreground" />
+                Keyboard shortcuts
+                <span className="ml-auto text-[10px] text-muted-foreground/50 font-mono">?</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2.5 text-[13px] cursor-pointer"
@@ -231,6 +264,8 @@ export function AppSidebarFooter() {
         isOpen={pricingDialogOpen}
         onOpenChange={setPricingDialogOpen}
       />
+      <AccountDialog isOpen={accountOpen} onOpenChange={setAccountOpen} />
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <LogoutDialog open={logoutAlertOpen} onOpenChange={setLogoutAlertOpen} />
       <SettingsDialog isOpen={settingsOpen} onOpenChange={setSettingsOpen} />
       <ReportDialog isOpen={reportOpen} onOpenChange={setReportOpen} />

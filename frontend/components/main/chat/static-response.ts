@@ -367,7 +367,167 @@ async function streamChat(prompt: string) {
 
 ---
 
-## 18. System Design (Complex Flow)
+## 18. Steps
+
+\`\`\`steps
+{
+  "title": "Deploy a Next.js App to Production",
+  "steps": [
+    {
+      "title": "Install dependencies",
+      "description": "Make sure all packages are up to date before building.",
+      "code": "bun install"
+    },
+    {
+      "title": "Run tests",
+      "description": "All unit and integration tests must pass before proceeding.",
+      "code": "bun test"
+    },
+    {
+      "title": "Build for production",
+      "description": "Creates an optimized build in the .next directory.",
+      "code": "bun run build"
+    },
+    {
+      "title": "Set environment variables",
+      "description": "Configure DATABASE_URL, NEXTAUTH_SECRET, and any third-party API keys in your hosting dashboard."
+    },
+    {
+      "title": "Deploy",
+      "description": "Push to your main branch or trigger a manual deploy from the dashboard.",
+      "code": "git push origin main"
+    }
+  ]
+}
+\`\`\`
+
+---
+
+## 19. Status
+
+\`\`\`status
+{
+  "title": "Eryx Platform",
+  "overall": "degraded",
+  "updated": "3 minutes ago",
+  "services": [
+    { "name": "API Gateway",      "status": "operational" },
+    { "name": "Authentication",   "status": "operational" },
+    { "name": "Chat Service",     "status": "degraded",    "note": "Elevated response times" },
+    { "name": "Vector Search",    "status": "degraded",    "note": "P99 latency +320ms" },
+    { "name": "File Storage",     "status": "operational" },
+    { "name": "Billing",          "status": "maintenance", "note": "Scheduled until 03:00 UTC" },
+    { "name": "Web App (CDN)",    "status": "operational" }
+  ]
+}
+\`\`\`
+
+---
+
+## 20. Checklist
+
+\`\`\`checklist
+{
+  "title": "Production Launch Checklist",
+  "items": [
+    { "label": "Set up CI/CD pipeline",            "status": "done" },
+    { "label": "Configure environment variables",  "status": "done" },
+    { "label": "Enable rate limiting on API",      "status": "done" },
+    { "label": "Write integration tests",          "status": "in-progress" },
+    { "label": "Security & dependency audit",      "status": "in-progress" },
+    { "label": "Load testing (10k concurrent)",    "status": "pending" },
+    { "label": "Set up error monitoring",          "status": "pending" },
+    { "label": "DNS cutover",                      "status": "blocked", "note": "Waiting on domain transfer approval" }
+  ]
+}
+\`\`\`
+
+---
+
+## 21. Command Reference
+
+\`\`\`command
+{
+  "title": "VS Code Shortcuts",
+  "sections": [
+    {
+      "label": "Navigation",
+      "items": [
+        { "keys": ["Cmd", "P"],       "description": "Quick open file" },
+        { "keys": ["Cmd", "Shift", "P"], "description": "Command palette" },
+        { "keys": ["Cmd", "B"],       "description": "Toggle sidebar" },
+        { "keys": ["Ctrl", "Tab"],    "description": "Cycle open editors" }
+      ]
+    },
+    {
+      "label": "Editing",
+      "items": [
+        { "keys": ["Cmd", "D"],       "description": "Select next occurrence" },
+        { "keys": ["Opt", "↑"],       "description": "Move line up" },
+        { "keys": ["Cmd", "Shift", "K"], "description": "Delete line" },
+        { "keys": ["Cmd", "/"],       "description": "Toggle line comment" }
+      ]
+    },
+    {
+      "label": "Terminal",
+      "items": [
+        { "keys": ["Ctrl", "\`"],      "description": "Toggle integrated terminal" },
+        { "keys": ["Cmd", "Shift", "5"], "description": "Split terminal" }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+---
+
+## 22. Changelog
+
+\`\`\`changelog
+{
+  "title": "Eryx Release Notes",
+  "versions": [
+    {
+      "version": "2.4.0",
+      "date": "Apr 1, 2026",
+      "tag": "latest",
+      "changes": [
+        { "type": "added",    "text": "System design canvas with split-view mode" },
+        { "type": "added",    "text": "5 new response formats: steps, status, checklist, command, changelog" },
+        { "type": "improved", "text": "File tree now renders with proper connected guide lines" },
+        { "type": "improved", "text": "Callout blocks have per-type accent colors and backgrounds" },
+        { "type": "fixed",    "text": "Split panel no longer overlaps header action buttons" }
+      ]
+    },
+    {
+      "version": "2.3.0",
+      "date": "Mar 18, 2026",
+      "tag": "stable",
+      "changes": [
+        { "type": "added",    "text": "Real-time web search with cited sources" },
+        { "type": "added",    "text": "PDF and document upload support" },
+        { "type": "improved", "text": "Streaming latency reduced by 40%" },
+        { "type": "fixed",    "text": "LaTeX rendering on mobile viewports" },
+        { "type": "security", "text": "Rotated signing keys for session tokens" }
+      ]
+    },
+    {
+      "version": "2.0.0",
+      "date": "Jan 5, 2026",
+      "changes": [
+        { "type": "breaking",   "text": "API routes moved from /api/v1 to /api/v2" },
+        { "type": "added",      "text": "Complete UI redesign with dark mode first" },
+        { "type": "deprecated", "text": "Legacy /api/v1 endpoints — will be removed in v3" },
+        { "type": "removed",    "text": "Flash message system replaced by toast notifications" }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+---
+
+## 23. System Design (Complex Flow)
 
 \`\`\`system-design
 {

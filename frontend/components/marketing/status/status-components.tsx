@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
-import { CheckCircle2, Clock, LucideIcon } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Uptime Bar ──────────────────────────────────────────
