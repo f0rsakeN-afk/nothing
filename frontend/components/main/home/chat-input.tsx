@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUp, Paperclip, Globe } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, ArrowUp, Paperclip, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -9,6 +10,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { AnimatedPlaceholder } from "@/components/ui/animated-placeholder";
 
 const PLACEHOLDERS = [
@@ -24,10 +30,6 @@ const PLACEHOLDERS = [
   "Summarize, simplify, or just vibe with me.",
 ];
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 interface ChatInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -36,68 +38,26 @@ interface ChatInputProps {
   className?: string;
 }
 
-// ---------------------------------------------------------------------------
-// ToolButton
-// base-ui's TooltipTrigger renders a <button> itself — pass all button props
-// directly onto it instead of nesting a <button> inside (avoids invalid HTML).
-// ---------------------------------------------------------------------------
-
-interface ToolButtonProps {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  active?: boolean;
-  onClick?: () => void;
-}
-
-const ToolButton = React.memo(function ToolButton({
-  icon: Icon,
-  label,
-  active,
-  onClick,
-}: ToolButtonProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        onClick={onClick}
-        aria-label={label}
-        aria-pressed={active}
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-xl  ",
-          active
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground",
-        )}
-      >
-        <Icon className="h-[15px] w-[15px]" />
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// ChatInput
-// ---------------------------------------------------------------------------
-
 export function ChatInput({
   value,
   onChange,
   onSubmit,
-  placeholder = "Ask anything…",
   className,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [isComposing, setIsComposing] = React.useState(false);
   const [webSearch, setWebSearch] = React.useState(false);
+  const [isMultiline, setIsMultiline] = React.useState(false);
 
   const isEmpty = !value.trim();
 
-  // Keep textarea height in sync with content
   const syncHeight = React.useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    const scHeight = el.scrollHeight;
+    el.style.height = `${Math.min(scHeight, 200)}px`;
+    setIsMultiline(scHeight > 38);
   }, []);
 
   React.useLayoutEffect(() => {
@@ -125,86 +85,179 @@ export function ChatInput({
     [handleSubmit, isComposing],
   );
 
-  const toggleWebSearch = React.useCallback(
-    () => setWebSearch((prev) => !prev),
-    [],
+  const PlusMenu = (
+    <Popover>
+      <PopoverTrigger
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground transition-colors active:scale-90"
+        aria-label="More tools"
+      >
+        <Plus className="h-4 w-4" />
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="start"
+        sideOffset={12}
+        className="w-48 p-1.5 bg-popover/90 backdrop-blur-xl border-border shadow-xl rounded-2xl animate-in fade-in zoom-in-95 duration-200"
+      >
+        <div className="flex flex-col gap-0.5">
+          <button className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-[0.98]">
+            <Paperclip className="h-4 w-4" />
+            <span>Attach file</span>
+          </button>
+          <button
+            onClick={() => setWebSearch(!webSearch)}
+            className={cn(
+              "flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm transition-all active:scale-[0.98]",
+              webSearch
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Globe className="h-4 w-4" />
+            <span>Search the web</span>
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+
+  const SendButton = (
+    <Tooltip>
+      <TooltipTrigger
+        onClick={handleSubmit}
+        disabled={isEmpty}
+        aria-label="Send message"
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200",
+          isEmpty
+            ? "text-muted-foreground/20 bg-transparent cursor-not-allowed"
+            : "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95",
+        )}
+      >
+        <ArrowUp className="h-4 w-4" />
+      </TooltipTrigger>
+      <AnimatePresence>
+        {!isEmpty && (
+          <TooltipContent
+            side="top"
+            sideOffset={12}
+            className="bg-foreground text-background font-medium"
+          >
+            Send <span className="ml-1 opacity-50 text-[10px]">↵</span>
+          </TooltipContent>
+        )}
+      </AnimatePresence>
+    </Tooltip>
   );
 
   return (
     <TooltipProvider delay={500}>
-      <div
+      <motion.div
+        layout
+        initial={false}
+        animate={{
+          borderRadius: isMultiline ? 24 : 21,
+          transition: { type: "spring", stiffness: 300, damping: 30 },
+        }}
         className={cn(
-          "w-full overflow-hidden rounded-2xl border border-border bg-card",
-          "shadow-xs transition-all duration-200",
-          "focus-within:border-foreground/15 focus-within:shadow-md",
+          "relative flex w-full transition-colors duration-300",
+          "bg-muted/40 border border-border/50 shadow-sm backdrop-blur-md",
+          "focus-within:bg-muted/60 focus-within:border-border/80",
+          isMultiline ? "flex-col p-2" : "flex-row items-center h-[42px] px-1.5 py-1",
           className,
         )}
       >
-        {/* ── Textarea ──────────────────────────────────────────── */}
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={() => setIsComposing(true)}
-            onCompositionEnd={() => setIsComposing(false)}
-            placeholder=""
-            aria-label={placeholder}
-            rows={1}
-            className={cn(
-              "block w-full resize-none bg-transparent",
-              "px-4 pt-4 pb-2",
-              "text-[14px] leading-relaxed text-foreground",
-              "outline-none hide-scrollbar",
-            )}
-          />
-          <div className="pointer-events-none absolute left-0 top-0 px-4 pt-4">
-            <AnimatedPlaceholder
-              placeholders={PLACEHOLDERS}
-              active={isEmpty}
-              className="m-0 text-[14px] leading-relaxed text-muted-foreground/40"
-            />
-          </div>
-        </div>
-
-        {/* ── Toolbar ───────────────────────────────────────────── */}
-        <div className="flex items-center gap-0.5 px-3 pb-3 pt-1">
-          {/* Left — utility tools */}
-          <ToolButton icon={Paperclip} label="Attach file" />
-          <ToolButton
-            icon={Globe}
-            label={webSearch ? "Web search on" : "Search the web"}
-            active={webSearch}
-            onClick={toggleWebSearch}
-          />
-
-          <div className="flex-1" />
-
-          {/* Send — same pattern: TooltipTrigger is the button */}
-          <Tooltip>
-            <TooltipTrigger
-              onClick={handleSubmit}
-              disabled={isEmpty}
-              aria-label="Send message"
-              className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
-                "transition-all duration-150",
-                isEmpty
-                  ? "cursor-not-allowed bg-muted text-muted-foreground/25"
-                  : "bg-primary text-primary-foreground shadow-sm hover:opacity-90 active:scale-[0.93]",
+        <motion.div
+          layout
+          className={cn(
+            "flex flex-1 items-center min-w-0",
+            isMultiline ? "flex-col items-stretch px-2 pt-1" : "flex-row px-1",
+          )}
+        >
+          <div className="flex flex-1 items-center min-w-0">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {!isMultiline && (
+                <motion.div
+                  layoutId="plus-wrapper"
+                  initial={{ opacity: 0, scale: 0.8, x: -5 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: -5 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center shrink-0 pr-1"
+                >
+                  {PlusMenu}
+                </motion.div>
               )}
+            </AnimatePresence>
+
+            <div className="relative flex-1 min-w-0">
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                rows={1}
+                autoFocus
+                className={cn(
+                  "block w-full resize-none bg-transparent",
+                  "py-1.5 text-sm leading-relaxed text-foreground",
+                  "placeholder:text-transparent outline-none hide-scrollbar",
+                )}
+              />
+              <motion.div
+                layout
+                className={cn(
+                  "pointer-events-none absolute left-0 text-sm leading-relaxed text-muted-foreground/40 transition-colors duration-200",
+                  isMultiline ? "top-1.5" : "top-1/2 -translate-y-1/2",
+                )}
+              >
+                <AnimatedPlaceholder
+                  placeholders={PLACEHOLDERS}
+                  active={isEmpty}
+                  className="m-0"
+                />
+              </motion.div>
+            </div>
+
+            <AnimatePresence mode="popLayout" initial={false}>
+              {!isMultiline && (
+                <motion.div
+                  layoutId="send-wrapper"
+                  initial={{ opacity: 0, scale: 0.8, x: 5 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: 5 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center shrink-0 pl-1"
+                >
+                  {SendButton}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {isMultiline && (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="flex items-center justify-between mt-1 px-1 pb-1"
             >
-              <ArrowUp className="h-4 w-4" />
-            </TooltipTrigger>
-            {!isEmpty && (
-              <TooltipContent side="top">
-                Send <span className="ml-0.5 opacity-50">↵</span>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </div>
-      </div>
+              <motion.div layoutId="plus-wrapper">
+                {PlusMenu}
+              </motion.div>
+              <motion.div layoutId="send-wrapper">
+                {SendButton}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </TooltipProvider>
   );
 }
