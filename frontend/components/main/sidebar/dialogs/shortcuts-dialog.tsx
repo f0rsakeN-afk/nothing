@@ -31,7 +31,7 @@ const ShortcutRow = React.memo(function ShortcutRow({
   isLast,
 }: {
   label: string;
-  keys: string[][];
+  keys: readonly (readonly string[])[];
   isLast?: boolean;
 }) {
   return (
@@ -188,7 +188,7 @@ export const ShortcutsDialog = React.memo(function ShortcutsDialog({
                 <ShortcutRow
                   key={shortcut.label}
                   label={shortcut.label}
-                  keys={shortcut.keys as string[][]}
+                  keys={shortcut.keys}
                   isLast={i === section.shortcuts.length - 1}
                 />
               ))}

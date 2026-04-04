@@ -80,7 +80,7 @@ export function ForgotPasswordForm() {
     defaultValues: { email: "" },
   });
 
-  const onSubmit = async (_data: forgotPasswordInput) => {
+  const onSubmit = async () => {
     // Replace with real API call:
     // await fetch("/api/auth/forgot-password", { method: "POST", body: JSON.stringify(data) });
     await new Promise((res) => setTimeout(res, 1000));

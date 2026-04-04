@@ -538,7 +538,7 @@ const mdComponents: Components = {
   ),
 
   // Lists
-  ul: ({ children, depth }: any) => {
+  ul: ({ children, depth }: { children?: React.ReactNode; depth?: number }) => {
     const listStyles = [
       "list-disc marker:text-primary/60",
       "list-[circle] marker:text-primary/40",
@@ -557,7 +557,7 @@ const mdComponents: Components = {
       {children}
     </ol>
   ),
-  li: ({ children, checked }: any) => {
+  li: ({ children, checked }: { children?: React.ReactNode; checked?: boolean }) => {
     if (typeof checked === "boolean") {
       return (
         <li className="group ml-0 flex items-start gap-3 py-1.5 transition-colors">
@@ -591,7 +591,7 @@ const mdComponents: Components = {
 
     const alertMap: Record<
       string,
-      { icon: any; color: string; label: string; accent: string }
+      { icon: React.ComponentType<{ className?: string }>; color: string; label: string; accent: string }
     > = {
       "[!NOTE]": {
         icon: Info,
@@ -668,7 +668,7 @@ const mdComponents: Components = {
   },
 
   // Footnotes & Section styling
-  section: ({ children, ...props }: any) => {
+  section: ({ children, ...props }: React.HTMLAttributes<HTMLElement> & { "data-footnotes"?: boolean }) => {
     if (props["data-footnotes"]) {
       return (
         <section

@@ -127,6 +127,12 @@ function ScrollSpy(props: ScrollSpyProps) {
   const onValueChangeRef = useAsRef(onValueChange);
 
   const store = React.useMemo<Store>(() => {
+    const notify = () => {
+      for (const cb of listenersRef.current) {
+        cb();
+      }
+    };
+
     return {
       subscribe: (cb) => {
         listenersRef.current.add(cb);
@@ -144,13 +150,9 @@ function ScrollSpy(props: ScrollSpyProps) {
           onValueChangeRef.current?.(value);
         }
 
-        store.notify();
+        notify();
       },
-      notify: () => {
-        for (const cb of listenersRef.current) {
-          cb();
-        }
-      },
+      notify,
     };
   }, [listenersRef, stateRef, onValueChangeRef]);
 

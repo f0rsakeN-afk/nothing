@@ -108,10 +108,12 @@ export function SignupForm() {
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const passwordValue = watch("password");
 
   const onSubmit = async (data: sgnupInput) => {
-    const { confirmPassword, ...payload } = data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmPassword: _, ...payload } = data;
 
     await fetch("/api/auth/signup", {
       method: "POST",

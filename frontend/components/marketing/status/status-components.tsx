@@ -8,11 +8,7 @@ import { cn } from "@/lib/utils";
 
 const UPTIME_DAYS = 40;
 
-export const UptimeBar = memo(function UptimeBar({
-  status,
-}: {
-  status: string;
-}) {
+export const UptimeBar = memo(function UptimeBar() {
   return (
     <div className="flex gap-[2px] w-full h-8 items-end">
       {Array.from({ length: UPTIME_DAYS }).map((_, i) => {
@@ -84,7 +80,7 @@ export const ServiceCard = memo(function ServiceCard({
         </div>
 
         <div className="flex flex-col gap-2">
-          <UptimeBar status={status} />
+          <UptimeBar />
           <div className="flex justify-between items-center text-[10px] text-muted-foreground/60 font-medium px-0.5 tracking-tight font-mono">
             <span>90 days ago</span>
             <span>Today</span>

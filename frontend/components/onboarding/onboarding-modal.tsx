@@ -62,7 +62,7 @@ const STEPS = [
             />
           </div>
         </div>
-        <p className="text-[10px] text-center text-muted-foreground italic">"Querying deep knowledge graphs..."</p>
+        <p className="text-[10px] text-center text-muted-foreground italic">&quot;Querying deep knowledge graphs...&quot;</p>
       </div>
     )
   },

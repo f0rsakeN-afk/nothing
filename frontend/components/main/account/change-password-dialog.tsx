@@ -88,7 +88,7 @@ export const ChangePasswordDialog = memo(function ChangePasswordDialog({
     defaultValues: { oldPassword: "", newPassword: "", confirmPassword: "" },
   });
 
-  const onSubmit = async (_data: updatePasswordInput) => {
+  const onSubmit = async () => {
     // TODO: wire to API
     await new Promise((r) => setTimeout(r, 800));
     reset();
@@ -117,7 +117,7 @@ export const ChangePasswordDialog = memo(function ChangePasswordDialog({
                 Change Password
               </DialogTitle>
               <p className="text-[12px] text-muted-foreground mt-1">
-                Make sure it's at least 6 characters.
+                Make sure it&apos;s at least 6 characters.
               </p>
             </div>
           </div>

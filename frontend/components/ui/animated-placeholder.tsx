@@ -35,7 +35,10 @@ export const AnimatedPlaceholder = React.memo(function AnimatedPlaceholder({
   // Reset to visible whenever the placeholder becomes active again (e.g. user
   // clears the input mid-cycle when visible might still be false).
   useEffect(() => {
-    if (active) setVisible(true);
+    if (active) {
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
   }, [active]);
 
   // Cycle through placeholders only while the placeholder is shown.
