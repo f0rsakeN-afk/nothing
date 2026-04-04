@@ -17,21 +17,41 @@ interface PlusMenuProps {
 }
 
 export const PlusMenu = React.memo(({ onFileSelect, webSearch, setWebSearch }: PlusMenuProps) => {
+  const [open, setOpen] = React.useState(false);
+
+  const handleFileClick = React.useCallback(() => {
+    onFileSelect();
+    setOpen(false);
+  }, [onFileSelect]);
+
+  const handleWebSearchToggle = React.useCallback(() => {
+    setWebSearch(!webSearch);
+    setOpen(false);
+  }, [webSearch, setWebSearch]);
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        render={(props: any) => (
+        render={(triggerProps: React.ComponentPropsWithRef<"button">) => (
           <motion.button
-            {...props}
             layoutId="plus-menu"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground transition-colors active:scale-90"
+            id={triggerProps.id}
+            ref={triggerProps.ref}
+            onClick={(e) => {
+              triggerProps.onClick?.(e);
+            }}
+            onKeyDown={triggerProps.onKeyDown}
+            onPointerDown={triggerProps.onPointerDown}
             aria-label="More tools"
-          />
+            aria-expanded={triggerProps["aria-expanded"]}
+            aria-haspopup={triggerProps["aria-haspopup"]}
+            aria-controls={triggerProps["aria-controls"]}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground transition-colors active:scale-90"
+          >
+            <Plus className="h-4 w-4" />
+          </motion.button>
         )}
-      >
-        <Plus className="h-4 w-4" />
-      </PopoverTrigger>
+      />
       <PopoverContent
         side="bottom"
         align="start"
@@ -40,14 +60,14 @@ export const PlusMenu = React.memo(({ onFileSelect, webSearch, setWebSearch }: P
       >
         <div className="flex flex-col gap-0.5">
           <button
-            onClick={onFileSelect}
+            onClick={handleFileClick}
             className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-[0.98]"
           >
             <Paperclip className="h-4 w-4" />
             <span>Attach file</span>
           </button>
           <button
-            onClick={() => setWebSearch(!webSearch)}
+            onClick={handleWebSearchToggle}
             className={cn(
               "flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm transition-all active:scale-[0.98]",
               webSearch

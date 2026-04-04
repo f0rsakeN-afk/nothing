@@ -8,6 +8,8 @@ import { AnimatedPlaceholder } from "@/components/ui/animated-placeholder";
 import { PlusMenu } from "./plus-menu";
 import { SendButton } from "./send-button";
 import { FilePreviews } from "./file-previews";
+import { VoiceButton } from "./voice-button";
+import { useSpeechToText } from "./use-speech-to-text";
 
 const PLACEHOLDERS = [
   "Ask anything…",
@@ -49,41 +51,63 @@ export function ChatInput({
   const [isMultiline, setIsMultiline] = React.useState(false);
   const [files, setFiles] = React.useState<Attachment[]>([]);
 
-  const isEmpty = !value.trim() && files.length === 0;
+  const { isListening, interimText, toggleListening, isSupported } =
+    useSpeechToText({
+      onResult: (text) => {
+        onChange(value ? `${value.trim()} ${text}` : text);
+      },
+    });
+
+  const isEmpty = !value.trim() && files.length === 0 && !interimText;
 
   const syncHeight = React.useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
+
+    if (!value && files.length === 0 && !interimText) {
+      el.style.height = "auto";
+      setIsMultiline(false);
+      return;
+    }
+
     el.style.height = "auto";
     const scHeight = el.scrollHeight;
     el.style.height = `${Math.min(scHeight, 200)}px`;
-    setIsMultiline(scHeight > 38 || files.length > 0);
-  }, [files.length]);
+    setIsMultiline(scHeight > 38 || files.length > 0 || !!interimText);
+  }, [value, files.length, interimText]);
 
   React.useLayoutEffect(() => {
     syncHeight();
-  }, [value, syncHeight, files.length]);
+  }, [syncHeight]);
 
   const handleChange = React.useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value),
     [onChange],
   );
 
-  const handleFileClick = React.useCallback(() => fileInputRef.current?.click(), []);
+  const handleFileClick = React.useCallback(
+    () => fileInputRef.current?.click(),
+    [],
+  );
 
-  const handleFileChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || []);
-    if (selected.length === 0) return;
+  const handleFileChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selected = Array.from(e.target.files || []);
+      if (selected.length === 0) return;
 
-    const newFiles = selected.map((file) => ({
-      file,
-      id: Math.random().toString(36).substring(7),
-      preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
-    }));
+      const newFiles = selected.map((file) => ({
+        file,
+        id: Math.random().toString(36).substring(7),
+        preview: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : undefined,
+      }));
 
-    setFiles((prev) => [...prev, ...newFiles]);
-    if (e.target) e.target.value = "";
-  }, []);
+      setFiles((prev) => [...prev, ...newFiles]);
+      if (e.target) e.target.value = "";
+    },
+    [],
+  );
 
   const removeFile = React.useCallback((id: string) => {
     setFiles((prev) => {
@@ -129,9 +153,11 @@ export function ChatInput({
         }}
         className={cn(
           "relative flex w-full transition-colors duration-300",
-          "bg-muted/40 border border-border/50 shadow-sm backdrop-blur-md",
-          "focus-within:bg-muted/60 focus-within:border-border/80",
-          isMultiline ? "flex-col p-2" : "flex-row items-center h-[42px] px-1.5 py-1",
+          "bg-background border border-input shadow font-sans",
+          "focus-within:border-primary/50 focus-within:ring-[3px] focus-within:ring-primary/10",
+          isMultiline
+            ? "flex-col p-2"
+            : "flex-row items-center h-[42px] px-1.5 py-1",
           className,
         )}
       >
@@ -151,7 +177,7 @@ export function ChatInput({
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.8, x: -5 }}
                   transition={{ duration: 0.2 }}
-                  className="flex items-center shrink-0 pr-1"
+                  className="flex items-center shrink-0 pr-2"
                 >
                   <PlusMenu
                     onFileSelect={handleFileClick}
@@ -165,25 +191,40 @@ export function ChatInput({
             <div className="relative flex-1 min-w-0">
               <FilePreviews files={files} onRemove={removeFile} />
 
-              <textarea
-                ref={textareaRef}
-                value={value}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                onCompositionStart={() => setIsComposing(true)}
-                onCompositionEnd={() => setIsComposing(false)}
-                rows={1}
-                autoFocus
-                className={cn(
-                  "block w-full resize-none bg-transparent",
-                  "py-1.5 text-sm leading-relaxed text-foreground",
-                  "placeholder:text-transparent outline-none hide-scrollbar",
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={value}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                  onCompositionStart={() => setIsComposing(true)}
+                  onCompositionEnd={() => setIsComposing(false)}
+                  rows={1}
+                  autoFocus
+                  className={cn(
+                    "block w-full resize-none bg-transparent",
+                    "py-1.5 text-sm leading-relaxed text-foreground",
+                    "placeholder:text-transparent outline-none hide-scrollbar",
+                    isListening && "text-transparent caret-foreground",
+                  )}
+                />
+
+                {/* Ghost Text Overlay for Real-time Transcription */}
+                {isListening && (
+                  <div className="pointer-events-none absolute inset-0 py-1.5 text-sm leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
+                    <span className="text-foreground">{value}</span>
+                    <span className="text-muted-foreground/40">
+                      {interimText}
+                    </span>
+                  </div>
                 )}
-              />
+              </div>
+
               <motion.div
                 layout
                 className={cn(
                   "pointer-events-none absolute left-0 text-sm leading-relaxed text-muted-foreground/40 transition-colors duration-200",
+                  "truncate whitespace-nowrap pr-14",
                   isMultiline ? "top-1.5" : "top-1/2 -translate-y-1/2",
                 )}
               >
@@ -198,12 +239,31 @@ export function ChatInput({
             <AnimatePresence mode="popLayout" initial={false}>
               {!isMultiline && (
                 <motion.div
+                  layoutId="voice-wrapper"
+                  initial={{ opacity: 0, scale: 0.8, x: 5 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: 5 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center shrink-0 pl-2"
+                >
+                  <VoiceButton
+                    isListening={isListening}
+                    toggleListening={toggleListening}
+                    isSupported={isSupported}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence mode="popLayout" initial={false}>
+              {!isMultiline && (
+                <motion.div
                   layoutId="send-wrapper"
                   initial={{ opacity: 0, scale: 0.8, x: 5 }}
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.8, x: 5 }}
                   transition={{ duration: 0.2 }}
-                  className="flex items-center shrink-0 pl-1"
+                  className="flex items-center shrink-0 pl-2"
                 >
                   <SendButton onSubmit={handleSubmit} disabled={isEmpty} />
                 </motion.div>
@@ -212,14 +272,14 @@ export function ChatInput({
           </div>
         </motion.div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {isMultiline && (
             <motion.div
               layout
               initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
+              exit={{ opacity: 0, y: 8, filter: "blur(4px)", transition: { duration: 0.15 } }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="flex items-center justify-between mt-1 px-1 pb-1"
             >
               <motion.div layoutId="plus-wrapper">
@@ -229,9 +289,18 @@ export function ChatInput({
                   setWebSearch={setWebSearch}
                 />
               </motion.div>
-              <motion.div layoutId="send-wrapper">
-                <SendButton onSubmit={handleSubmit} disabled={isEmpty} />
-              </motion.div>
+              <div className="flex items-center gap-1">
+                <motion.div layoutId="voice-wrapper">
+                  <VoiceButton
+                    isListening={isListening}
+                    toggleListening={toggleListening}
+                    isSupported={isSupported}
+                  />
+                </motion.div>
+                <motion.div layoutId="send-wrapper">
+                  <SendButton onSubmit={handleSubmit} disabled={isEmpty} />
+                </motion.div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

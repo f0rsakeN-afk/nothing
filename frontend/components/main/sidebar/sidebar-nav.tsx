@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FolderOpen, Plus, Search, Library } from "lucide-react";
+import { FolderOpen, Plus, Search, Library, Trash2 } from "lucide-react";
 
 import {
   SidebarGroup,
@@ -42,6 +42,14 @@ const NAV_ITEMS = [
     label: "Files",
     icon: FolderOpen,
     href: "/files",
+    primary: false,
+    comingSoon: false,
+  },
+  {
+    id: "trash",
+    label: "Trash",
+    icon: Trash2,
+    href: "/trash",
     primary: false,
     comingSoon: false,
   },

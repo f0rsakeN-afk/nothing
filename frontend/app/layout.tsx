@@ -17,9 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eryx — AI System Design and Search Assistant",
+  title: "Eryx — AI Assistant",
   description:
-    "Eryx is a developer-focused AI platform combining intelligent chat, real-time web search (RAG), and interactive system design diagram generation.",
+    "Eryx is a powerful, intelligent AI chat assistant. Ask questions, get help with coding, and explore ideas seamlessly.",
 };
 
 export default function RootLayout({

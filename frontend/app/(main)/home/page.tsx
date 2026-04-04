@@ -40,19 +40,20 @@ export default function HomePage() {
         <CreditsButton />
         <NotificationsButton />
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8">
-        <h1
-          suppressHydrationWarning
-          className="mb-8 text-center text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
-        >
-          {heading}
-        </h1>
+      <div className="flex flex-1 flex-col items-center px-6 pb-8 pt-12 md:justify-center">
+        <div className="flex flex-1 flex-col items-center justify-center w-full md:flex-none">
+          <h1
+            suppressHydrationWarning
+            className="mb-8 text-center text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+          >
+            {heading}
+          </h1>
 
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
-          {CHIPS.map((chip) => (
-            // setActiveChip is stable (from useState) — no useCallback wrapper needed.
-            <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
-          ))}
+          <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
+            {CHIPS.map((chip) => (
+              <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
+            ))}
+          </div>
         </div>
 
         <div className="w-full max-w-2xl">

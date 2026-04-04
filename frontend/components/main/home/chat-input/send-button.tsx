@@ -19,15 +19,17 @@ export const SendButton = React.memo(({ onSubmit, disabled }: SendButtonProps) =
   return (
     <Tooltip>
       <TooltipTrigger
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        render={(props: any) => (
+        render={(triggerProps: React.ComponentPropsWithRef<"button">) => (
           <motion.button
-            {...props}
             layoutId="send-button"
+            id={triggerProps.id}
+            ref={triggerProps.ref}
             onClick={(e) => {
-              props.onClick?.(e);
+              triggerProps.onClick?.(e);
               onSubmit();
             }}
+            onKeyDown={triggerProps.onKeyDown}
+            onPointerDown={triggerProps.onPointerDown}
             disabled={disabled}
             aria-label="Send message"
             className={cn(
@@ -36,11 +38,11 @@ export const SendButton = React.memo(({ onSubmit, disabled }: SendButtonProps) =
                 ? "text-muted-foreground/20 bg-transparent cursor-not-allowed"
                 : "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95",
             )}
-          />
+          >
+            <ArrowUp className="h-4 w-4" />
+          </motion.button>
         )}
-      >
-        <ArrowUp className="h-4 w-4" />
-      </TooltipTrigger>
+      />
       <AnimatePresence>
         {!disabled && (
           <TooltipContent
