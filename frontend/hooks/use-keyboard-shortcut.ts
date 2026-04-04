@@ -26,7 +26,7 @@ export function useKeyboardShortcut(
     ignoreInputs = true,
   } = options;
 
-  const stableHandler = useCallback(handler, [handler]);
+  const stableHandler = useCallback(() => handler(), [handler]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

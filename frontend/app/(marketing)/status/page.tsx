@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { CheckCircle2, Globe, ShieldCheck, Zap, Database, Search, Layers, Clock } from "lucide-react";
+import { Globe, ShieldCheck, Zap, Database, Search, Layers } from "lucide-react";
 import { ServiceCard, IncidentItem } from "@/components/marketing/status/status-components";
 
 export const metadata: Metadata = {

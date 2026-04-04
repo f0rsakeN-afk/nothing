@@ -146,7 +146,7 @@ export function MarketingHeader() {
                   </Link>
                 </Button>
                 <Button className="w-full">
-                  <Link href="/signup" onClick={closeSheet}>
+                  <Link href="/home" onClick={closeSheet}>
                     Get started
                   </Link>
                 </Button>

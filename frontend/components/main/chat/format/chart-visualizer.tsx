@@ -20,8 +20,18 @@ import { CodeBlock } from "./code-block";
 
 const COLORS = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899"];
 
+interface ChartData {
+  type: "bar" | "line" | "pie" | "gantt";
+  items: Record<string, unknown>[];
+  title?: string;
+  xKey?: string;
+  yKey?: string;
+  startKey?: string;
+  endKey?: string;
+}
+
 export const ChartVisualizer = memo(function ChartVisualizer({ data }: { data: string }) {
-  const chartData = useMemo(() => {
+  const chartData = useMemo<ChartData | null>(() => {
     try {
       return JSON.parse(data);
     } catch {
@@ -29,20 +39,21 @@ export const ChartVisualizer = memo(function ChartVisualizer({ data }: { data: s
     }
   }, [data]);
 
+  const { type, items, title, xKey = "name", yKey = "value", startKey = "start", endKey = "end" } = chartData || {};
+
+  const processedItems = useMemo(() => {
+    if (!items || !type) return [];
+    if (type !== "gantt") return items;
+    return (items as Record<string, unknown>[]).map((item) => ({
+      ...item,
+      duration: Number(item[endKey]) - Number(item[startKey]),
+      offset: Number(item[startKey]),
+    }));
+  }, [items, type, startKey, endKey]);
+
   if (!chartData || !chartData.type || !chartData.items) {
     return <CodeBlock language="json">{data}</CodeBlock>;
   }
-
-  const { type, items, title, xKey = "name", yKey = "value", startKey = "start", endKey = "end" } = chartData;
-
-  const processedItems = useMemo(() => {
-    if (type !== "gantt") return items;
-    return items.map((item: any) => ({
-      ...item,
-      duration: item[endKey] - item[startKey],
-      offset: item[startKey],
-    }));
-  }, [items, type, startKey, endKey]);
 
   return (
     <div className="my-6 rounded-xl border border-border bg-muted/20 p-6 shadow-sm transition-all hover:bg-muted/30">
@@ -83,7 +94,7 @@ export const ChartVisualizer = memo(function ChartVisualizer({ data }: { data: s
           ) : type === "pie" ? (
             <PieChart>
               <Pie data={processedItems} dataKey={yKey} nameKey={xKey} cx="50%" cy="50%" outerRadius={80} stroke="hsl(var(--background))" strokeWidth={2}>
-                {processedItems.map((_: any, index: number) => (
+                {processedItems.map((_: unknown, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

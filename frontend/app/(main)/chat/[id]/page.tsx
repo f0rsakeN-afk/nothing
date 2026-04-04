@@ -11,8 +11,6 @@ import {
   useSplitView,
 } from "@/components/main/chat/split-view-context";
 import { Network, X } from "lucide-react";
-import { CreditsButton } from "@/components/main/header/credits-button";
-import { NotificationsButton } from "@/components/main/header/notifications-button";
 import { randomUUID } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -112,7 +110,6 @@ function SplitPanel() {
 function ChatPageInner() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
-  const splitView = useSplitView();
 
   const seedMessages = React.useMemo<Message[]>(
     () => [

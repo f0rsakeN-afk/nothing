@@ -91,7 +91,6 @@ export function ThoughtChainStep({
   children,
   status = 'pending',
   defaultOpen = true,
-  _isLast = false,
 }: {
   children: React.ReactNode;
   status?: Status;

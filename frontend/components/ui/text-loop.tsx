@@ -34,7 +34,10 @@ export function TextLoop({
   const items = Children.toArray(children);
   const itemCount = items.length;
   const onIndexChangeRef = useRef(onIndexChange);
-  onIndexChangeRef.current = onIndexChange;
+  
+  useEffect(() => {
+    onIndexChangeRef.current = onIndexChange;
+  }, [onIndexChange]);
 
   useEffect(() => {
     if (!trigger) return;

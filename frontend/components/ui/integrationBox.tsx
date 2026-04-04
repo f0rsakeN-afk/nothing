@@ -122,7 +122,8 @@ export default function IntegrationBox() {
 
   useEffect(() => {
     animateUpDown();
-    setIsAnimating(true);
+    const frame = requestAnimationFrame(() => setIsAnimating(true));
+    return () => cancelAnimationFrame(frame);
   }, [animateUpDown]);
 
   const pathVariants = {
@@ -146,7 +147,8 @@ export default function IntegrationBox() {
   const flowTransition = {
     duration: 5,
     repeat: Infinity,
-    ease: "linear",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ease: "linear" as any,
   };
   return (
     <>

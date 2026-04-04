@@ -59,9 +59,10 @@ export function VerifyEmailForm({ email }: { email?: string }) {
     defaultValues: { otp: "" },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const otpValue = watch("otp") || "";
 
-  const onSubmit = async (_data: verifyEmailInput) => {
+  const onSubmit = async () => {
     // Replace with real API call:
     // await fetch("/api/auth/verify-email", { method: "POST", body: JSON.stringify(data) });
     void email;

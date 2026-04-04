@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "motion/react";
-import { Loader2, Edit3, Save } from "lucide-react";
+import { Loader2, Edit3 } from "lucide-react";
 
 import {
   Dialog,
