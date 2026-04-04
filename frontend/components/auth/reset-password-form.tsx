@@ -122,6 +122,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     defaultValues: { password: "", confirmPassword: "" },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const passwordValue = watch("password");
 
   const onSubmit = async (data: FormValues) => {
@@ -131,6 +132,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     //   body: JSON.stringify({ token, password: data.password }),
     // });
     void token;
+    void data;
     await new Promise((res) => setTimeout(res, 1000));
     setDone(true);
   };

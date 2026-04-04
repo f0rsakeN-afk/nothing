@@ -115,7 +115,7 @@ export default function ContextPage() {
         {/* ── What's coming ─────────────────────────────────── */}
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50 mb-4">
-            What's coming
+            What&apos;s coming
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {COMING_SOON.map(({ icon: Icon, title, description }) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback } from "react";
+import Image from "next/image";
 import {
   Download,
   ExternalLink,
@@ -48,10 +49,13 @@ const ImageView = memo(function ImageView({ item }: { item: MediaItem }) {
             <p className="text-sm">Failed to load image</p>
           </div>
         ) : (
-          <img
+          <Image
             src={item.src}
             alt={item.alt ?? ""}
             onError={() => setError(true)}
+            width={1200}
+            height={800}
+            unoptimized
             className="max-h-[65vh] max-w-full rounded-lg object-contain"
           />
         )}

@@ -45,7 +45,7 @@ export default function DeleteProjectModal({
             Delete Project
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This action is irreversible. All research, documents, and chat history associated with <span className="font-semibold text-foreground">"{project?.name}"</span> will be permanently deleted.
+            This action is irreversible. All research, documents, and chat history associated with <span className="font-semibold text-foreground">&quot;{project?.name}&quot;</span> will be permanently deleted.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

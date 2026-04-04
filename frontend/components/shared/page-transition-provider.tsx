@@ -13,7 +13,8 @@ function OverlayController() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setVisible(false);
+    const frame = requestAnimationFrame(() => setVisible(false));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   return (
