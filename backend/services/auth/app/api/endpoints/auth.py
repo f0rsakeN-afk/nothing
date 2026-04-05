@@ -163,3 +163,16 @@ async def update_password(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.get("/health", tags=["System"])
+async def health_check() -> dict[str, str]:
+    """
+    Service health check endpoint.
+    """
+    from app.core.config import settings
+    return {
+        "status": "active",
+        "app": settings.APP_NAME,
+        "environment": settings.ENVIRONMENT,
+        "version": "1.0.0"
+    }
