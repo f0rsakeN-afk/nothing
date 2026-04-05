@@ -1,49 +1,90 @@
 # ---------------------------
-# Node / Bun (Gateway)
-# ---------------------------
-node_modules/
-bun.lockb
-.env
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-
-# Build folders
-dist/
-build/
-
-# ---------------------------
 # Python (Backend Services)
 # ---------------------------
 # Virtual environments
 venv/
+.venv/
 */venv/
+*/.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Distribution / Build
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
 # Logs
 *.log
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing / Coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
 
 # Environment variables
 .env
-.env.* 
+.env.*
+.env.local
 
 # SQLite / DB files (if used locally)
 *.sqlite3
 *.db
+*.db-journal
 
 # Migrations (optional, track if needed)
-migrations/
-alembic.ini
+# migrations/
+# alembic.ini
+
+# ---------------------------
+# Node / Bun (Gateway)
+# ---------------------------
+node_modules/
+bun.lockb
+.npm
+.eslintcache
+.stylelintcache
 
 # ---------------------------
 # OS / IDE
 # ---------------------------
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .idea/
 *.swp
+*.swo
+*~
