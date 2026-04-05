@@ -48,6 +48,6 @@ app.add_middleware(CSRFMiddleware)
 app.include_router(auth.router)
 
 
-@app.get("/health", include_in_schema=False)
-async def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/", include_in_schema=False)
+async def root():
+    return {"message": "Welcome to Nothing Auth API"}
