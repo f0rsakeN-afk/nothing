@@ -43,7 +43,7 @@ const ResultItem = React.memo(function ResultItem({
   return (
     <button className="flex w-full items-center gap-3 px-4 py-2.5 text-left   hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none">
       <MessageCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 flex items-center justify-between min-w-0">
         {matchIdx !== -1 ? (
           <p className="text-[13px] font-medium text-foreground truncate">
             {item.title.slice(0, matchIdx)}
@@ -53,7 +53,7 @@ const ResultItem = React.memo(function ResultItem({
             {item.title.slice(matchIdx + query.length)}
           </p>
         ) : (
-          <p className="text-[13px] font-medium text-foreground truncate">
+          <p className="text-[13px] font-semibold tracking-wide text-foreground truncate">
             {item.title}
           </p>
         )}

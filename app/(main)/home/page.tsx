@@ -44,7 +44,7 @@ export default function HomePage() {
         <div className="flex flex-1 flex-col items-center justify-center w-full md:flex-none">
           <h1
             suppressHydrationWarning
-            className="mb-8 text-center text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+            className="mb-8 text-center text-3xl font-semibold text-foreground md:text-4xl font-display tracking-wide"
           >
             {heading}
           </h1>

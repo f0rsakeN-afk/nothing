@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/shared/ThemeToggler";
 import Logo from "@/components/shared/Logo";
+import { useStackApp, useUser } from "@stackframe/stack";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,9 @@ export function MarketingHeader() {
 
   const closeSheet = useCallback(() => setOpen(false), []);
 
+  const user = useUser();
+  const app = useStackApp();
+
   return (
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
@@ -87,12 +91,11 @@ export function MarketingHeader() {
         {/* Desktop right actions */}
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost">
-            <Link href="/login">Sign in</Link>
-          </Button>
-          <Button>
-            <Link href="/signup">Get started</Link>
-          </Button>
+          {user ? (
+            <Button>Go to Home</Button>
+          ) : (
+            <Button onClick={() => app.redirectToSignIn()}>Sign In</Button>
+          )}
         </div>
 
         {/* Mobile: theme toggle + sheet trigger */}

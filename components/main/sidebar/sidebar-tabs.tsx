@@ -65,7 +65,7 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
                 />
               )}
               <tab.icon className="relative z-10 h-3.5 w-3.5" />
-              <span className="relative z-10">{tab.label}</span>
+              <span className="relative z-10 font-semibold tracking-wider">{tab.label}</span>
             </button>
           );
         })}

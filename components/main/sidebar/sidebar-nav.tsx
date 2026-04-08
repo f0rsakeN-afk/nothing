@@ -85,7 +85,7 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
                 <Icon className="h-4 w-4 shrink-0" />
                 {!isCollapsed && (
                   <>
-                    <span className="text-[13px] flex-1">{label}</span>
+                    <span className="text-[13px] flex-1 font-semibold tracking-wider">{label}</span>
                     {comingSoon && (
                       <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/40 shrink-0">
                         Soon

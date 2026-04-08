@@ -82,7 +82,7 @@ export function ChatHistoryItem({ item }: { item: HistoryItem }) {
               href={`/chat/${item.id}`}
               className="flex min-w-0 items-center gap-2 pr-7"
             >
-              <span className="flex-1 truncate text-[12.5px]">
+              <span className="flex-1 font-semibold tracking-wider truncate text-[12.5px]">
                 {item.title}
               </span>
             </Link>

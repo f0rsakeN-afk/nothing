@@ -23,7 +23,7 @@ export const Chip = memo(function Chip({ chip, onOpen }: ChipProps) {
         "flex items-center gap-1.5 rounded-full border border-border bg-card",
         "px-3.5 py-1.5 text-[13px] font-medium text-muted-foreground",
         "hover:border-foreground/20 hover:bg-accent/50 hover:text-foreground",
-        "transition-colors duration-150",
+        "transition-colors duration-150 font-semibold tracking-wide",
       )}
     >
       <Icon className="h-3.5 w-3.5" />

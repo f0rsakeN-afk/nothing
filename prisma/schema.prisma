@@ -1,70 +1,274 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-
-  @@unique([email])
-  @@map("user")
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
 }
 
-model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
+model User {
+  id        String   @id @default(uuid())
+  stackId   String   @unique
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  seenOnboarding Boolean   @default(false)
+  isActive       Boolean   @default(true)
+
+  role      Role       @default(USER)
+  reports   Report[]
+  feedbacks Feedback[]
+  projects  Project[]
+
+  customize Customize?
+
+  @@index([stackId])
+  @@index([deletedAt])
+  @@index([role])
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  title     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deletedAt DateTime?
+  archivedAt DateTime?
 
-  @@unique([token])
-  @@index([userId])
-  @@map("session")
+  projectId String?
+  project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  chatFiles ChatFile[]
+  messages  Message[]
+
+  @@index([projectId])
+  @@index([deletedAt])
+  @@index([archivedAt])
 }
 
-model Account {
-  id                    String    @id
-  accountId             String
-  providerId            String
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@index([userId])
-  @@map("account")
+enum SENDER {
+  user
+  ai
 }
 
-model Verification {
-  id         String   @id
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  deletedAt DateTime?
 
-  @@index([identifier])
-  @@map("verification")
+  sender String
+  role   SENDER? @default(user)
+
+  content String
+  type    String  @default("text")
+
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messageFiles MessageFile[]
+
+  @@index([chatId])
+  @@index([deletedAt])
+}
+
+model File {
+  id   String @id @default(cuid())
+  name String
+  url  String
+  type String
+
+  createdAt    DateTime       @default(now())
+  deletedAt    DateTime?
+  projectFiles ProjectFile[]
+  chatFiles    ChatFile[]
+  messageFiles MessageFile[]
+
+  @@index([deletedAt])
+  @@index([type])
+}
+
+model ProjectFile {
+  projectId String
+  fileId    String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, fileId])
+}
+
+model MessageFile {
+  messageId String
+  fileId    String
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, fileId])
+}
+
+model ChatFile {
+  chatId String
+  fileId String
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, fileId])
+}
+
+model Project {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+
+  instruction String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  archivedAt DateTime?
+
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats        Chat[]
+  projectFiles ProjectFile[]
+
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([archivedAt])
+  @@index([name])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  reason      String
+  description String
+  email       String
+  image       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([rating])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  topic     String
+  message   String
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  @@index([email])
+  @@index([topic])
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+enum KnowledgeDetail {
+  CONCISE
+  BALANCED
+  DETAILED
+}
+
+model Customize {
+  id              String          @id @default(cuid())
+  name            String
+  interest        String[]
+  responseTone    String
+  knowledgeDetail KnowledgeDetail @default(BALANCED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([deletedAt])
+}
+
+model OnboardingData {
+  id String @id @default(cuid())
+}
+
+enum TrashableModel {
+  USER
+  CHAT
+  MESSAGE
+  FILE
+  PROJECT
+  REPORT
+  FEEDBACK
+  CONTACT
+  CUSTOMIZE
+}
+
+enum ArchivableModel {
+  CHAT
+  PROJECT
+}
+
+model Trash {
+  id         String         @id @default(cuid())
+  modelType  TrashableModel
+  modelId    String
+  data       Json
+  deletedAt  DateTime       @default(now())
+  deletedBy  String?
+  reason     String?
+  expiresAt  DateTime?
+
+  @@index([modelType, modelId])
+  @@index([deletedAt])
+}
+
+model Archive {
+  id         String          @id @default(cuid())
+  modelType  ArchivableModel
+  modelId    String
+  data       Json
+  archivedAt DateTime        @default(now())
+  archivedBy String?
+
+  @@index([modelType, modelId])
+  @@index([archivedAt])
 }

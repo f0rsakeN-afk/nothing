@@ -18,7 +18,7 @@ export const StepsItem = ({
 }: StepsItemProps) => (
   <div
     className={cn(
-      'text-muted-foreground hover:text-foreground text-sm transition-colors duration-200 [&_strong]:text-blue-500',
+      'text-muted-foreground hover:text-foreground text-sm transition-colors duration-200 [&_strong]:text-blue-500 tracking-wide',
       className,
     )}
     {...props}

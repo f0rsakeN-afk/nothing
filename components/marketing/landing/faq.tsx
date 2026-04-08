@@ -80,7 +80,7 @@ export const FAQ = ({
                 Got Questions?
               </h1>
             ) : (
-              <h2 className="text-2xl tracking-tight md:text-4xl lg:text-5xl">
+              <h2 className="text-2xl font-display tracking-tight md:text-4xl lg:text-5xl">
                 Got Questions?
               </h2>
             )}

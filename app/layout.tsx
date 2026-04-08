@@ -6,6 +6,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import MainLayout from "./mainLayout";
 import { Toaster } from "sonner";
+import { StackProvider, StackTheme } from "@stackframe/stack";
+import { stackServerApp } from "@/src/stack/server";
 //import { PageTransitionProvider } from "@/components/shared/page-transition-provider";
 
 // const inter = Inter({
@@ -50,13 +52,18 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${sourceSerif.variable} [--font-code:var(--font-sans)] h-full antialiased scroll-smooth`}
     >
       <body className="min-h-dvh flex flex-col bg-background text-foreground">
-        <ThemeProvider defaultTheme="dark" attribute="class">
-          {/* <PageTransitionProvider>{children}</PageTransitionProvider> */}
-          <Toaster position="top-center" richColors />
-          <MainLayout>
-            {children}
-          </MainLayout>
-        </ThemeProvider>
+        <StackProvider app={stackServerApp}>
+          <StackTheme>
+
+          <ThemeProvider defaultTheme="dark" attribute="class">
+            <Toaster position="top-center" richColors />
+            {/* <PageTransitionProvider>{children}</PageTransitionProvider> */}
+            <MainLayout>
+              {children}
+            </MainLayout>
+          </ThemeProvider>
+          </StackTheme>
+        </StackProvider>
       </body>
     </html>
   );

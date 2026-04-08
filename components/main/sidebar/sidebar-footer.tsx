@@ -62,24 +62,24 @@ export function AppSidebarFooter() {
     setTheme(theme === "light" ? "dark" : "light");
   }, [theme, setTheme]);
 
-  const openSettings   = React.useCallback(() => setSettingsOpen(true), []);
-  const openAccount    = React.useCallback(() => setAccountOpen(true), []);
-  const openCustomize  = React.useCallback(() => setCustomizeOpen(true), []);
-  const openPricing    = React.useCallback(() => setPricingDialogOpen(true), []);
-  const openFeedback   = React.useCallback(() => setFeedbackOpen(true), []);
-  const openLogout     = React.useCallback(() => setLogoutAlertOpen(true), []);
-  const openShortcuts  = React.useCallback(() => setShortcutsOpen(true), []);
+  const openSettings = React.useCallback(() => setSettingsOpen(true), []);
+  const openAccount = React.useCallback(() => setAccountOpen(true), []);
+  const openCustomize = React.useCallback(() => setCustomizeOpen(true), []);
+  const openPricing = React.useCallback(() => setPricingDialogOpen(true), []);
+  const openFeedback = React.useCallback(() => setFeedbackOpen(true), []);
+  const openLogout = React.useCallback(() => setLogoutAlertOpen(true), []);
+  const openShortcuts = React.useCallback(() => setShortcutsOpen(true), []);
 
   // ── Global keyboard shortcuts ──────────────────────────────────────────
   useKeyboardShortcut(",", openSettings, { meta: true });
   useKeyboardShortcut(",", openSettings, { ctrl: true });
-  useKeyboardShortcut("a", openAccount,  { meta: true,  shift: true });
-  useKeyboardShortcut("a", openAccount,  { ctrl: true,  shift: true });
-  useKeyboardShortcut("f", openFeedback, { meta: true,  shift: true });
-  useKeyboardShortcut("f", openFeedback, { ctrl: true,  shift: true });
+  useKeyboardShortcut("a", openAccount, { meta: true, shift: true });
+  useKeyboardShortcut("a", openAccount, { ctrl: true, shift: true });
+  useKeyboardShortcut("f", openFeedback, { meta: true, shift: true });
+  useKeyboardShortcut("f", openFeedback, { ctrl: true, shift: true });
   useKeyboardShortcut("?", openShortcuts);
 
-  const goToLanding = React.useCallback(() => router.push("/"), [router]);
+  const goToLanding = React.useCallback(() => router.push("/about"), [router]);
   const openTerms = React.useCallback(
     () => window.open("/legal/terms", "_blank"),
     [],
@@ -98,7 +98,7 @@ export function AppSidebarFooter() {
           <Button
             variant="outline"
             onClick={openPricing}
-            className="h-9 w-full border-sidebar-border bg-transparent text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground  "
+            className="h-9 w-full border-sidebar-border bg-transparent text-[13px] font-semibold tracking-wide text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground  "
           >
             Upgrade
           </Button>
@@ -118,7 +118,7 @@ export function AppSidebarFooter() {
             {!isCollapsed && (
               <>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-medium text-sidebar-foreground leading-none mb-1">
+                  <p className="text-[12.5px] font-semibold tracking-wide text-sidebar-foreground leading-none mb-1">
                     Nightcrawl3r
                   </p>
                   <span className="inline-flex items-center rounded-full bg-sidebar-accent/50 px-1.5 py-0.5 text-[9.5px] font-medium text-sidebar-foreground/50 tracking-wide">
@@ -167,7 +167,9 @@ export function AppSidebarFooter() {
               >
                 <Keyboard className="h-3.5 w-3.5 text-muted-foreground" />
                 Keyboard shortcuts
-                <span className="ml-auto text-[10px] text-muted-foreground/50 font-mono">?</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/50 font-mono">
+                  ?
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2.5 text-[13px] cursor-pointer"
