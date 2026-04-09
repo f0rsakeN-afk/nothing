@@ -9,21 +9,48 @@ import { CHIPS, type ChipData } from "@/components/main/home/data";
 import { HEADING_PHRASES } from "@/components/main/home/data/headings";
 import { CreditsButton } from "@/components/main/header/credits-button";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
-import { randomUUID } from "@/lib/utils";
+import { MemoryDialog } from "@/components/main/memory/memory-dialog";
 
 export default function HomePage() {
   const router = useRouter();
   const [input, setInput] = useState("");
+  const [webSearch, setWebSearch] = useState(false);
+  const [memoryDialogOpen, setMemoryDialogOpen] = useState(false);
   const [heading] = useState(
     () => HEADING_PHRASES[Math.floor(Math.random() * HEADING_PHRASES.length)],
   );
   const [activeChip, setActiveChip] = useState<ChipData | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleSubmit = useCallback(
-    (value: string) => {
-      router.push(`/chat/${randomUUID()}?q=${encodeURIComponent(value)}`);
+    async (value: string) => {
+      if (isCreating) return;
+      setIsCreating(true);
+
+      try {
+        // Create chat via API
+        const res = await fetch("/api/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstMessage: value }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to create chat");
+        }
+
+        const { id: chatId, shouldTriggerAI } = await res.json();
+
+        // Navigate to the new chat with the message as a query param
+        const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
+        const webSearchParam = webSearch ? "&web=1" : "";
+        router.push(`/chat/${chatId}?q=${encodeURIComponent(value)}${triggerParam}${webSearchParam}`);
+      } catch (error) {
+        console.error("Error creating chat:", error);
+        setIsCreating(false);
+      }
     },
-    [router],
+    [router, isCreating, webSearch]
   );
 
   // Closes the modal and populates the input in one go.
@@ -61,6 +88,9 @@ export default function HomePage() {
             value={input}
             onChange={setInput}
             onSubmit={handleSubmit}
+            isLoading={isCreating}
+            webSearch={webSearch}
+            setWebSearch={setWebSearch}
           />
         </div>
       </div>

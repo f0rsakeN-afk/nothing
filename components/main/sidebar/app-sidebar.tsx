@@ -14,9 +14,11 @@ import { type TabId } from "./data";
 import CreateProjectDialog from "./dialogs/projects/create-project";
 import RenameProjectModal from "./dialogs/projects/rename-project";
 import DeleteProjectModal from "./dialogs/projects/delete-project";
+import { useUser } from "@stackframe/stack";
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const user = useUser();
   const [activeTab, setActiveTab] = React.useState<TabId>("chats");
   const [searchOpen, setSearchOpen] = React.useState(false);
   const isCollapsed = state === "collapsed";
@@ -32,8 +34,8 @@ export function AppSidebar() {
 
   const openSearch = React.useCallback(() => setSearchOpen(true), []);
 
-  useKeyboardShortcut("k", openSearch, { meta: true, ignoreInputs: false });
-  useKeyboardShortcut("k", openSearch, { ctrl: true, ignoreInputs: false });
+  useKeyboardShortcut("k", openSearch, { meta: true, ignoreInputs: false, enabled: !!user });
+  useKeyboardShortcut("k", openSearch, { ctrl: true, ignoreInputs: false, enabled: !!user });
 
   const openCreateProject = React.useCallback(() => {
     setCreateProjectOpen(true);
@@ -62,14 +64,18 @@ export function AppSidebar() {
 
         <SidebarContent className="gap-0">
           <SidebarNav onSearchOpen={openSearch} />
-          <SidebarTabs activeTab={activeTab} onTabChange={setActiveTab} />
-          {!isCollapsed && (
-            <SidebarHistory
-              activeTab={activeTab}
-              onCreateProject={openCreateProject}
-              onRenameProject={openRenameProject}
-              onDeleteProject={openDeleteProject}
-            />
+          {user && (
+            <>
+              <SidebarTabs activeTab={activeTab} onTabChange={setActiveTab} />
+              {!isCollapsed && (
+                <SidebarHistory
+                  activeTab={activeTab}
+                  onCreateProject={openCreateProject}
+                  onRenameProject={openRenameProject}
+                  onDeleteProject={openDeleteProject}
+                />
+              )}
+            </>
           )}
         </SidebarContent>
 

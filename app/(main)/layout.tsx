@@ -5,6 +5,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/main/sidebar/app-sidebar";
+import { InitUser } from "@/components/init-user";
 import "../../styles/hide-scrollbar.css";
 
 export default async function MainLayout({
@@ -28,6 +29,7 @@ export default async function MainLayout({
           {/* <span className="text-sm font-medium text-foreground">Eryx</span> */}
         </header>
 
+        <InitUser />
         {children}
       </SidebarInset>
     </SidebarProvider>
