@@ -8,6 +8,7 @@ export const TABS = [
 
 export type TabId = (typeof TABS)[number]["id"];
 
+// Types for chat/project items
 export type HistoryItem = {
   id: string;
   title: string;
@@ -18,47 +19,5 @@ export type HistoryGroup = {
   items: HistoryItem[];
 };
 
-export const HISTORY: HistoryGroup[] = [
-  {
-    label: "Today",
-    items: [
-      { id: "1", title: "Architecture Review" },
-      { id: "2", title: "API Design Patterns" },
-      { id: "3", title: "Fix memory leak in worker" },
-    ],
-  },
-  {
-    label: "Yesterday",
-    items: [
-      { id: "4", title: "Draft onboarding email" },
-      { id: "5", title: "Refactor auth middleware" },
-      { id: "6", title: "Postgres query optimisation" },
-    ],
-  },
-  {
-    label: "Last 7 Days",
-    items: [
-      { id: "7", title: "CI pipeline setup" },
-      { id: "8", title: "Rate limiting strategy" },
-      { id: "9", title: "Webhook retry logic" },
-      { id: "10", title: "Stripe integration plan" },
-    ],
-  },
-];
-export const PROJECTS: HistoryGroup[] = [
-  {
-    label: "Pinned",
-    items: [
-      { id: "p1", title: "Eryx AI Platform" },
-      { id: "p2", title: "Edge Network Design" },
-    ],
-  },
-  {
-    label: "Recent",
-    items: [
-      { id: "p3", title: "Auth Middleware Refactor" },
-      { id: "p4", title: "Database Migration v2" },
-      { id: "p5", title: "UI System Overhaul" },
-    ],
-  },
-];
+// Note: HISTORY and PROJECTS static data removed
+// Data is now fetched from API via React Query in SidebarHistory

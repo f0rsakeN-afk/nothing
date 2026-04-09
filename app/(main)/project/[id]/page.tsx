@@ -28,6 +28,7 @@ export default function ProjectWorkspacePage({
   params: { id: string };
 }) {
   const [input, setInput] = useState("");
+  const [webSearch, setWebSearch] = useState(false);
 
   const handleSubmit = (value: string) => {
     console.log("Submitting in project:", params.id, "value:", value);
@@ -55,6 +56,8 @@ export default function ProjectWorkspacePage({
                 value={input}
                 onChange={setInput}
                 onSubmit={handleSubmit}
+                webSearch={webSearch}
+                setWebSearch={setWebSearch}
               />
             </div>
 

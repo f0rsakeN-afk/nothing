@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
+import React from "react";
 import Link from "next/link";
-import { FolderOpen, Plus, Search, Library, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, Search, Library, Trash2, Brain } from "lucide-react";
 
 import {
   SidebarGroup,
@@ -11,8 +13,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useUser } from "@stackframe/stack";
 
-const NAV_ITEMS = [
+type NavItem = {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string | null;
+  primary: boolean;
+  comingSoon: boolean;
+  authOnly: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
   {
     id: "new-chat",
     label: "New Chat",
@@ -20,6 +33,7 @@ const NAV_ITEMS = [
     href: "/home",
     primary: true,
     comingSoon: false,
+    authOnly: false,
   },
   {
     id: "search",
@@ -28,6 +42,7 @@ const NAV_ITEMS = [
     href: null,
     primary: false,
     comingSoon: false,
+    authOnly: true,
   },
   {
     id: "context",
@@ -35,7 +50,17 @@ const NAV_ITEMS = [
     icon: Library,
     href: "/context",
     primary: false,
-    comingSoon: true,
+    comingSoon: false,
+    authOnly: true,
+  },
+  {
+    id: "memory",
+    label: "Memory",
+    icon: Brain,
+    href: "/memory",
+    primary: false,
+    comingSoon: false,
+    authOnly: true,
   },
   {
     id: "files",
@@ -44,6 +69,7 @@ const NAV_ITEMS = [
     href: "/files",
     primary: false,
     comingSoon: false,
+    authOnly: true,
   },
   {
     id: "trash",
@@ -52,8 +78,9 @@ const NAV_ITEMS = [
     href: "/trash",
     primary: false,
     comingSoon: false,
+    authOnly: true,
   },
-] as const;
+];
 
 interface SidebarNavProps {
   onSearchOpen: () => void;
@@ -61,12 +88,18 @@ interface SidebarNavProps {
 
 export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
   const { state } = useSidebar();
+  const user = useUser();
   const isCollapsed = state === "collapsed";
+
+  const visibleItems = useMemo(
+    () => NAV_ITEMS.filter(({ authOnly }) => !authOnly || user),
+    [user],
+  );
 
   return (
     <SidebarGroup className={cn("py-2", isCollapsed ? "px-1.5" : "px-2")}>
       <SidebarMenu className="gap-0.5">
-        {NAV_ITEMS.map(
+        {visibleItems.map(
           ({ id, label, icon: Icon, href, primary, comingSoon }) => (
             <SidebarMenuItem key={id}>
               <SidebarMenuButton
@@ -85,7 +118,9 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
                 <Icon className="h-4 w-4 shrink-0" />
                 {!isCollapsed && (
                   <>
-                    <span className="text-[13px] flex-1 font-semibold tracking-wider">{label}</span>
+                    <span className="text-[13px] flex-1 font-semibold tracking-wider">
+                      {label}
+                    </span>
                     {comingSoon && (
                       <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/40 shrink-0">
                         Soon

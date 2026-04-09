@@ -12,6 +12,9 @@ import {
 
 interface MessageActionsProps {
   content: string;
+  messageId?: string;
+  chatId?: string;
+  initialReaction?: "like" | "dislike" | null;
   className?: string;
 }
 
@@ -21,10 +24,13 @@ interface MessageActionsProps {
  */
 export const MessageActions = memo(function MessageActions({
   content,
+  messageId,
+  chatId,
+  initialReaction = null,
   className,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
-  const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
+  const [feedback, setFeedback] = useState<"like" | "dislike" | null>(initialReaction);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -44,13 +50,32 @@ export const MessageActions = memo(function MessageActions({
     }
   }, [content]);
 
-  const handleLike = useCallback(() => {
-    setFeedback((prev) => (prev === "like" ? null : "like"));
-  }, []);
+  const handleReaction = useCallback(async (reaction: "like" | "dislike") => {
+    if (!messageId || !chatId) return;
 
-  const handleDislike = useCallback(() => {
-    setFeedback((prev) => (prev === "dislike" ? null : "dislike"));
-  }, []);
+    // Optimistic update
+    const newFeedback = feedback === reaction ? null : reaction;
+    setFeedback(newFeedback);
+
+    try {
+      const res = await fetch(`/api/messages/${messageId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reaction, chatId }),
+      });
+
+      if (!res.ok) {
+        // Revert on error
+        setFeedback(feedback);
+      }
+    } catch {
+      // Revert on error
+      setFeedback(feedback);
+    }
+  }, [messageId, chatId, feedback]);
+
+  const handleLike = useCallback(() => handleReaction("like"), [handleReaction]);
+  const handleDislike = useCallback(() => handleReaction("dislike"), [handleReaction]);
 
   return (
     <TooltipProvider delay={400}>

@@ -1,49 +1,172 @@
-"use client";
+'use client';
 
-import { memo, useState, useCallback, useRef, useEffect } from "react";
-import { Copy, Check, Pencil, X } from "lucide-react";
+import React, { memo, useState, useCallback, useRef, useEffect } from "react";
+import { Copy, Check, Pencil, X, Loader2, Globe, AlertCircle, Check as CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AiResponseFormatter } from "./ai-response-formatter";
 import { MessageActions } from "./message-actions";
-
-/* remove this later on  */
-import { FileSearch } from "lucide-react";
-import {
-  Steps,
-  StepsTrigger,
-  StepsContent,
-  StepsBar,
-  StepsItem,
-} from "@/components/odysseyui/steps";
-
-import {
-  ThoughtChain,
-  ThoughtChainStep,
-  ThoughtChainTrigger,
-  ThoughtChainContent,
-  ThoughtChainItem,
-} from "@/components/odysseyui/thought-chain";
+import { BorderTrail } from "@/components/ui/border-trail";
+import { ShimmerText } from "@/components/odysseyui/text-shimmer";
+import { Card, CardContent } from "@/components/ui/card";
 
 export type MessageRole = "user" | "assistant";
+
+export type MessageStatus = "idle" | "submitting" | "streaming" | "done" | "error";
 
 export interface Message {
   id: string;
   role: MessageRole;
   content: string;
-  isStreaming?: boolean; // true while SSE chunks are arriving
+  isStreaming?: boolean;
+  status?: MessageStatus;
+  chatId?: string;
+  toolProgress?: {
+    name: string;
+    status: "running" | "completed" | "error";
+    progress?: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
-// UserMessage — with copy + inline edit
+// Search Loading State (shown during web search)
+// ---------------------------------------------------------------------------
+
+export const SearchLoadingState = memo(function SearchLoadingState({
+  query,
+}: {
+  query?: string;
+}) {
+  return (
+    <Card className="relative w-full my-4 overflow-hidden shadow-none">
+      <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200 dark:from-blue-400 dark:via-blue-500 dark:to-blue-700" size={80} />
+      <CardContent className="px-6!">
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative h-10 w-10 rounded-full flex items-center justify-center bg-blue-50 dark:bg-blue-950">
+              <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200" size={40} />
+              <Globe className="h-5 w-5 text-blue-500" />
+            </div>
+            <div className="space-y-2">
+              <ShimmerText
+                text={query ? `Searching: ${query}` : "Searching the web..."}
+                className="text-base font-medium"
+                duration={2}
+              />
+              <div className="flex gap-2">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 animate-pulse"
+                    style={{
+                      width: `${Math.random() * 40 + 20}px`,
+                      animationDelay: `${i * 0.2}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Tool Progress Card
+// ---------------------------------------------------------------------------
+
+export const ToolProgressCard = memo(function ToolProgressCard({
+  name,
+  status,
+  progress,
+}: {
+  name: string;
+  status: "running" | "completed" | "error";
+  progress?: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-3 px-2">
+      <div
+        className={cn(
+          "relative h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+          status === "running" && "bg-blue-50 dark:bg-blue-950",
+          status === "completed" && "bg-green-50 dark:bg-green-950",
+          status === "error" && "bg-red-50 dark:bg-red-950"
+        )}
+      >
+        {status === "running" && (
+          <>
+            <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200" size={40} />
+            <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+          </>
+        )}
+        {status === "completed" && (
+          <CheckIcon className="h-4 w-4 text-green-500" />
+        )}
+        {status === "error" && (
+          <AlertCircle className="h-4 w-4 text-red-500" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-foreground truncate">{name}</p>
+          {status === "running" && progress !== undefined && (
+            <span className="text-xs text-muted-foreground">{progress}%</span>
+          )}
+        </div>
+        {status === "running" && (
+          <div className="h-1 mt-1 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-blue-500 transition-all duration-300"
+              style={{ width: `${progress || 0}%` }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Streaming Status Indicator
+// ---------------------------------------------------------------------------
+
+export const StreamingStatusIndicator = memo(function StreamingStatusIndicator({
+  status,
+  isSearchMode,
+}: {
+  status: MessageStatus;
+  isSearchMode?: boolean;
+}) {
+  if (status !== "streaming") return null;
+
+  if (isSearchMode) {
+    return <SearchLoadingState />;
+  }
+
+  return (
+    <div className="flex items-center gap-2 py-2 px-3">
+      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+      <span className="text-xs text-muted-foreground">Generating response...</span>
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// UserMessage
 // ---------------------------------------------------------------------------
 
 interface UserMessageProps {
   content: string;
+  status?: MessageStatus;
   onEdit?: (newContent: string) => void;
 }
 
 const UserMessage = memo(function UserMessage({
   content,
+  status,
   onEdit,
 }: UserMessageProps) {
   const [copied, setCopied] = useState(false);
@@ -51,7 +174,6 @@ const UserMessage = memo(function UserMessage({
   const [draft, setDraft] = useState(content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize + focus when entering edit mode
   useEffect(() => {
     if (!editing) return;
     const el = textareaRef.current;
@@ -104,6 +226,8 @@ const UserMessage = memo(function UserMessage({
     [],
   );
 
+  const isSubmitting = status === "submitting";
+
   if (editing) {
     return (
       <div className="flex justify-end">
@@ -117,13 +241,13 @@ const UserMessage = memo(function UserMessage({
             className={cn(
               "w-full resize-none overflow-hidden rounded-2xl rounded-tr-sm",
               "bg-primary px-4 py-2.5 text-[14px] leading-relaxed text-primary-foreground",
-              "outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
+              "outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
             )}
           />
           <div className="flex items-center justify-end gap-1.5">
             <button
               onClick={handleCancel}
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-muted-foreground/60 hover:bg-muted/60 hover:text-muted-foreground  "
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-muted-foreground/60 hover:bg-muted/60 hover:text-muted-foreground"
             >
               <X className="h-3 w-3" />
               Cancel
@@ -142,26 +266,23 @@ const UserMessage = memo(function UserMessage({
 
   return (
     <div className="flex flex-col items-end gap-1.5 px-2 sm:px-0">
-      <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-[14px] leading-relaxed text-primary-foreground shadow-xs">
+      <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-[14px] leading-relaxed text-primary-foreground shadow-xs flex items-center gap-2">
+        {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
         {content}
       </div>
       <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover/user-msg:opacity-100">
         <button
           onClick={handleCopy}
           aria-label={copied ? "Copied" : "Copy message"}
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-medium text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground  "
+          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-medium text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground"
         >
-          {copied ? (
-            <Check className="h-3 w-3 text-primary" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
+          {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
           {copied ? "Copied" : "Copy"}
         </button>
         <button
           onClick={handleEdit}
           aria-label="Edit message"
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-medium text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground  "
+          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-medium text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground"
         >
           <Pencil className="h-3 w-3" />
           Edit
@@ -178,88 +299,37 @@ const UserMessage = memo(function UserMessage({
 const AssistantMessage = memo(function AssistantMessage({
   content,
   isStreaming,
+  status,
+  messageId,
+  chatId,
+  toolProgress,
+  isSearchMode,
 }: {
   content: string;
   isStreaming?: boolean;
+  status?: MessageStatus;
+  messageId?: string;
+  chatId?: string;
+  toolProgress?: Message["toolProgress"];
+  isSearchMode?: boolean;
 }) {
   return (
     <div className="group/assistant-msg min-w-0 sm:max-w-[97%]">
+      <StreamingStatusIndicator status={status || "idle"} isSearchMode={isSearchMode} />
+      {toolProgress && (
+        <ToolProgressCard
+          name={toolProgress.name}
+          status={toolProgress.status}
+          progress={toolProgress.progress}
+        />
+      )}
       <AiResponseFormatter content={content} isStreaming={isStreaming} />
-      {!isStreaming && (
-        <>
-          <MessageActions content={content} />
-
-          <div className="py-6">
-            <ThoughtChain>
-              <ThoughtChainStep status="done">
-                <ThoughtChainTrigger>
-                  Understanding the codebase
-                </ThoughtChainTrigger>
-                <ThoughtChainContent>
-                  <ThoughtChainItem>
-                    Scanned 47 files across src/ and packages/
-                  </ThoughtChainItem>
-                  <ThoughtChainItem>
-                    Identified React 18 with TypeScript and Tailwind CSS
-                  </ThoughtChainItem>
-                  <ThoughtChainItem>
-                    No existing auth layer detected
-                  </ThoughtChainItem>
-                </ThoughtChainContent>
-              </ThoughtChainStep>
-
-              <ThoughtChainStep status="active">
-                <ThoughtChainTrigger>
-                  Planning the implementation
-                </ThoughtChainTrigger>
-                <ThoughtChainContent>
-                  <ThoughtChainItem>
-                    Choosing NextAuth.js for session management
-                  </ThoughtChainItem>
-                  <ThoughtChainItem>
-                    Designing protected route middleware
-                  </ThoughtChainItem>
-                </ThoughtChainContent>
-              </ThoughtChainStep>
-
-              <ThoughtChainStep status="pending">
-                <ThoughtChainTrigger>Writing the code</ThoughtChainTrigger>
-                <ThoughtChainContent>
-                  <ThoughtChainItem>auth.ts — provider config</ThoughtChainItem>
-                  <ThoughtChainItem>
-                    middleware.ts — route protection
-                  </ThoughtChainItem>
-                  <ThoughtChainItem>SessionProvider wrapper</ThoughtChainItem>
-                </ThoughtChainContent>
-              </ThoughtChainStep>
-            </ThoughtChain>
-          </div>
-
-          <div className="">
-            <div className="w-full max-w-sm">
-              <Steps defaultOpen>
-                <StepsTrigger leftIcon={<FileSearch className="size-4" />}>
-                  Tool run: analyze repo
-                </StepsTrigger>
-                <StepsContent bar={<StepsBar className="mr-2 ml-1.5" />}>
-                  <div className="space-y-1">
-                    <StepsItem>
-                      Cloning repository <strong>odyssey-ui/www</strong>
-                    </StepsItem>
-                    <StepsItem>
-                      Detected <strong>TypeScript</strong> +{" "}
-                      <strong>Tailwind CSS</strong>
-                    </StepsItem>
-                    <StepsItem>
-                      Found 142 components across 6 packages
-                    </StepsItem>
-                    <StepsItem>Dependency graph resolved in 280ms</StepsItem>
-                  </div>
-                </StepsContent>
-              </Steps>
-            </div>
-          </div>
-        </>
+      {!isStreaming && messageId && (
+        <MessageActions
+          content={content}
+          messageId={messageId}
+          chatId={chatId}
+        />
       )}
     </div>
   );
@@ -287,15 +357,19 @@ export const ChatMessage = memo(function ChatMessage({
     <div
       className={cn(
         "group/user-msg w-full",
-        message.role === "user" ? "py-2" : "py-4",
+        message.role === "user" ? "py-2" : "py-4"
       )}
     >
       {message.role === "user" ? (
-        <UserMessage content={message.content} onEdit={handleEdit} />
+        <UserMessage content={message.content} status={message.status} onEdit={handleEdit} />
       ) : (
         <AssistantMessage
           content={message.content}
           isStreaming={message.isStreaming}
+          status={message.status}
+          messageId={message.id}
+          chatId={message.chatId}
+          toolProgress={message.toolProgress}
         />
       )}
     </div>

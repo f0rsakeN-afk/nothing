@@ -1,28 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AnimatedPlaceholder } from "@/components/ui/animated-placeholder";
-import { PlusMenu } from "./plus-menu";
 import { SendButton } from "./send-button";
 import { FilePreviews } from "./file-previews";
-import { VoiceButton } from "./voice-button";
-import { useSpeechToText } from "./use-speech-to-text";
-
-const PLACEHOLDERS = [
-  "Ask anything…",
-  "What are you building today?",
-  "Explain this like I'm five…",
-  "Why is my code crying at 2am?",
-  "Debug this, please. I'm begging.",
-  "Help me write something brilliant…",
-  "What's the best way to do this?",
-  "I swear this worked yesterday…",
-  "Turn this chaos into something clean.",
-  "Summarize, simplify, or just vibe with me.",
-];
+import { Globe, Brain, Paperclip, X } from "lucide-react";
 
 interface Attachment {
   file: File;
@@ -36,6 +18,10 @@ interface ChatInputProps {
   onSubmit: (value: string) => void;
   placeholder?: string;
   className?: string;
+  isLoading?: boolean;
+  webSearch?: boolean;
+  setWebSearch: (val: boolean) => void;
+  onOpenMemory?: () => void;
 }
 
 export function ChatInput({
@@ -43,42 +29,16 @@ export function ChatInput({
   onChange,
   onSubmit,
   className,
+  isLoading = false,
+  webSearch = false,
+  setWebSearch,
+  onOpenMemory,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [isComposing, setIsComposing] = React.useState(false);
-  const [webSearch, setWebSearch] = React.useState(false);
-  const [isMultiline, setIsMultiline] = React.useState(false);
   const [files, setFiles] = React.useState<Attachment[]>([]);
 
-  const { isListening, interimText, toggleListening, isSupported } =
-    useSpeechToText({
-      onResult: (text) => {
-        onChange(value ? `${value.trim()} ${text}` : text);
-      },
-    });
-
-  const isEmpty = !value.trim() && files.length === 0 && !interimText;
-
-  const syncHeight = React.useCallback(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-
-    if (!value && files.length === 0 && !interimText) {
-      el.style.height = "auto";
-      setIsMultiline(false);
-      return;
-    }
-
-    el.style.height = "auto";
-    const scHeight = el.scrollHeight;
-    el.style.height = `${Math.min(scHeight, 200)}px`;
-    setIsMultiline(scHeight > 38 || files.length > 0 || !!interimText);
-  }, [value, files.length, interimText]);
-
-  React.useLayoutEffect(() => {
-    syncHeight();
-  }, [syncHeight]);
+  const isEmpty = !value.trim() && files.length === 0;
 
   const handleChange = React.useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value),
@@ -126,16 +86,24 @@ export function ChatInput({
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey && !isComposing) {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSubmit();
       }
     },
-    [handleSubmit, isComposing],
+    [handleSubmit],
   );
 
+  // Auto-resize textarea
+  React.useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [value]);
+
   return (
-    <TooltipProvider delay={500}>
+    <div className={cn("relative flex flex-col w-full", className)}>
       <input
         type="file"
         ref={fileInputRef}
@@ -144,167 +112,110 @@ export function ChatInput({
         multiple
       />
 
-      <motion.div
-        layout
-        initial={false}
-        animate={{
-          borderRadius: isMultiline ? 24 : 21,
-          transition: { type: "spring", stiffness: 300, damping: 30 },
-        }}
+      {/* Attachments preview */}
+      {files.length > 0 && (
+        <div className="mb-2">
+          <FilePreviews files={files} onRemove={removeFile} />
+        </div>
+      )}
+
+      {/* Textarea */}
+      <div
         className={cn(
-          "relative flex w-full transition-colors duration-300",
-          "bg-background border border-input shadow font-sans",
-          "focus-within:border-primary/50 focus-within:ring-[3px] focus-within:ring-primary/10",
-          isMultiline
-            ? "flex-col p-2"
-            : "flex-row items-center h-[42px] px-1.5 py-1",
-          className,
+          "w-full bg-muted/40 border border-border rounded-2xl",
+          "focus-within:border-primary/50 transition-colors",
         )}
       >
-        <motion.div
-          layout
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          placeholder="Ask anything..."
+          autoFocus
           className={cn(
-            "flex flex-1 items-center min-w-0 font-sans",
-            isMultiline ? "flex-col items-stretch px-2 pt-1" : "flex-row px-1",
+            "block w-full resize-none bg-transparent p-4 pb-0",
+            "text-sm leading-relaxed text-foreground",
+            "placeholder:text-muted-foreground/60 outline-none",
           )}
-        >
-          <div className="flex flex-1 items-center min-w-0">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {!isMultiline && (
-                <motion.div
-                  layoutId="plus-wrapper"
-                  initial={{ opacity: 0, scale: 0.8, x: -5 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, x: -5 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center shrink-0 pr-2"
-                >
-                  <PlusMenu
-                    onFileSelect={handleFileClick}
-                    webSearch={webSearch}
-                    setWebSearch={setWebSearch}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+        />
+      </div>
 
-            <div className="relative flex-1 min-w-0">
-              <FilePreviews files={files} onRemove={removeFile} />
+      {/* Bottom action bar */}
+      <div
+        className={cn(
+          "flex items-center justify-between w-full mt-2 px-1",
+        )}
+      >
+        {/* Left actions */}
+        <div className="flex items-center gap-1">
+          {/* File attach */}
+          <button
+            type="button"
+            onClick={handleFileClick}
+            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Attach files"
+          >
+            <Paperclip className="h-[18px] w-[18px]" />
+          </button>
 
-              <div className="relative">
-                <textarea
-                  ref={textareaRef}
-                  value={value}
-                  onChange={handleChange}
-                  onKeyDown={handleKeyDown}
-                  onCompositionStart={() => setIsComposing(true)}
-                  onCompositionEnd={() => setIsComposing(false)}
-                  rows={1}
-                  autoFocus
-                  className={cn(
-                    "block w-full resize-none bg-transparent",
-                    "py-1.5 text-sm leading-relaxed text-foreground",
-                    "placeholder:text-transparent outline-none hide-scrollbar",
-                    isListening && "text-transparent caret-foreground",
-                  )}
-                />
+          {/* Web Search */}
+          <button
+            type="button"
+            onClick={() => setWebSearch(!webSearch)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors",
+              webSearch
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
+            )}
+            title="Web search"
+          >
+            <Globe className="h-[18px] w-[18px]" />
+            {webSearch && (
+              <span className="text-xs font-medium">Searching</span>
+            )}
+          </button>
 
-                {/* Ghost Text Overlay for Real-time Transcription */}
-                {isListening && (
-                  <div className="pointer-events-none absolute inset-0 py-1.5 text-sm leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
-                    <span className="text-foreground">{value}</span>
-                    <span className="text-muted-foreground/40">
-                      {interimText}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <motion.div
-                layout
-                className={cn(
-                  "pointer-events-none absolute left-0 text-sm leading-relaxed text-muted-foreground/40 transition-colors duration-200",
-                  "truncate whitespace-nowrap pr-14",
-                  isMultiline ? "top-1.5" : "top-1/2 -translate-y-1/2",
-                )}
-              >
-                <AnimatedPlaceholder
-                  placeholders={PLACEHOLDERS}
-                  active={isEmpty}
-                  className="m-0"
-                />
-              </motion.div>
-            </div>
-
-            <AnimatePresence mode="popLayout" initial={false}>
-              {!isMultiline && (
-                <motion.div
-                  layoutId="voice-wrapper"
-                  initial={{ opacity: 0, scale: 0.8, x: 5 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, x: 5 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center shrink-0 pl-2"
-                >
-                  <VoiceButton
-                    isListening={isListening}
-                    toggleListening={toggleListening}
-                    isSupported={isSupported}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <AnimatePresence mode="popLayout" initial={false}>
-              {!isMultiline && (
-                <motion.div
-                  layoutId="send-wrapper"
-                  initial={{ opacity: 0, scale: 0.8, x: 5 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, x: 5 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center shrink-0 pl-2"
-                >
-                  <SendButton onSubmit={handleSubmit} disabled={isEmpty} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-
-        <AnimatePresence mode="popLayout">
-          {isMultiline && (
-            <motion.div
-              layout
-              initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: 8, filter: "blur(4px)", transition: { duration: 0.15 } }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex items-center justify-between mt-1 px-1 pb-1"
+          {/* Memory */}
+          {onOpenMemory && (
+            <button
+              type="button"
+              onClick={onOpenMemory}
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Use memory"
             >
-              <motion.div layoutId="plus-wrapper">
-                <PlusMenu
-                  onFileSelect={handleFileClick}
-                  webSearch={webSearch}
-                  setWebSearch={setWebSearch}
-                />
-              </motion.div>
-              <div className="flex items-center gap-1">
-                <motion.div layoutId="voice-wrapper">
-                  <VoiceButton
-                    isListening={isListening}
-                    toggleListening={toggleListening}
-                    isSupported={isSupported}
-                  />
-                </motion.div>
-                <motion.div layoutId="send-wrapper">
-                  <SendButton onSubmit={handleSubmit} disabled={isEmpty} />
-                </motion.div>
-              </div>
-            </motion.div>
+              <Brain className="h-[18px] w-[18px]" />
+            </button>
           )}
-        </AnimatePresence>
-      </motion.div>
-    </TooltipProvider>
+        </div>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-2">
+          {/* Clear button when there's content */}
+          {value.trim() && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                textareaRef.current?.focus();
+              }}
+              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Clear"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Send button */}
+          <SendButton
+            onSubmit={handleSubmit}
+            disabled={isEmpty || isLoading}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
