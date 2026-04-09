@@ -7,6 +7,10 @@ interface ShortcutOptions {
   alt?: boolean;
   /** Skip when focus is inside an input/textarea/contenteditable (default: true) */
   ignoreInputs?: boolean;
+  /** Disable shortcuts when a dialog/popup is open */
+  disableOnDialog?: boolean;
+  /** Only activate when true (default: true) */
+  enabled?: boolean;
 }
 
 /**
@@ -24,11 +28,15 @@ export function useKeyboardShortcut(
     shift = false,
     alt = false,
     ignoreInputs = true,
+    disableOnDialog = false,
+    enabled = true,
   } = options;
 
   const stableHandler = useCallback(() => handler(), [handler]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (ignoreInputs) {
         const target = e.target as HTMLElement;
@@ -39,6 +47,11 @@ export function useKeyboardShortcut(
         ) {
           return;
         }
+      }
+
+      if (disableOnDialog) {
+        const hasOpenDialog = document.querySelector("[data-state='open']");
+        if (hasOpenDialog) return;
       }
 
       const metaMatch  = meta  ? e.metaKey  : !e.metaKey;
@@ -60,5 +73,5 @@ export function useKeyboardShortcut(
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [key, meta, ctrl, shift, alt, ignoreInputs, stableHandler]);
+  }, [key, meta, ctrl, shift, alt, ignoreInputs, disableOnDialog, enabled, stableHandler]);
 }

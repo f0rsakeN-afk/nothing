@@ -14,7 +14,7 @@ interface SplitViewContextType {
   closeSplitView: () => void;
 }
 
-const SplitViewContext = createContext<SplitViewContextType | null>(null);
+export const SplitViewContext = createContext<SplitViewContextType | null>(null);
 
 export function SplitViewProvider({ children }: { children: ReactNode }) {
   const [splitView, setSplitView] = useState<SplitViewData | null>(null);

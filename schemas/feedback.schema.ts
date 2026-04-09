@@ -6,7 +6,7 @@ export const feedbackSchema = z.object({
     .string()
     .min(5, "Comment must be at least 5 characters long.")
     .max(500, "Comment cannot exceed 500 characters."),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  email: z.string().email("Invalid email address")
 });
 
 export type FeedbackSchema = z.infer<typeof feedbackSchema>;

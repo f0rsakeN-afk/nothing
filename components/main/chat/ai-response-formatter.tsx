@@ -139,6 +139,13 @@ const ChangelogVisualizer = dynamic(
     })),
   { ssr: false },
 );
+const WebSearchResults = dynamic(
+  () =>
+    import("./format/web-search-results").then((m) => ({
+      default: m.WebSearchResults,
+    })),
+  { ssr: false },
+);
 
 // ---------------------------------------------------------------------------
 // YouTube helper — extracts video ID from watch / short / embed URLs
@@ -758,6 +765,10 @@ const mdComponents: Components = {
         return (
           <ChangelogVisualizer data={String(children).replace(/\n$/, "")} />
         );
+      if (language === "web-search")
+        return (
+          <WebSearchResults data={String(children).replace(/\n$/, "")} />
+        );
       return (
         <CodeBlock language={language}>
           {String(children).replace(/\n$/, "")}
@@ -877,7 +888,7 @@ export const AiResponseFormatter = memo(function AiResponseFormatter({
 
   return (
     <MediaContext.Provider value={ctxValue}>
-      <div className={cn("min-w-0 px-2 text-justify", className)}>
+      <div className={cn("min-w-0 px-2 text-justify font-medium", className)}>
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeKatex]}

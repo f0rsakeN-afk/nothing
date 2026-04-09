@@ -2,20 +2,18 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
+import { useChatMessages } from "@/hooks/use-chat-messages";
 import { ChatInput } from "@/components/main/home/chat-input";
-import { STATIC_RESPONSE } from "@/components/main/chat/static-response";
-import type { Message } from "@/components/main/chat/chat-message";
-import {
-  SplitViewProvider,
-  useSplitView,
-} from "@/components/main/chat/split-view-context";
-import { Network, X } from "lucide-react";
-import { randomUUID } from "@/lib/utils";
+import type { Message } from "@/services/chat.service";
+import { SplitViewContext } from "@/components/main/chat/split-view-context";
+import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { MemoryDialog } from "@/components/main/memory/memory-dialog";
 
-// ---------------------------------------------------------------------------
-// Code-split heavy components
-// ---------------------------------------------------------------------------
+// =========================================
+// Code-split heavy components (loaded on demand)
+// =========================================
 
 const ChatMessage = dynamic(
   () =>
@@ -25,13 +23,12 @@ const ChatMessage = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="py-4">
+      <div className="py-4 px-2">
         <div className="flex gap-3">
-          <div className="mt-0.5 h-7 w-7 shrink-0 rounded-full bg-muted animate-pulse" />
-          <div className="flex-1 space-y-2 pt-1">
+          <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0" />
+          <div className="flex-1 space-y-2">
             <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
             <div className="h-3.5 w-1/2 rounded bg-muted animate-pulse" />
-            <div className="h-3.5 w-5/6 rounded bg-muted animate-pulse" />
           </div>
         </div>
       </div>
@@ -47,21 +44,60 @@ const SystemDesignCanvas = dynamic(
   { ssr: false },
 );
 
-// ---------------------------------------------------------------------------
-// Split panel
-// ---------------------------------------------------------------------------
+// =========================================
+// Skeleton components
+// =========================================
 
-function SplitPanel() {
-  const splitView = useSplitView();
+function ChatPageSkeleton() {
+  return (
+    <div className="flex h-dvh items-center justify-center">
+      <div className="flex flex-col gap-4 w-full max-w-md px-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex gap-3">
+            <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div
+                className="h-3.5 bg-muted animate-pulse rounded"
+                style={{ width: `${60 + i * 15}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  // useMemo must be called unconditionally — before any early return
-  const nodes = React.useMemo(() => {
-    try {
-      return JSON.parse(splitView?.splitView?.rawData ?? "")?.nodes ?? [];
-    } catch {
-      return [];
-    }
-  }, [splitView?.splitView?.rawData]);
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-dvh gap-4">
+      <p className="text-sm text-muted-foreground">Failed to load messages</p>
+      <button
+        onClick={onRetry}
+        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+// =========================================
+// Memoized components
+// =========================================
+
+const MessageItem = React.memo(function MessageItem({
+  message,
+  onEdit,
+}: {
+  message: Message;
+  onEdit: (id: string, content: string) => void;
+}) {
+  return <ChatMessage key={message.id} message={message} onEdit={onEdit} />;
+});
+
+const SplitPanel = React.memo(function SplitPanel() {
+  const splitView = React.useContext(SplitViewContext);
 
   if (!splitView?.splitView) return null;
 
@@ -69,11 +105,22 @@ function SplitPanel() {
 
   return (
     <div className="flex flex-col w-1/2 shrink-0 border-l border-border bg-card/30 animate-in slide-in-from-right-4 duration-200">
-      {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/60 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Network className="w-4 h-4 text-primary" />
+            <svg
+              className="w-4 h-4 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
           </div>
           <div className="min-w-0">
             <h3 className="text-[13px] font-semibold text-foreground truncate">
@@ -91,86 +138,221 @@ function SplitPanel() {
           className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           aria-label="Close split view"
         >
-          <X className="w-3.5 h-3.5" />
+          <svg
+            className="w-3.5 h-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
         </button>
       </div>
 
-      {/* Canvas fills the rest */}
       <div className="flex-1 min-h-0">
-        <SystemDesignCanvas data={rawData} nodes={nodes} />
+        <SystemDesignCanvas data={rawData} nodes={[]} />
+      </div>
+    </div>
+  );
+});
+
+// =========================================
+// Virtualized message list
+// =========================================
+
+interface VirtualizedMessageListProps {
+  messages: Message[];
+  onEdit: (id: string, content: string) => void;
+  onLoadOlder: () => void;
+  hasOlder: boolean;
+  isLoadingOlder: boolean;
+}
+
+function VirtualizedMessageList({
+  messages,
+  onEdit,
+  onLoadOlder,
+  hasOlder,
+  isLoadingOlder,
+}: VirtualizedMessageListProps) {
+  const parentRef = React.useRef<HTMLDivElement>(null);
+  const lastScrollTop = React.useRef(0);
+  const lastCount = React.useRef(messages.length);
+  const isStreamingRef = React.useRef(false);
+
+  const { scrollToBottom, markManualScroll, isNearBottom } = useOptimizedScroll(parentRef);
+
+  // Use simple virtual scrolling with CSS
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+  });
+
+  const items = virtualizer.getVirtualItems();
+
+  // Scroll handler for loading older messages
+  React.useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const { scrollTop } = el;
+      const scrollDelta = scrollTop - lastScrollTop.current;
+      lastScrollTop.current = scrollTop;
+
+      if (scrollDelta < -50 && scrollTop < 200 && hasOlder && !isLoadingOlder) {
+        onLoadOlder();
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [hasOlder, isLoadingOlder, onLoadOlder]);
+
+  // Auto-scroll to bottom as streaming response arrives
+  React.useEffect(() => {
+    const hasStreaming = messages.some(m => "isStreaming" in m && m.isStreaming);
+    const wasStreaming = isStreamingRef.current;
+    isStreamingRef.current = hasStreaming;
+
+    if (hasStreaming && !wasStreaming) {
+      // Just started streaming - scroll to bottom
+      markManualScroll();
+      scrollToBottom();
+    } else if (hasStreaming) {
+      // Still streaming - continue scrolling
+      scrollToBottom();
+    } else if (!hasStreaming && wasStreaming) {
+      // Just finished streaming - reset manual scroll tracking
+      markManualScroll();
+    }
+  }, [messages.length, scrollToBottom, markManualScroll]);
+
+  // Track manual scroll
+  React.useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      markManualScroll();
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [markManualScroll]);
+
+  return (
+    <div ref={parentRef} className="flex-1 overflow-y-auto hide-scrollbar">
+      {isLoadingOlder && (
+        <div className="flex justify-center py-2">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-3xl px-4">
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${items[0]?.start ?? 0}px)`,
+            }}
+          >
+            {items.map((virtualItem) => {
+                const message = messages[virtualItem.index];
+                return (
+                  <div
+                    key={virtualItem.key}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{ padding: "8px 0" }}
+                  >
+                    <MessageItem message={message} onEdit={onEdit} />
+                  </div>
+                );
+              })}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Inner page (needs access to split view context)
-// ---------------------------------------------------------------------------
+// =========================================
+// Inner page
+// =========================================
 
 function ChatPageInner() {
+  const params = useParams();
+  const chatId = params.id as string;
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
+  const shouldTriggerAI = searchParams.get("trigger") === "1";
+  const initialWebSearch = searchParams.get("web") === "1";
 
-  const seedMessages = React.useMemo<Message[]>(
-    () => [
-      { id: randomUUID(), role: "user", content: initialQuery },
-      { id: randomUUID(), role: "assistant", content: STATIC_RESPONSE },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+  const [input, setInput] = React.useState("");
+  const [webSearch, setWebSearch] = React.useState(initialWebSearch);
+  const [memoryDialogOpen, setMemoryDialogOpen] = React.useState(false);
+  const hasTriggeredAI = React.useRef(false);
+
+  const {
+    messages,
+    isLoading,
+    isError,
+    refetch,
+    sendUserMessage,
+    loadOlder,
+    hasOlder,
+    isFetchingOlder,
+  } = useChatMessages({ chatId, initialQuery, isWebSearch: webSearch });
+
+  // Auto-trigger AI response for first message when navigating from home
+  React.useEffect(() => {
+    if (shouldTriggerAI && !isLoading && !hasTriggeredAI.current && initialQuery) {
+      hasTriggeredAI.current = true;
+      // Always send the initialQuery directly - don't look for existing messages
+      // because the seed message and any saved messages are the same content
+      // and searching for non-seed messages causes duplicate sends
+      sendUserMessage(initialQuery);
+    }
+  }, [shouldTriggerAI, isLoading, initialQuery, sendUserMessage]);
+
+  const handleSubmit = React.useCallback(
+    async (value: string) => {
+      setInput("");
+      await sendUserMessage(value);
+    },
+    [sendUserMessage],
   );
 
-  const [messages, setMessages] = React.useState<Message[]>(seedMessages);
-  const [input, setInput] = React.useState("");
-  const bottomRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleEdit = React.useCallback((id: string, newContent: string) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, content: newContent } : m)),
-    );
-  }, []);
-
-  const handleSubmit = React.useCallback((value: string) => {
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: value,
-    };
-    const aiMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: STATIC_RESPONSE,
-    };
-    setMessages((prev) => [...prev, userMsg, aiMsg]);
-    setInput("");
-  }, []);
+  if (isLoading) return <ChatPageSkeleton />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      {/* ── Chat column ───────────────────────────────────── */}
       <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* {!splitView?.splitView && (
-          <div className="absolute right-4 top-2 z-10 flex items-center gap-1.5">
-            <CreditsButton />
-            <NotificationsButton />
-          </div>
-        )} */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar">
-          <div className="mx-auto w-full max-w-3xl px-2 py-2">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                onEdit={handleEdit}
-              />
-            ))}
-            {/* <div ref={bottomRef} /> */}
-          </div>
-        </div>
+        <VirtualizedMessageList
+          messages={messages}
+          onEdit={() => {}}
+          onLoadOlder={loadOlder}
+          hasOlder={hasOlder}
+          isLoadingOlder={isFetchingOlder}
+        />
 
         <div className="shrink-0">
           <div className="mx-auto w-full max-w-3xl px-2 py-2">
@@ -179,22 +361,34 @@ function ChatPageInner() {
               onChange={setInput}
               onSubmit={handleSubmit}
               placeholder="Ask a follow-up…"
+              webSearch={webSearch}
+              setWebSearch={setWebSearch}
+              onOpenMemory={() => setMemoryDialogOpen(true)}
             />
           </div>
         </div>
+
+        <MemoryDialog isOpen={memoryDialogOpen} onOpenChange={setMemoryDialogOpen} />
       </div>
 
-      {/* ── Split panel ───────────────────────────────────── */}
       <SplitPanel />
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Page export — wraps everything in SplitViewProvider
-// ---------------------------------------------------------------------------
+// =========================================
+// Page export
+// =========================================
 
 export default function ChatPage() {
+  const SplitViewProvider = dynamic(
+    () =>
+      import("@/components/main/chat/split-view-context").then(
+        (m) => m.SplitViewProvider,
+      ),
+    { ssr: false },
+  );
+
   return (
     <SplitViewProvider>
       <ChatPageInner />

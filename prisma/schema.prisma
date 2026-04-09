@@ -33,6 +33,7 @@ model User {
   reports   Report[]
   feedbacks Feedback[]
   projects  Project[]
+  chats     Chat[]
 
   customize Customize?
 
@@ -51,17 +52,34 @@ model Chat {
 
   projectId String?
   project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   chatFiles ChatFile[]
   messages  Message[]
 
+  // Search context persistence - links chat to its active search
+  searchResultId String?
+  searchResult   SearchResult? @relation(fields: [searchResultId], references: [id], onDelete: SetNull)
+
+  // Share settings
+  visibility     String    @default("private") // "private" | "public"
+  shareToken     String?   @unique @default(cuid())
+  shareExpiry    DateTime?
+  sharePassword  String?
+
   @@index([projectId])
+  @@index([userId])
   @@index([deletedAt])
   @@index([archivedAt])
+  @@index([userId, deletedAt])
+  @@index([userId, updatedAt])
+  @@index([shareToken])
 }
 
 enum SENDER {
   user
   ai
+  assistant
 }
 
 model Message {
@@ -80,24 +98,62 @@ model Message {
   updatedAt DateTime      @updatedAt
   messageFiles MessageFile[]
 
+  // Threading support
+  parentId String?
+  parent   Message?  @relation("MessageThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies Message[] @relation("MessageThread")
+
+  // Search context - thread messages inherit search from parent
+  searchResultId String?
+  searchResult   SearchResult? @relation(fields: [searchResultId], references: [id], onDelete: SetNull)
+
   @@index([chatId])
   @@index([deletedAt])
+  @@index([parentId])
+}
+
+enum FileStatus {
+  PENDING_UPLOAD
+  PROCESSING
+  READY
+  FAILED
 }
 
 model File {
-  id   String @id @default(cuid())
-  name String
-  url  String
-  type String
+  id        String @id @default(cuid())
+  name      String
+  url       String
+  type      String
 
-  createdAt    DateTime       @default(now())
-  deletedAt    DateTime?
+  // S3 storage
+  s3Key     String?  // S3 object key
+  s3Bucket  String?
+  uploadId  String?  // S3 multipart upload ID
+
+  // Extracted content for AI context
+  extractedContent String?  // Full extracted text
+  contentPreview   String?  // First 500 chars for preview
+  tokenCount      Int?     // Estimated tokens
+
+  // Status for upload/processing
+  status FileStatus @default(PENDING_UPLOAD)
+
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  deletedBy String?
+
+  // Project link (direct, not through join table for context files)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   projectFiles ProjectFile[]
   chatFiles    ChatFile[]
   messageFiles MessageFile[]
 
   @@index([deletedAt])
   @@index([type])
+  @@index([projectId])
+  @@index([status])
 }
 
 model ProjectFile {
@@ -146,6 +202,7 @@ model Project {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   chats        Chat[]
   projectFiles ProjectFile[]
+  files        File[]         // Direct relation for context files
 
   @@index([userId])
   @@index([deletedAt])
@@ -188,6 +245,32 @@ model Feedback {
   @@index([rating])
 }
 
+model MessageFeedback {
+  id        String   @id @default(cuid())
+  messageId String
+  chatId    String
+  userId    String
+  reaction  String   // "like" | "dislike"
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@index([chatId])
+  @@index([userId])
+}
+
+model UserPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  preferredTone     String   @default("balanced")
+  detailLevel       String   @default("BALANCED")
+  totalLikes        Int      @default(0)
+  totalDislikes     Int      @default(0)
+  likeRatio         Float    @default(0.5)  // likes / (likes + dislikes)
+  lastUpdated       DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model Contact {
   id        String   @id @default(cuid())
   name      String
@@ -224,6 +307,23 @@ model Customize {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([deletedAt])
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  tags      String[]
+  category  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([userId, category])
+  @@index([createdAt])
 }
 
 model OnboardingData {
@@ -271,4 +371,34 @@ model Archive {
 
   @@index([modelType, modelId])
   @@index([archivedAt])
+}
+
+model SearchResult {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  sources   Json
+  createdAt DateTime @default(now())
+
+  // Inverse relations for Chat and Message links
+  chats     Chat[]
+  messages  Message[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SavedSource {
+  id        String   @id @default(cuid())
+  userId    String
+  sourceId  String   // ID from SearchSource
+  title     String
+  url       String
+  snippet   String
+  source    String   // "stackoverflow" | "reddit" | etc
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@unique([userId, sourceId])
 }

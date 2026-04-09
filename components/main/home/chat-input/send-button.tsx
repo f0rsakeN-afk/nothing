@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -13,9 +13,10 @@ import {
 interface SendButtonProps {
   onSubmit: () => void;
   disabled: boolean;
+  isLoading?: boolean;
 }
 
-export const SendButton = React.memo(({ onSubmit, disabled }: SendButtonProps) => {
+export const SendButton = React.memo(({ onSubmit, disabled, isLoading }: SendButtonProps) => {
   return (
     <Tooltip>
       <TooltipTrigger
@@ -26,25 +27,29 @@ export const SendButton = React.memo(({ onSubmit, disabled }: SendButtonProps) =
             ref={triggerProps.ref}
             onClick={(e) => {
               triggerProps.onClick?.(e);
-              onSubmit();
+              if (!isLoading) onSubmit();
             }}
             onKeyDown={triggerProps.onKeyDown}
             onPointerDown={triggerProps.onPointerDown}
-            disabled={disabled}
+            disabled={disabled || isLoading}
             aria-label="Send message"
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200",
-              disabled
+              disabled || isLoading
                 ? "text-muted-foreground/20 bg-transparent cursor-not-allowed"
                 : "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95",
             )}
           >
-            <ArrowUp className="h-4 w-4" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowUp className="h-4 w-4" />
+            )}
           </motion.button>
         )}
       />
       <AnimatePresence>
-        {!disabled && (
+        {!disabled && !isLoading && (
           <TooltipContent
             side="top"
             sideOffset={12}

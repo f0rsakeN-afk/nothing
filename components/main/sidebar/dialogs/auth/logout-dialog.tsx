@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { LogOut } from "lucide-react";
+import { useStackApp } from "@stackframe/stack";
 
 interface LogoutDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface LogoutDialogProps {
 }
 
 export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
+  const app = useStackApp();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent size="sm">
@@ -35,7 +37,10 @@ export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
           <AlertDialogAction
             className={"text-white"}
             render={<Button variant="destructive" />}
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              app.signOut();
+              onOpenChange(false);
+            }}
           >
             Logout
           </AlertDialogAction>
