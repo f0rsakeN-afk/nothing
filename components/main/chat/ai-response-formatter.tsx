@@ -139,17 +139,6 @@ const ChangelogVisualizer = dynamic(
     })),
   { ssr: false },
 );
-const WebSearchResults = dynamic(
-  () =>
-    import("./format/web-search-results").then((m) => ({
-      default: m.WebSearchResults,
-    })),
-  { ssr: false },
-);
-
-// ---------------------------------------------------------------------------
-// YouTube helper — extracts video ID from watch / short / embed URLs
-// ---------------------------------------------------------------------------
 
 function getYouTubeId(url: string): string | null {
   try {
@@ -764,10 +753,6 @@ const mdComponents: Components = {
       if (language === "changelog")
         return (
           <ChangelogVisualizer data={String(children).replace(/\n$/, "")} />
-        );
-      if (language === "web-search")
-        return (
-          <WebSearchResults data={String(children).replace(/\n$/, "")} />
         );
       return (
         <CodeBlock language={language}>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2, Trash2, AlertTriangle } from "lucide-react";
 
 import {
@@ -13,6 +12,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { useDeleteProject } from "@/hooks/use-projects";
 
 interface DeleteProjectModalProps {
   open: boolean;
@@ -25,16 +25,20 @@ export default function DeleteProjectModal({
   onClose,
   project,
 }: DeleteProjectModalProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteProject = useDeleteProject();
 
   const handleDelete = async () => {
-    setIsDeleting(true);
-    // Simulate API call
-    console.log("Deleting project:", project?.id);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsDeleting(false);
-    onClose(false);
+    if (!project) return;
+
+    try {
+      await deleteProject.mutateAsync(project.id);
+      onClose(false);
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+    }
   };
+
+  const isDeleting = deleteProject.isPending;
 
   return (
     <AlertDialog open={open} onOpenChange={onClose}>

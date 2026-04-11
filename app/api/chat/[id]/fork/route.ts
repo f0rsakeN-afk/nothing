@@ -19,7 +19,6 @@ export async function POST(
       where: { id, visibility: "public" },
       include: {
         messages: {
-          where: { deletedAt: null },
           orderBy: { createdAt: "asc" },
         },
       },

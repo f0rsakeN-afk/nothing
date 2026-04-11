@@ -14,7 +14,6 @@ export interface MemoryItem {
   metadata: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
 }
 
 export interface MemorySearchResult {
@@ -61,7 +60,6 @@ export async function searchMemories(
 
   const where: Record<string, unknown> = {
     userId,
-    deletedAt: null,
   };
 
   if (query.trim()) {
@@ -99,7 +97,6 @@ export async function getMemories(
 
   const where: Record<string, unknown> = {
     userId,
-    deletedAt: null,
   };
 
   if (category) {
@@ -126,7 +123,6 @@ export async function getMemoryById(memoryId: string, userId: string): Promise<M
     where: {
       id: memoryId,
       userId,
-      deletedAt: null,
     },
   });
 
@@ -163,12 +159,11 @@ export async function updateMemory(
 }
 
 /**
- * Delete a memory (soft delete)
+ * Delete a memory
  */
 export async function deleteMemory(memoryId: string, userId: string): Promise<boolean> {
-  await prisma.memory.update({
+  await prisma.memory.delete({
     where: { id: memoryId },
-    data: { deletedAt: new Date() },
   });
 
   return true;
@@ -181,7 +176,6 @@ export async function getMemoryCategories(userId: string): Promise<string[]> {
   const categories = await prisma.memory.findMany({
     where: {
       userId,
-      deletedAt: null,
       category: { not: null },
     },
     select: { category: true },

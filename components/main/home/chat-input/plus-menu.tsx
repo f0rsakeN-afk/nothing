@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Plus, Paperclip, Globe } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, Paperclip } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -12,22 +11,15 @@ import {
 
 interface PlusMenuProps {
   onFileSelect: () => void;
-  webSearch: boolean;
-  setWebSearch: (val: boolean) => void;
 }
 
-export const PlusMenu = React.memo(({ onFileSelect, webSearch, setWebSearch }: PlusMenuProps) => {
+export const PlusMenu = React.memo(({ onFileSelect }: PlusMenuProps) => {
   const [open, setOpen] = React.useState(false);
 
   const handleFileClick = React.useCallback(() => {
     onFileSelect();
     setOpen(false);
   }, [onFileSelect]);
-
-  const handleWebSearchToggle = React.useCallback(() => {
-    setWebSearch(!webSearch);
-    setOpen(false);
-  }, [webSearch, setWebSearch]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,18 +57,6 @@ export const PlusMenu = React.memo(({ onFileSelect, webSearch, setWebSearch }: P
           >
             <Paperclip className="h-4 w-4" />
             <span>Attach file</span>
-          </button>
-          <button
-            onClick={handleWebSearchToggle}
-            className={cn(
-              "flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm transition-all active:scale-[0.98]",
-              webSearch
-                ? "text-primary bg-primary/10"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <Globe className="h-4 w-4" />
-            <span>Search the web</span>
           </button>
         </div>
       </PopoverContent>

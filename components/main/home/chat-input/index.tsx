@@ -4,7 +4,13 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { SendButton } from "./send-button";
 import { FilePreviews } from "./file-previews";
-import { Globe, Brain, Paperclip, X } from "lucide-react";
+import { Paperclip, Globe } from "lucide-react";
+import { MemoryPopover } from "./memory-popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Attachment {
   file: File;
@@ -19,24 +25,24 @@ interface ChatInputProps {
   placeholder?: string;
   className?: string;
   isLoading?: boolean;
-  webSearch?: boolean;
-  setWebSearch: (val: boolean) => void;
   onOpenMemory?: () => void;
+  onMemoriesSelect?: (memoryIds: string[]) => void;
 }
 
 export function ChatInput({
   value,
   onChange,
   onSubmit,
+  placeholder = "Ask anything...",
   className,
   isLoading = false,
-  webSearch = false,
-  setWebSearch,
   onOpenMemory,
+  onMemoriesSelect,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [files, setFiles] = React.useState<Attachment[]>([]);
+  const [focused, setFocused] = React.useState(false);
 
   const isEmpty = !value.trim() && files.length === 0;
 
@@ -99,7 +105,7 @@ export function ChatInput({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
   }, [value]);
 
   return (
@@ -114,16 +120,19 @@ export function ChatInput({
 
       {/* Attachments preview */}
       {files.length > 0 && (
-        <div className="mb-2">
+        <div className="mb-3">
           <FilePreviews files={files} onRemove={removeFile} />
         </div>
       )}
 
-      {/* Textarea */}
+      {/* Input container */}
       <div
         className={cn(
-          "w-full bg-muted/40 border border-border rounded-2xl",
-          "focus-within:border-primary/50 transition-colors",
+          "relative flex flex-col rounded-2xl border",
+          "bg-background transition-all duration-300 ease-out",
+          focused
+            ? "border-foreground/20 shadow-sm ring-2 ring-foreground/[0.06]"
+            : "border-border shadow-xs",
         )}
       >
         <textarea
@@ -131,87 +140,51 @@ export function ChatInput({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           rows={1}
-          placeholder="Ask anything..."
+          placeholder={placeholder}
           autoFocus
           className={cn(
-            "block w-full resize-none bg-transparent p-4 pb-0",
-            "text-sm leading-relaxed text-foreground",
-            "placeholder:text-muted-foreground/60 outline-none",
+            "block w-full resize-none bg-transparent px-4 py-4 pr-28",
+            "text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/40",
+            "outline-none placeholder:font-light",
           )}
         />
-      </div>
 
-      {/* Bottom action bar */}
-      <div
-        className={cn(
-          "flex items-center justify-between w-full mt-2 px-1",
-        )}
-      >
-        {/* Left actions */}
-        <div className="flex items-center gap-1">
-          {/* File attach */}
-          <button
-            type="button"
-            onClick={handleFileClick}
-            className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Attach files"
-          >
-            <Paperclip className="h-[18px] w-[18px]" />
-          </button>
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between px-4 pb-3.5 -mt-0.5">
+          {/* Left: mode buttons */}
+          <div className="flex items-center gap-1">
+            {/* File attach */}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={handleFileClick}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground/50 hover:text-foreground hover:bg-muted/70 transition-all duration-200 active:scale-95"
+                  >
+                    <Paperclip className="h-[18px] w-[18px]" />
+                  </button>
+                }
+              />
+              <TooltipContent side="bottom" sideOffset={8}>
+                Attach files
+              </TooltipContent>
+            </Tooltip>
 
-          {/* Web Search */}
-          <button
-            type="button"
-            onClick={() => setWebSearch(!webSearch)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors",
-              webSearch
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted",
-            )}
-            title="Web search"
-          >
-            <Globe className="h-[18px] w-[18px]" />
-            {webSearch && (
-              <span className="text-xs font-medium">Searching</span>
-            )}
-          </button>
+            {/* Memory popover */}
+            <MemoryPopover
+              onOpenMemory={onOpenMemory}
+              onMemoriesSelect={onMemoriesSelect}
+            />
+          </div>
 
-          {/* Memory */}
-          {onOpenMemory && (
-            <button
-              type="button"
-              onClick={onOpenMemory}
-              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Use memory"
-            >
-              <Brain className="h-[18px] w-[18px]" />
-            </button>
-          )}
-        </div>
-
-        {/* Right actions */}
-        <div className="flex items-center gap-2">
-          {/* Clear button when there's content */}
-          {value.trim() && (
-            <button
-              type="button"
-              onClick={() => {
-                onChange("");
-                textareaRef.current?.focus();
-              }}
-              className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Clear"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-
-          {/* Send button */}
+          {/* Right: send button */}
           <SendButton
             onSubmit={handleSubmit}
-            disabled={isEmpty || isLoading}
+            disabled={isEmpty}
             isLoading={isLoading}
           />
         </div>

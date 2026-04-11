@@ -17,7 +17,7 @@ export async function POST(
 
     // Verify chat belongs to user
     const chat = await prisma.chat.findFirst({
-      where: { id: chatId, userId: user.id, deletedAt: null },
+      where: { id: chatId, userId: user.id },
       select: { id: true },
     });
 
