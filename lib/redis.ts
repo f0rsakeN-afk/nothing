@@ -52,6 +52,7 @@ export const KEYS = {
   chatMessages: (chatId: string) => `chat:${chatId}:messages`,
   chatMeta: (chatId: string) => `chat:${chatId}:meta`,
   userChats: (userId: string) => `chats:user:${userId}`,
+  userChatsArchived: (userId: string) => `chats:user:${userId}:archived`,
   userRateLimit: (userId: string) => `user:${userId}:rate_limit`,
   userChatCreation: (userId: string) => `user:${userId}:chat_creation`,
   imageCache: (url: string) => `img:${Buffer.from(url).toString("base64").slice(0, 64)}`,

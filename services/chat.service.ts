@@ -20,6 +20,9 @@ export interface Chat {
   messageCount: number;
   firstMessagePreview: string | null;
   parentChatId?: string | null;
+  archivedAt?: string | null;
+  pinnedAt?: string | null;
+  visibility?: "public" | "private";
 }
 
 export interface ChatListResponse {
@@ -65,6 +68,18 @@ export async function getChats(limit = 50): Promise<ChatListResponse> {
   return res.json();
 }
 
+export async function getArchivedChats(limit = 50): Promise<ChatListResponse> {
+  const res = await fetch(`/api/chats?limit=${limit}&archived=true`);
+  if (!res.ok) throw new Error("Failed to fetch archived chats");
+  return res.json();
+}
+
+export async function getProjectChats(projectId: string, limit = 50): Promise<ChatListResponse> {
+  const res = await fetch(`/api/chats?limit=${limit}&projectId=${projectId}`);
+  if (!res.ok) throw new Error("Failed to fetch project chats");
+  return res.json();
+}
+
 export async function getChat(chatId: string): Promise<Chat> {
   const res = await fetch(`/api/chats/${chatId}`);
   if (!res.ok) throw new Error("Failed to fetch chat");
@@ -83,7 +98,7 @@ export async function createChat(firstMessage?: string): Promise<Chat> {
 
 export async function updateChat(
   chatId: string,
-  data: { title?: string; archivedAt?: string }
+  data: { title?: string; archivedAt?: string | null; projectId?: string | null; pinnedAt?: string | null }
 ): Promise<Chat> {
   const res = await fetch(`/api/chats/${chatId}`, {
     method: "PATCH",
@@ -99,6 +114,30 @@ export async function deleteChat(chatId: string): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete chat");
 }
 
+export async function archiveChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    archivedAt: new Date().toISOString(),
+  });
+}
+
+export async function unarchiveChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    archivedAt: null,
+  });
+}
+
+export async function pinChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    pinnedAt: new Date().toISOString(),
+  });
+}
+
+export async function unpinChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    pinnedAt: null,
+  });
+}
+
 export async function branchChat(
   chatId: string,
   messageId: string
@@ -109,6 +148,20 @@ export async function branchChat(
     body: JSON.stringify({ messageId }),
   });
   if (!res.ok) throw new Error("Failed to branch chat");
+  return res.json();
+}
+
+// Share/Visibility
+export async function updateChatVisibility(
+  chatId: string,
+  visibility: "public" | "private"
+): Promise<{ success: boolean; visibility: string }> {
+  const res = await fetch(`/api/chat/${chatId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ visibility }),
+  });
+  if (!res.ok) throw new Error("Failed to update visibility");
   return res.json();
 }
 

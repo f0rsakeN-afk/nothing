@@ -46,6 +46,7 @@ model Chat {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   archivedAt DateTime?
+  pinnedAt  DateTime?
 
   projectId String?
   project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
@@ -68,6 +69,7 @@ model Chat {
   @@index([projectId])
   @@index([userId])
   @@index([archivedAt])
+  @@index([pinnedAt])
   @@index([userId, updatedAt])
   @@index([shareToken])
   @@index([parentChatId])
@@ -184,6 +186,7 @@ model Project {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
+  pinnedAt   DateTime?
 
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -193,6 +196,7 @@ model Project {
 
   @@index([userId])
   @@index([archivedAt])
+  @@index([pinnedAt])
   @@index([name])
 }
 

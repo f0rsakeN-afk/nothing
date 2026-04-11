@@ -70,15 +70,24 @@ export function useChatMessages({
     enabled: !!chatId,
   });
 
-  // Flatten all pages into messages array
+  // Flatten all pages into messages array with deduplication
   // API returns newest first (desc order for "before" pagination)
-  // So index 0 = newest, last index = oldest
-  // We DON'T reverse - want newest at bottom (index 0 oldest would show at top wrongly)
+  // Page 0 = newest, Page N = oldest
+  // We want output: oldest-first (for chat display where newest at bottom)
   const messages = useMemo(() => {
+    const seenIds = new Set<string>();
     const allMessages: Message[] = [];
-    data?.pages.forEach((page) => {
+
+    // Process pages in reverse order (oldest first) so we append in correct position
+    // [...data?.pages].reverse() creates a copy and reverses it
+    const reversedPages = [...(data?.pages || [])].reverse();
+
+    reversedPages.forEach((page) => {
       page.messages.forEach((m) => {
-        allMessages.push(m);
+        if (!seenIds.has(m.id)) {
+          seenIds.add(m.id);
+          allMessages.push(m);
+        }
       });
     });
 

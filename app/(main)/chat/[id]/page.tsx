@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams, useParams } from "next/navigation";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { ChatInput } from "@/components/main/home/chat-input";
+import { ChatHeader } from "@/components/main/chat/chat-header";
 import type { Message } from "@/services/chat.service";
 import { SplitViewContext } from "@/components/main/chat/split-view-context";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
@@ -398,6 +399,7 @@ function ChatPageInner() {
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
+        <ChatHeader chatId={chatId} />
         <VirtualizedMessageList
           messages={messages}
           chatId={chatId}

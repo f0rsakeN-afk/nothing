@@ -17,11 +17,21 @@ export interface ChatWithMessages {
   }[];
 }
 
-export async function getUserChats(userId: string, limit = 20, cursor?: string) {
+export async function getUserChats(
+  userId: string,
+  limit = 20,
+  cursor?: string,
+  options: { archived?: boolean; projectId?: string } = {}
+) {
+  const { archived = false, projectId } = options;
+  const cacheKey = archived
+    ? KEYS.userChatsArchived(userId)
+    : KEYS.userChats(userId);
+
   // Try cache first (only for non-paginated queries - cursor means pagination)
   if (!cursor) {
     try {
-      const cached = await redis.get(KEYS.userChats(userId));
+      const cached = await redis.get(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
         // Check if cached result has enough items
@@ -37,6 +47,8 @@ export async function getUserChats(userId: string, limit = 20, cursor?: string) 
   const chats = await prisma.chat.findMany({
     where: {
       userId,
+      archivedAt: archived ? { not: null } : null,
+      ...(projectId && { projectId }),
     },
     orderBy: { updatedAt: "desc" },
     take: limit + 1,
@@ -68,6 +80,9 @@ export async function getUserChats(userId: string, limit = 20, cursor?: string) 
       projectId: chat.projectId,
       messageCount: chat._count.messages,
       firstMessagePreview: chat.messages[0]?.content.slice(0, 100) || null,
+      parentChatId: chat.parentChatId,
+      archivedAt: chat.archivedAt?.toISOString() ?? null,
+      pinnedAt: chat.pinnedAt?.toISOString() ?? null,
     })),
     nextCursor: hasMore ? chats[chats.length - 1].id : null,
   };
@@ -75,7 +90,7 @@ export async function getUserChats(userId: string, limit = 20, cursor?: string) 
   // Cache the result (only for non-paginated queries)
   if (!cursor) {
     try {
-      await redis.setex(KEYS.userChats(userId), TTL.userChats, JSON.stringify(result));
+      await redis.setex(cacheKey, TTL.userChats, JSON.stringify(result));
     } catch {
       // Cache error, continue without caching
     }
@@ -203,7 +218,7 @@ export async function getChatById(chatId: string, userId: string) {
 export async function updateChat(
   chatId: string,
   userId: string,
-  data: { title?: string; archivedAt?: Date | null }
+  data: { title?: string; archivedAt?: Date | null; projectId?: string | null; pinnedAt?: Date | null }
 ) {
   // Verify ownership first
   const existing = await prisma.chat.findFirst({
@@ -224,7 +239,10 @@ export async function updateChat(
     select: {
       id: true,
       title: true,
+      projectId: true,
       updatedAt: true,
+      archivedAt: true,
+      pinnedAt: true,
     },
   });
 
@@ -232,10 +250,17 @@ export async function updateChat(
   if (data.title) {
     await redis.hset(KEYS.chatMeta(chat.id), "title", data.title);
   }
+  if (data.projectId !== undefined) {
+    await redis.hset(KEYS.chatMeta(chat.id), "projectId", data.projectId || "");
+  }
+  if (data.pinnedAt !== undefined) {
+    await redis.hset(KEYS.chatMeta(chat.id), "pinnedAt", data.pinnedAt ? data.pinnedAt.toISOString() : "");
+  }
 
   // Invalidate user chat list cache (covers rename, archive, project changes)
   try {
     await redis.del(KEYS.userChats(userId));
+    await redis.del(KEYS.userChatsArchived(userId));
   } catch {
     // Redis error, ignore
   }
@@ -244,7 +269,7 @@ export async function updateChat(
   await redis.publish(
     CHANNELS.sidebar(userId),
     JSON.stringify({
-      type: data.archivedAt ? "chat:archived" : "chat:renamed",
+      type: data.archivedAt ? "chat:archived" : data.pinnedAt ? "chat:pinned" : "chat:renamed",
       chatId: chat.id,
       title: chat.title,
     })
@@ -275,6 +300,7 @@ export async function deleteChat(chatId: string, userId: string) {
   // Invalidate user chat list cache
   try {
     await redis.del(KEYS.userChats(userId));
+    await redis.del(KEYS.userChatsArchived(userId));
   } catch {
     // Redis error, ignore
   }

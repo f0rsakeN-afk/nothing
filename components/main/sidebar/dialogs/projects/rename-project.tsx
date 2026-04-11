@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { projectSchema, type ProjectFormValues } from "@/schemas/project";
+import { useUpdateProject } from "@/hooks/use-projects";
 
 interface RenameProjectModalProps {
   open: boolean;
@@ -29,6 +30,8 @@ export default function RenameProjectModal({
   onClose,
   project,
 }: RenameProjectModalProps) {
+  const updateProject = useUpdateProject();
+
   const {
     register,
     handleSubmit,
@@ -52,10 +55,18 @@ export default function RenameProjectModal({
   }, [project, reset]);
 
   const onSubmit = async (data: ProjectFormValues) => {
-    // Simulate API call
-    console.log("Renaming project:", project?.id, data);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    onClose(false);
+    if (!project) return;
+
+    try {
+      await updateProject.mutateAsync({
+        id: project.id,
+        name: data.name,
+        description: data.description,
+      });
+      onClose(false);
+    } catch (error) {
+      console.error("Failed to rename project:", error);
+    }
   };
 
   return (

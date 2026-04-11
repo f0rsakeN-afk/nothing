@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
+import { getOrCreateUser } from "@/lib/auth";
 import { invalidateProjectContext } from "@/services/project-context.service";
 
 export async function GET(
@@ -14,11 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await stackServerApp.getUser({ tokenStore: request });
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const user = await getOrCreateUser(request);
     const { id: projectId } = await params;
 
     // Verify project ownership
@@ -48,6 +44,9 @@ export async function GET(
 
     return NextResponse.json({ files });
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Project files error:", error);
     return NextResponse.json(
       { error: "Failed to fetch files" },
@@ -61,11 +60,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await stackServerApp.getUser({ tokenStore: request });
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const user = await getOrCreateUser(request);
     const { id: projectId } = await params;
     const body = await request.json();
     const { fileId } = body;
@@ -110,6 +105,9 @@ export async function POST(
 
     return NextResponse.json({ file: updatedFile });
   } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("Add project file error:", error);
     return NextResponse.json(
       { error: "Failed to add file to project" },

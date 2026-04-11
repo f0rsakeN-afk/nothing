@@ -7,21 +7,37 @@ export async function GET(request: NextRequest) {
     // Validate auth and get user
     const user = await getOrCreateUser(request);
 
+    const { searchParams } = new URL(request.url);
+    const archived = searchParams.get("archived");
+    const showArchived = archived === "true";
+
     const projects = await prisma.project.findMany({
       where: {
         userId: user.id,
+        ...(showArchived
+          ? { archivedAt: { not: null } }
+          : { archivedAt: null }),
       },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
         name: true,
         description: true,
+        instruction: true,
         createdAt: true,
         updatedAt: true,
+        archivedAt: true,
       },
     });
 
-    return NextResponse.json({ projects });
+    return NextResponse.json({
+      projects: projects.map((p) => ({
+        ...p,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+        archivedAt: p.archivedAt?.toISOString() ?? null,
+      })),
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -63,8 +79,10 @@ export async function POST(request: NextRequest) {
         id: project.id,
         name: project.name,
         description: project.description,
+        instruction: project.instruction,
         createdAt: project.createdAt.toISOString(),
         updatedAt: project.updatedAt.toISOString(),
+        archivedAt: project.archivedAt?.toISOString() ?? null,
       },
       { status: 201 }
     );
