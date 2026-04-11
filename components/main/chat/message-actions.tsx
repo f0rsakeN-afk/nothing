@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
-import { Copy, Check, Volume2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { memo, useState, useCallback, useEffect } from "react";
+import { Copy, Check, Volume2, Pause, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -9,6 +9,30 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+// Strip markdown/rich text formatting for clean speech
+function cleanTextForSpeech(text: string): string {
+  return text
+    // Remove markdown emphasis: *text* or **text**
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
+    // Remove code blocks and inline code
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`([^`]+)`/g, "$1")
+    // Remove links but keep text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    // Remove images
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
+    // Remove headers markers
+    .replace(/^#+\s+/gm, "")
+    // Remove blockquotes
+    .replace(/^>\s+/gm, "")
+    // Remove list markers
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    // Clean up extra whitespace
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 interface MessageActionsProps {
   content: string;
@@ -31,6 +55,21 @@ export const MessageActions = memo(function MessageActions({
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(initialReaction);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Reset speaking state when content changes (new message)
+  useEffect(() => {
+    setIsSpeaking(false);
+  }, [messageId]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -43,12 +82,32 @@ export const MessageActions = memo(function MessageActions({
   }, [content]);
 
   const handleVoice = useCallback(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(content);
-      window.speechSynthesis.speak(utterance);
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const synth = window.speechSynthesis;
+
+    // If currently speaking, stop it
+    if (isSpeaking) {
+      synth.cancel();
+      setIsSpeaking(false);
+      return;
     }
-  }, [content]);
+
+    // Clean the content and speak
+    const cleanContent = cleanTextForSpeech(content);
+    if (!cleanContent) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanContent);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    synth.cancel(); // Clear any pending speech
+    synth.speak(utterance);
+  }, [content, isSpeaking]);
 
   const handleReaction = useCallback(async (reaction: "like" | "dislike") => {
     if (!messageId || !chatId) return;
@@ -107,13 +166,22 @@ export const MessageActions = memo(function MessageActions({
         <Tooltip>
           <TooltipTrigger
             onClick={handleVoice}
-            aria-label="Listen to response"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 hover:bg-muted/80 hover:text-muted-foreground focus-visible:bg-muted/80"
+            aria-label={isSpeaking ? "Stop" : "Listen to response"}
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted/80 focus-visible:bg-muted/80",
+              isSpeaking
+                ? "text-primary"
+                : "text-muted-foreground/40 hover:text-muted-foreground"
+            )}
           >
-            <Volume2 className="h-4 w-4" />
+            {isSpeaking ? (
+              <Pause className="h-4 w-4 fill-current" />
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center">
-            Listen to response
+            {isSpeaking ? "Stop" : "Listen to response"}
           </TooltipContent>
         </Tooltip>
 

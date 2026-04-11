@@ -10,6 +10,8 @@ import { SplitViewContext } from "@/components/main/chat/split-view-context";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
+import { cn } from "@/lib/utils";
+import { MessageSkeleton, TypingIndicator } from "@/components/main/chat/message-skeleton";
 
 // =========================================
 // Code-split heavy components (loaded on demand)
@@ -22,17 +24,7 @@ const ChatMessage = dynamic(
     })),
   {
     ssr: false,
-    loading: () => (
-      <div className="py-4 px-2">
-        <div className="flex gap-3">
-          <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
-            <div className="h-3.5 w-1/2 rounded bg-muted animate-pulse" />
-          </div>
-        </div>
-      </div>
-    ),
+    loading: () => <MessageSkeleton />,
   },
 );
 
@@ -45,24 +37,54 @@ const SystemDesignCanvas = dynamic(
 );
 
 // =========================================
-// Skeleton components
+// Skeleton components — premium loading states
 // =========================================
 
 function ChatPageSkeleton() {
   return (
-    <div className="flex h-dvh items-center justify-center">
-      <div className="flex flex-col gap-4 w-full max-w-md px-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex gap-3">
-            <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div
-                className="h-3.5 bg-muted animate-pulse rounded"
-                style={{ width: `${60 + i * 15}%` }}
-              />
+    <div className="flex h-dvh flex-col bg-background">
+      {/* Topbar skeleton */}
+      <div className="h-14 border-b border-border/50 px-4 flex items-center gap-4 shrink-0">
+        <div className="h-8 w-8 rounded-lg bg-muted/50 animate-pulse" />
+        <div className="h-4 w-32 rounded bg-muted/50 animate-pulse" />
+        <div className="ml-auto flex gap-2">
+          <div className="h-8 w-8 rounded-lg bg-muted/50 animate-pulse" />
+          <div className="h-8 w-8 rounded-lg bg-muted/50 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 space-y-1">
+          {/* Welcome message skeleton */}
+          <div className="py-4 px-2">
+            <div className="flex gap-3">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20 shrink-0" />
+              <div className="flex-1 space-y-3 max-w-[80%]">
+                <div className="h-4 w-full rounded bg-muted/50 animate-pulse" />
+                <div className="h-4 w-3/4 rounded bg-muted/50 animate-pulse" />
+                <div className="h-4 w-1/2 rounded bg-muted/50 animate-pulse" />
+              </div>
             </div>
           </div>
-        ))}
+
+          {/* User message skeleton */}
+          <MessageSkeleton isUser />
+
+          {/* Assistant messages */}
+          <MessageSkeleton />
+          <MessageSkeleton />
+
+          {/* Typing indicator */}
+          <TypingIndicator />
+        </div>
+      </div>
+
+      {/* Input area skeleton */}
+      <div className="shrink-0 border-t border-border/50 p-3">
+        <div className="mx-auto max-w-3xl">
+          <div className="h-12 rounded-2xl bg-muted/50 ring-1 ring-border/50 animate-pulse" />
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { Chip } from "@/components/main/home/chip";
 import { PromptModal } from "@/components/main/home/prompt-modal";
@@ -10,9 +11,11 @@ import { HEADING_PHRASES } from "@/components/main/home/data/headings";
 import { CreditsButton } from "@/components/main/header/credits-button";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
+import type { Chat } from "@/services/chat.service";
 
 export default function HomePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [memoryDialogOpen, setMemoryDialogOpen] = useState(false);
   const [heading] = useState(
@@ -38,7 +41,28 @@ export default function HomePage() {
           throw new Error("Failed to create chat");
         }
 
-        const { id: chatId, shouldTriggerAI } = await res.json();
+        const { id: chatId, shouldTriggerAI, title } = await res.json();
+
+        // Optimistically add chat to sidebar before navigating
+        const tempChat: Chat = {
+          id: chatId,
+          title,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          projectId: null,
+          messageCount: 0,
+          firstMessagePreview: value,
+        };
+
+        queryClient.setQueryData(
+          ["chats"],
+          (old: { chats: Chat[]; nextCursor: string | null } | undefined) => {
+            if (!old) return { chats: [tempChat], nextCursor: null };
+            // Avoid duplicates
+            if (old.chats.some((c) => c.id === chatId)) return old;
+            return { ...old, chats: [tempChat, ...old.chats] };
+          }
+        );
 
         // Navigate to the new chat with the message as a query param
         const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
@@ -48,7 +72,7 @@ export default function HomePage() {
         setIsCreating(false);
       }
     },
-    [router, isCreating]
+    [router, isCreating, queryClient]
   );
 
   // Closes the modal and populates the input in one go.
