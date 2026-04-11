@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useEffect, useRef } from "react";
 import { Copy, Check, Volume2, Pause, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +12,8 @@ import {
 
 // Strip markdown/rich text formatting for clean speech
 function cleanTextForSpeech(text: string): string {
+  if (!text) return "";
+
   return text
     // Remove markdown emphasis: *text* or **text**
     .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
@@ -57,25 +59,77 @@ export const MessageActions = memo(function MessageActions({
   const [feedback, setFeedback] = useState<"like" | "dislike" | null>(initialReaction);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Reset speaking state when content changes (new message)
-  useEffect(() => {
-    setIsSpeaking(false);
-  }, [messageId]);
+  // Use ref to track mounted state and avoid state updates after unmount
+  const isMountedRef = useRef(true);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Cleanup on unmount
+  // Track mounted state
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Cleanup speech and timeouts on unmount
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Reset speaking state when messageId changes (new message loaded)
+  useEffect(() => {
+    if (messageId) {
+      setIsSpeaking(false);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+  }, [messageId]);
+
+  // Handle page visibility - stop speech when page is hidden
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        if (isMountedRef.current) {
+          setIsSpeaking(false);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content);
+      if (!isMountedRef.current) return;
+
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+
+      // Clear existing timeout
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+
+      copyTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setCopied(false);
+        }
+      }, 2000);
     } catch (err) {
       console.error("Failed to copy text: ", err);
     }
@@ -90,6 +144,7 @@ export const MessageActions = memo(function MessageActions({
     if (isSpeaking) {
       synth.cancel();
       setIsSpeaking(false);
+      utteranceRef.current = null;
       return;
     }
 
@@ -100,12 +155,33 @@ export const MessageActions = memo(function MessageActions({
     const utterance = new SpeechSynthesisUtterance(cleanContent);
     utterance.rate = 1;
     utterance.pitch = 1;
+    utteranceRef.current = utterance;
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    // Use event handlers that check mounted state
+    utterance.onstart = () => {
+      if (isMountedRef.current) {
+        setIsSpeaking(true);
+      }
+    };
 
-    synth.cancel(); // Clear any pending speech
+    utterance.onend = () => {
+      if (isMountedRef.current) {
+        setIsSpeaking(false);
+      }
+      utteranceRef.current = null;
+    };
+
+    utterance.onerror = (event) => {
+      // Ignore 'interrupted' errors - they happen when we cancel speech intentionally
+      if (event.error === "interrupted") return;
+      if (isMountedRef.current) {
+        setIsSpeaking(false);
+      }
+      utteranceRef.current = null;
+    };
+
+    // Cancel any ongoing speech before starting new one
+    synth.cancel();
     synth.speak(utterance);
   }, [content, isSpeaking]);
 
