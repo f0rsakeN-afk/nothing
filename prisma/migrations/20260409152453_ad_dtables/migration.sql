@@ -2,7 +2,10 @@
 CREATE TYPE "Role" AS ENUM ('USER', 'MODERATOR', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "SENDER" AS ENUM ('user', 'ai');
+CREATE TYPE "SENDER" AS ENUM ('user', 'ai', 'assistant');
+
+-- CreateEnum
+CREATE TYPE "FileStatus" AS ENUM ('PENDING_UPLOAD', 'PROCESSING', 'READY', 'FAILED');
 
 -- CreateEnum
 CREATE TYPE "KnowledgeDetail" AS ENUM ('CONCISE', 'BALANCED', 'DETAILED');
@@ -37,6 +40,12 @@ CREATE TABLE "Chat" (
     "deletedAt" TIMESTAMP(3),
     "archivedAt" TIMESTAMP(3),
     "projectId" TEXT,
+    "userId" TEXT,
+    "searchResultId" TEXT,
+    "visibility" TEXT NOT NULL DEFAULT 'private',
+    "shareToken" TEXT,
+    "shareExpiry" TIMESTAMP(3),
+    "sharePassword" TEXT,
 
     CONSTRAINT "Chat_pkey" PRIMARY KEY ("id")
 );
@@ -52,6 +61,8 @@ CREATE TABLE "Message" (
     "type" TEXT NOT NULL DEFAULT 'text',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "parentId" TEXT,
+    "searchResultId" TEXT,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
@@ -62,8 +73,17 @@ CREATE TABLE "File" (
     "name" TEXT NOT NULL,
     "url" TEXT NOT NULL,
     "type" TEXT NOT NULL,
+    "s3Key" TEXT,
+    "s3Bucket" TEXT,
+    "uploadId" TEXT,
+    "extractedContent" TEXT,
+    "contentPreview" TEXT,
+    "tokenCount" INTEGER,
+    "status" "FileStatus" NOT NULL DEFAULT 'PENDING_UPLOAD',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
+    "deletedBy" TEXT,
+    "projectId" TEXT,
 
     CONSTRAINT "File_pkey" PRIMARY KEY ("id")
 );
@@ -137,6 +157,32 @@ CREATE TABLE "Feedback" (
 );
 
 -- CreateTable
+CREATE TABLE "MessageFeedback" (
+    "id" TEXT NOT NULL,
+    "messageId" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "reaction" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "MessageFeedback_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserPreference" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "preferredTone" TEXT NOT NULL DEFAULT 'balanced',
+    "detailLevel" TEXT NOT NULL DEFAULT 'BALANCED',
+    "totalLikes" INTEGER NOT NULL DEFAULT 0,
+    "totalDislikes" INTEGER NOT NULL DEFAULT 0,
+    "likeRatio" DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+    "lastUpdated" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserPreference_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Contact" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -162,6 +208,22 @@ CREATE TABLE "Customize" (
     "userId" TEXT NOT NULL,
 
     CONSTRAINT "Customize_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Memory" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "tags" TEXT[],
+    "category" TEXT,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Memory_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -197,6 +259,31 @@ CREATE TABLE "Archive" (
     CONSTRAINT "Archive_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "SearchResult" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "query" TEXT NOT NULL,
+    "sources" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SearchResult_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SavedSource" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "sourceId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "snippet" TEXT NOT NULL,
+    "source" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SavedSource_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_stackId_key" ON "User"("stackId");
 
@@ -213,7 +300,13 @@ CREATE INDEX "User_deletedAt_idx" ON "User"("deletedAt");
 CREATE INDEX "User_role_idx" ON "User"("role");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Chat_shareToken_key" ON "Chat"("shareToken");
+
+-- CreateIndex
 CREATE INDEX "Chat_projectId_idx" ON "Chat"("projectId");
+
+-- CreateIndex
+CREATE INDEX "Chat_userId_idx" ON "Chat"("userId");
 
 -- CreateIndex
 CREATE INDEX "Chat_deletedAt_idx" ON "Chat"("deletedAt");
@@ -222,16 +315,34 @@ CREATE INDEX "Chat_deletedAt_idx" ON "Chat"("deletedAt");
 CREATE INDEX "Chat_archivedAt_idx" ON "Chat"("archivedAt");
 
 -- CreateIndex
+CREATE INDEX "Chat_userId_deletedAt_idx" ON "Chat"("userId", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "Chat_userId_updatedAt_idx" ON "Chat"("userId", "updatedAt");
+
+-- CreateIndex
+CREATE INDEX "Chat_shareToken_idx" ON "Chat"("shareToken");
+
+-- CreateIndex
 CREATE INDEX "Message_chatId_idx" ON "Message"("chatId");
 
 -- CreateIndex
 CREATE INDEX "Message_deletedAt_idx" ON "Message"("deletedAt");
 
 -- CreateIndex
+CREATE INDEX "Message_parentId_idx" ON "Message"("parentId");
+
+-- CreateIndex
 CREATE INDEX "File_deletedAt_idx" ON "File"("deletedAt");
 
 -- CreateIndex
 CREATE INDEX "File_type_idx" ON "File"("type");
+
+-- CreateIndex
+CREATE INDEX "File_projectId_idx" ON "File"("projectId");
+
+-- CreateIndex
+CREATE INDEX "File_status_idx" ON "File"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Project_name_key" ON "Project"("name");
@@ -267,6 +378,21 @@ CREATE INDEX "Feedback_deletedAt_idx" ON "Feedback"("deletedAt");
 CREATE INDEX "Feedback_rating_idx" ON "Feedback"("rating");
 
 -- CreateIndex
+CREATE INDEX "MessageFeedback_messageId_idx" ON "MessageFeedback"("messageId");
+
+-- CreateIndex
+CREATE INDEX "MessageFeedback_chatId_idx" ON "MessageFeedback"("chatId");
+
+-- CreateIndex
+CREATE INDEX "MessageFeedback_userId_idx" ON "MessageFeedback"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserPreference_userId_key" ON "UserPreference"("userId");
+
+-- CreateIndex
+CREATE INDEX "UserPreference_userId_idx" ON "UserPreference"("userId");
+
+-- CreateIndex
 CREATE INDEX "Contact_email_idx" ON "Contact"("email");
 
 -- CreateIndex
@@ -285,6 +411,15 @@ CREATE UNIQUE INDEX "Customize_userId_key" ON "Customize"("userId");
 CREATE INDEX "Customize_deletedAt_idx" ON "Customize"("deletedAt");
 
 -- CreateIndex
+CREATE INDEX "Memory_userId_idx" ON "Memory"("userId");
+
+-- CreateIndex
+CREATE INDEX "Memory_userId_category_idx" ON "Memory"("userId", "category");
+
+-- CreateIndex
+CREATE INDEX "Memory_createdAt_idx" ON "Memory"("createdAt");
+
+-- CreateIndex
 CREATE INDEX "Trash_modelType_modelId_idx" ON "Trash"("modelType", "modelId");
 
 -- CreateIndex
@@ -296,11 +431,41 @@ CREATE INDEX "Archive_modelType_modelId_idx" ON "Archive"("modelType", "modelId"
 -- CreateIndex
 CREATE INDEX "Archive_archivedAt_idx" ON "Archive"("archivedAt");
 
+-- CreateIndex
+CREATE INDEX "SearchResult_userId_idx" ON "SearchResult"("userId");
+
+-- CreateIndex
+CREATE INDEX "SearchResult_createdAt_idx" ON "SearchResult"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "SavedSource_userId_idx" ON "SavedSource"("userId");
+
+-- CreateIndex
+CREATE INDEX "SavedSource_createdAt_idx" ON "SavedSource"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SavedSource_userId_sourceId_key" ON "SavedSource"("userId", "sourceId");
+
 -- AddForeignKey
 ALTER TABLE "Chat" ADD CONSTRAINT "Chat_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Chat" ADD CONSTRAINT "Chat_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Chat" ADD CONSTRAINT "Chat_searchResultId_fkey" FOREIGN KEY ("searchResultId") REFERENCES "SearchResult"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_chatId_fkey" FOREIGN KEY ("chatId") REFERENCES "Chat"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Message" ADD CONSTRAINT "Message_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Message"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Message" ADD CONSTRAINT "Message_searchResultId_fkey" FOREIGN KEY ("searchResultId") REFERENCES "SearchResult"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "File" ADD CONSTRAINT "File_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProjectFile" ADD CONSTRAINT "ProjectFile_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;

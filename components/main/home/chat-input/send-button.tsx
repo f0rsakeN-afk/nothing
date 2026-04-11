@@ -4,11 +4,6 @@ import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface SendButtonProps {
   onSubmit: () => void;
@@ -18,48 +13,24 @@ interface SendButtonProps {
 
 export const SendButton = React.memo(({ onSubmit, disabled, isLoading }: SendButtonProps) => {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={(triggerProps: React.ComponentPropsWithRef<"button">) => (
-          <motion.button
-            layoutId="send-button"
-            id={triggerProps.id}
-            ref={triggerProps.ref}
-            onClick={(e) => {
-              triggerProps.onClick?.(e);
-              if (!isLoading) onSubmit();
-            }}
-            onKeyDown={triggerProps.onKeyDown}
-            onPointerDown={triggerProps.onPointerDown}
-            disabled={disabled || isLoading}
-            aria-label="Send message"
-            className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200",
-              disabled || isLoading
-                ? "text-muted-foreground/20 bg-transparent cursor-not-allowed"
-                : "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95",
-            )}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ArrowUp className="h-4 w-4" />
-            )}
-          </motion.button>
-        )}
-      />
-      <AnimatePresence>
-        {!disabled && !isLoading && (
-          <TooltipContent
-            side="top"
-            sideOffset={12}
-            className="bg-foreground text-background font-medium"
-          >
-            Send <span className="ml-1 opacity-50 text-[10px]">↵</span>
-          </TooltipContent>
-        )}
-      </AnimatePresence>
-    </Tooltip>
+    <button
+      onClick={onSubmit}
+      disabled={disabled || isLoading}
+      aria-label="Send message"
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        disabled || isLoading
+          ? "bg-muted/60 text-muted-foreground/40 cursor-not-allowed"
+          : "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:scale-105 active:scale-95",
+      )}
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.5} />
+      )}
+    </button>
   );
 });
 

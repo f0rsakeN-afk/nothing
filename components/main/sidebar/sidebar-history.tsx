@@ -14,8 +14,10 @@ import { ChatHistoryItem } from "./chat-history-item";
 import { ProjectHistoryItem } from "./project-history-item";
 import { useChatEvents } from "@/hooks/useChatEvents";
 import { useSidebarChats } from "@/hooks/use-sidebar-chats";
+import { useProjects, useArchivedProjects, useArchiveProject, useUnarchiveProject, usePinProject, useUnpinProject } from "@/hooks/use-projects";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TabId } from "./data";
+import type { Project } from "@/types/project";
 
 interface SidebarHistoryProps {
   activeTab: TabId;
@@ -32,6 +34,10 @@ interface ChatItem {
   projectId: string | null;
   messageCount: number;
   firstMessagePreview: string | null;
+  parentChatId?: string | null;
+  visibility?: "public" | "private";
+  archivedAt?: string | null;
+  pinnedAt?: string | null;
 }
 
 function groupChatsByDate(chats: ChatItem[]) {
@@ -95,7 +101,7 @@ function SidebarEmptyState({ type }: { type: "chats" | "projects" | "archive" })
   const messages = {
     chats: "No chats yet",
     projects: "No projects yet",
-    archive: "No archive yet",
+    archive: "No archived items",
   };
 
   return (
@@ -123,34 +129,189 @@ export function SidebarHistory({
   // Use sidebar chats hook
   const {
     chats,
-    isLoading,
-    isError,
-    refetch,
+    archivedChats,
+    isLoading: isChatsLoading,
+    isError: isChatsError,
+    refetch: refetchChats,
     renameChat,
     deleteChatById,
+    archiveChat,
+    unarchiveChat,
+    pinChat,
+    unpinChat,
+    shareChat,
   } = useSidebarChats();
 
-  // Archive tab
+  // Projects hooks
+  const { data: projectsData, isLoading: isProjectsLoading, isError: isProjectsError, refetch: refetchProjects } = useProjects();
+  const { data: archivedProjectsData, isLoading: isArchiveProjectsLoading, isError: isArchiveProjectsError, refetch: refetchArchiveProjects } = useArchivedProjects();
+
+  const archiveProject = useArchiveProject();
+  const unarchiveProject = useUnarchiveProject();
+  const pinProject = usePinProject();
+  const unpinProject = useUnpinProject();
+
+  const handleArchiveChat = async (chatId: string) => {
+    try {
+      await archiveChat(chatId);
+    } catch (error) {
+      console.error("Failed to archive chat:", error);
+    }
+  };
+
+  const handleUnarchiveChat = async (chatId: string) => {
+    try {
+      await unarchiveChat(chatId);
+    } catch (error) {
+      console.error("Failed to unarchive chat:", error);
+    }
+  };
+
+  const handleShareChat = async (chatId: string, visibility: "public" | "private") => {
+    try {
+      await shareChat(chatId, visibility);
+    } catch (error) {
+      console.error("Failed to share chat:", error);
+    }
+  };
+
+  const handlePinChat = async (chatId: string) => {
+    try {
+      await pinChat(chatId);
+    } catch (error) {
+      console.error("Failed to pin chat:", error);
+    }
+  };
+
+  const handleUnpinChat = async (chatId: string) => {
+    try {
+      await unpinChat(chatId);
+    } catch (error) {
+      console.error("Failed to unpin chat:", error);
+    }
+  };
+
+  const handleArchiveProject = async (project: { id: string; name: string }) => {
+    try {
+      await archiveProject.mutateAsync(project.id);
+    } catch (error) {
+      console.error("Failed to archive project:", error);
+    }
+  };
+
+  const handleUnarchiveProject = async (project: { id: string; name: string }) => {
+    try {
+      await unarchiveProject.mutateAsync(project.id);
+    } catch (error) {
+      console.error("Failed to unarchive project:", error);
+    }
+  };
+
+  const handlePinProject = async (project: { id: string; name: string }) => {
+    try {
+      await pinProject.mutateAsync(project.id);
+    } catch (error) {
+      console.error("Failed to pin project:", error);
+    }
+  };
+
+  const handleUnpinProject = async (project: { id: string; name: string }) => {
+    try {
+      await unpinProject.mutateAsync(project.id);
+    } catch (error) {
+      console.error("Failed to unpin project:", error);
+    }
+  };
+
+  // Archive tab - show both archived chats and projects
   if (activeTab === "archive") {
-    return <SidebarEmptyState type="archive" />;
+    const isLoadingChats = isChatsLoading;
+    const isLoadingProjects = isArchiveProjectsLoading;
+    const isLoading = isLoadingChats || isLoadingProjects;
+    const hasChats = archivedChats.length > 0;
+    const hasProjects = (archivedProjectsData?.projects || []).length > 0;
+
+    if (isLoading) {
+      return <SidebarSkeleton type="projects" />;
+    }
+
+    if (!hasChats && !hasProjects) {
+      return <SidebarEmptyState type="archive" />;
+    }
+
+    return (
+      <>
+        {/* Archived Chats */}
+        {hasChats && (
+          <SidebarGroup className="py-1 px-2">
+            <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
+              Chats
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0">
+                {archivedChats.map((chat) => (
+                  <ChatHistoryItem
+                    key={chat.id}
+                    item={chat}
+                    onDelete={deleteChatById}
+                    onRename={renameChat}
+                    onArchive={handleArchiveChat}
+                    onUnarchive={handleUnarchiveChat}
+                    onShare={handleShareChat}
+                    onPin={handlePinChat}
+                    onUnpin={handleUnpinChat}
+                    isArchived
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Archived Projects */}
+        {hasProjects && (
+          <SidebarGroup className="py-1 px-2">
+            <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
+              Projects
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0">
+                {(archivedProjectsData?.projects || []).map((project) => (
+                  <ProjectHistoryItem
+                    key={project.id}
+                    item={{ id: project.id, title: project.name, pinnedAt: project.pinnedAt }}
+                    onRename={onRenameProject || (() => {})}
+                    onDelete={onDeleteProject || (() => {})}
+                    onArchive={handleUnarchiveProject}
+                    onPin={handlePinProject}
+                    onUnpin={handleUnpinProject}
+                    isArchived
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+      </>
+    );
   }
 
   // Loading state
-  if (activeTab === "chats" && isLoading) {
+  if (activeTab === "chats" && isChatsLoading) {
     return <SidebarSkeleton type="chats" />;
   }
 
-  if (activeTab === "projects" && isLoading) {
+  if (activeTab === "projects" && isProjectsLoading) {
     return <SidebarSkeleton type="projects" />;
   }
 
   // Error state
-  if (activeTab === "chats" && isError) {
-    return <SidebarErrorState onRetry={refetch} />;
+  if (activeTab === "chats" && isChatsError) {
+    return <SidebarErrorState onRetry={refetchChats} />;
   }
 
-  if (activeTab === "projects" && isError) {
-    return <SidebarErrorState onRetry={refetch} />;
+  if (activeTab === "projects" && isProjectsError) {
+    return <SidebarErrorState onRetry={refetchProjects} />;
   }
 
   // Empty state
@@ -175,8 +336,13 @@ export function SidebarHistory({
                   <ChatHistoryItem
                     key={item.id}
                     item={item}
-                    onDelete={async (id) => { await deleteChatById(id); }}
-                    onRename={async (id, title) => { await renameChat(id, title); }}
+                    onDelete={deleteChatById}
+                    onRename={renameChat}
+                    onArchive={handleArchiveChat}
+                    onUnarchive={handleUnarchiveChat}
+                    onShare={handleShareChat}
+                    onPin={handlePinChat}
+                    onUnpin={handleUnpinChat}
                   />
                 ))}
               </SidebarMenu>
@@ -187,11 +353,50 @@ export function SidebarHistory({
     );
   }
 
-  // Projects tab (placeholder for now)
+  // Projects tab
   if (activeTab === "projects") {
+    const projects = projectsData?.projects || [];
+
+    if (projects.length === 0) {
+      return (
+        <>
+          <SidebarEmptyState type="projects" />
+          <SidebarGroup className="py-2 px-2 mt-auto">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={onCreateProject}
+                  className="w-full justify-center gap-2 h-9 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-xl transition-all shadow-sm active:scale-[0.98]"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="text-[12px] font-semibold">Create Project</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </>
+      );
+    }
+
     return (
       <>
-        <SidebarEmptyState type="projects" />
+        <SidebarGroup className="py-1 px-2">
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0">
+              {projects.map((project) => (
+                <ProjectHistoryItem
+                  key={project.id}
+                  item={{ id: project.id, title: project.name, pinnedAt: project.pinnedAt }}
+                  onRename={onRenameProject || (() => {})}
+                  onDelete={onDeleteProject || (() => {})}
+                  onArchive={handleArchiveProject}
+                  onPin={handlePinProject}
+                  onUnpin={handleUnpinProject}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarGroup className="py-2 px-2 mt-auto">
           <SidebarMenu>
             <SidebarMenuItem>

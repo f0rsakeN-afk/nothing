@@ -4,6 +4,8 @@
  * Thread-aware: keeps parent-child message groups together when truncating.
  */
 
+import { aiConfig } from "./config";
+
 interface Message {
   id: string;
   role: string;
@@ -22,8 +24,8 @@ interface ContextChunk {
 
 // Token estimation (~4 chars per token for English)
 const CHARS_PER_TOKEN = 4;
-const MAX_CONTEXT_TOKENS = 8000; // Increased for better context
-const MIN_RECENT_TOKENS = 3000; // Keep more recent context
+const MAX_CONTEXT_TOKENS = aiConfig.maxContextTokensFallback; // For direct usage
+const MIN_RECENT_TOKENS = aiConfig.minRecentTokens; // Keep more recent context
 const KEY_FACT_EXTRACTION_ENABLED = true;
 
 // Important patterns that should never be truncated
@@ -116,7 +118,7 @@ export async function buildChatContext(
   keyFacts: string[];
   summary: string;
 }> {
-  const { maxTokens = MAX_CONTEXT_TOKENS, includeSystem = true, systemPrompt } = options;
+  const { maxTokens = aiConfig.maxContextTokensFallback, includeSystem = true, systemPrompt } = options;
 
   if (messages.length === 0) {
     return {

@@ -8,6 +8,7 @@ export interface Message {
   content: string;
   createdAt?: string;
   isStreaming?: boolean;
+  chatId?: string; // Included so branch feature can access chatId from message
 }
 
 export interface Chat {
@@ -18,6 +19,10 @@ export interface Chat {
   projectId: string | null;
   messageCount: number;
   firstMessagePreview: string | null;
+  parentChatId?: string | null;
+  archivedAt?: string | null;
+  pinnedAt?: string | null;
+  visibility?: "public" | "private";
 }
 
 export interface ChatListResponse {
@@ -63,6 +68,18 @@ export async function getChats(limit = 50): Promise<ChatListResponse> {
   return res.json();
 }
 
+export async function getArchivedChats(limit = 50): Promise<ChatListResponse> {
+  const res = await fetch(`/api/chats?limit=${limit}&archived=true`);
+  if (!res.ok) throw new Error("Failed to fetch archived chats");
+  return res.json();
+}
+
+export async function getProjectChats(projectId: string, limit = 50): Promise<ChatListResponse> {
+  const res = await fetch(`/api/chats?limit=${limit}&projectId=${projectId}`);
+  if (!res.ok) throw new Error("Failed to fetch project chats");
+  return res.json();
+}
+
 export async function getChat(chatId: string): Promise<Chat> {
   const res = await fetch(`/api/chats/${chatId}`);
   if (!res.ok) throw new Error("Failed to fetch chat");
@@ -81,7 +98,7 @@ export async function createChat(firstMessage?: string): Promise<Chat> {
 
 export async function updateChat(
   chatId: string,
-  data: { title?: string; archivedAt?: string }
+  data: { title?: string; archivedAt?: string | null; projectId?: string | null; pinnedAt?: string | null }
 ): Promise<Chat> {
   const res = await fetch(`/api/chats/${chatId}`, {
     method: "PATCH",
@@ -95,6 +112,57 @@ export async function updateChat(
 export async function deleteChat(chatId: string): Promise<void> {
   const res = await fetch(`/api/chats/${chatId}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete chat");
+}
+
+export async function archiveChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    archivedAt: new Date().toISOString(),
+  });
+}
+
+export async function unarchiveChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    archivedAt: null,
+  });
+}
+
+export async function pinChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    pinnedAt: new Date().toISOString(),
+  });
+}
+
+export async function unpinChat(chatId: string): Promise<Chat> {
+  return updateChat(chatId, {
+    pinnedAt: null,
+  });
+}
+
+export async function branchChat(
+  chatId: string,
+  messageId: string
+): Promise<{ newChatId: string; branchTitle: string; messageCount: number }> {
+  const res = await fetch(`/api/chats/${chatId}/branch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageId }),
+  });
+  if (!res.ok) throw new Error("Failed to branch chat");
+  return res.json();
+}
+
+// Share/Visibility
+export async function updateChatVisibility(
+  chatId: string,
+  visibility: "public" | "private"
+): Promise<{ success: boolean; visibility: string }> {
+  const res = await fetch(`/api/chat/${chatId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ visibility }),
+  });
+  if (!res.ok) throw new Error("Failed to update visibility");
+  return res.json();
 }
 
 // Messages
@@ -155,8 +223,7 @@ export async function streamChat(
   messages: Array<{ role: string; content: string }>,
   callbacks: StreamCallbacks,
   signal?: AbortSignal,
-  mode?: "chat" | "web",
-  performWebSearch?: boolean
+  mode?: "chat" | "web"
 ): Promise<string> {
   const { onChunk, onComplete, onError } = callbacks;
 
@@ -164,7 +231,7 @@ export async function streamChat(
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatId, messages, mode, performWebSearch }),
+      body: JSON.stringify({ chatId, messages, mode }),
       signal,
     });
 

@@ -3,8 +3,6 @@
  * Optimized for performance - string concatenation order matters for V8
  */
 
-import type { SearchSource } from "./scraper";
-
 export interface PromptConfig {
   tone?: "formal" | "casual" | "friendly" | "technical" | "concise" | "detailed" | "balanced";
   detailLevel?: "CONCISE" | "BALANCED" | "DETAILED";
@@ -13,7 +11,6 @@ export interface PromptConfig {
   projectInstruction?: string;
   language?: string;
   domain?: string;
-  includeSearchContext?: boolean;
   learningMode?: boolean;
   explanatoryMode?: boolean;
   researchMode?: boolean;
@@ -23,8 +20,8 @@ export interface PromptConfig {
 const promptCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 50;
 
-function getCacheKey(config: PromptConfig, hasSearchSources: boolean): string {
-  return JSON.stringify({ config, hasSearchSources });
+function getCacheKey(config: PromptConfig): string {
+  return JSON.stringify(config);
 }
 
 // ============================================================================
@@ -692,49 +689,6 @@ function buildSpecialModes(config: PromptConfig): string {
 }
 
 // ============================================================================
-// SEARCH CONTEXT (when web search is available)
-// ============================================================================
-
-function buildSearchContextGuidelines(sources?: SearchSource[]): string {
-  const baseSearch = `WEB SEARCH CONTEXT:
-- When search results are provided, synthesize across multiple sources
-- Always cite as [Source N] when referencing specific facts
-- Prefer search results over training data when they conflict (search is more current)
-- Summarize don't copy - aggregate key points, don't reproduce entire sources
-- Never reproduce more than 20 words from a single source
-- Max one short quote (under 20 words) per source`;
-
-  if (!sources || sources.length === 0) {
-    return baseSearch;
-  }
-
-  const sourceList = sources.map((s, i) => {
-    let entry = `[Source ${i + 1}] ${s.title}\nURL: ${s.url}\nType: ${s.source}`;
-    if (s.keyPoints?.length) {
-      entry += `\nKey Points: ${s.keyPoints.join(" | ")}`;
-    }
-    if (s.codeSnippet) {
-      entry += `\nCode: ${s.codeSnippet.slice(0, 200)}`;
-    }
-    entry += `\nContent: ${s.content.slice(0, 500)}`;
-    return entry;
-  }).join("\n\n");
-
-  return `WEB SEARCH RESULTS (Current Information)
-
-${sourceList}
-
-USAGE RULES:
-1. Answer based on the sources above - synthesize, don't copy
-2. Cite as [Source N] for specific facts
-3. Never reproduce more than 20 words from a single source
-4. For code questions, use provided snippets as reference
-5. If insufficient context, say "I couldn't find that in my search results"
-6. Prioritize StackOverflow/GitHub for technical, Reddit for opinions
-7. When search conflicts with training data, prefer search results`;
-}
-
-// ============================================================================
 // PREMIUM PRINCIPLES
 // ============================================================================
 
@@ -764,9 +718,8 @@ function buildPremiumPrinciples(): string {
  * Build the full system prompt with all sections
  * Uses caching to avoid rebuilding identical prompts
  */
-export function buildSystemPrompt(config: PromptConfig = {}, searchSources?: SearchSource[]): string {
-  const hasSearchSources = !!(searchSources && searchSources.length > 0 && config.includeSearchContext);
-  const cacheKey = getCacheKey(config, hasSearchSources);
+export function buildSystemPrompt(config: PromptConfig = {}): string {
+  const cacheKey = getCacheKey(config);
 
   // Check cache first
   const cached = promptCache.get(cacheKey);
@@ -788,7 +741,6 @@ export function buildSystemPrompt(config: PromptConfig = {}, searchSources?: Sea
     buildUncertaintyGuidelines(),
     buildFileHandlingGuidelines(),
     buildLanguageSwitchingGuidelines(),
-    config.includeSearchContext ? buildSearchContextGuidelines(searchSources) : "",
     buildResponseQuality(config),
     buildCodeGuidelines(),
     buildArtifactGuidelines(),

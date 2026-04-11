@@ -31,9 +31,7 @@ export async function POST(
         id: messageId,
         chat: {
           userId: user.id,
-          deletedAt: null,
         },
-        deletedAt: null,
       },
       select: { id: true },
     });

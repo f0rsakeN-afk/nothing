@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { projectSchema, type ProjectFormValues } from "@/schemas/project";
+import { useCreateProject } from "@/hooks/use-projects";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -26,6 +27,8 @@ export default function CreateProjectDialog({
   open,
   onClose,
 }: CreateProjectDialogProps) {
+  const createProject = useCreateProject();
+
   const {
     register,
     handleSubmit,
@@ -40,11 +43,13 @@ export default function CreateProjectDialog({
   });
 
   const onSubmit = async (data: ProjectFormValues) => {
-    // Simulate API call
-    console.log("Creating project:", data);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    reset();
-    onClose(false);
+    try {
+      await createProject.mutateAsync(data);
+      reset();
+      onClose(false);
+    } catch (error) {
+      console.error("Failed to create project:", error);
+    }
   };
 
   return (

@@ -25,7 +25,6 @@ model User {
   createdAt DateTime @default(now())
 
   updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
   seenOnboarding Boolean   @default(false)
   isActive       Boolean   @default(true)
 
@@ -38,7 +37,6 @@ model User {
   customize Customize?
 
   @@index([stackId])
-  @@index([deletedAt])
   @@index([role])
 }
 
@@ -47,8 +45,8 @@ model Chat {
   title     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  deletedAt DateTime?
   archivedAt DateTime?
+  pinnedAt  DateTime?
 
   projectId String?
   project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
@@ -57,9 +55,10 @@ model Chat {
   chatFiles ChatFile[]
   messages  Message[]
 
-  // Search context persistence - links chat to its active search
-  searchResultId String?
-  searchResult   SearchResult? @relation(fields: [searchResultId], references: [id], onDelete: SetNull)
+  // Branch tracking
+  parentChatId String?
+  parentChat   Chat?    @relation("ChatBranches", fields: [parentChatId], references: [id], onDelete: SetNull)
+  branches     Chat[]   @relation("ChatBranches")
 
   // Share settings
   visibility     String    @default("private") // "private" | "public"
@@ -69,11 +68,11 @@ model Chat {
 
   @@index([projectId])
   @@index([userId])
-  @@index([deletedAt])
   @@index([archivedAt])
-  @@index([userId, deletedAt])
+  @@index([pinnedAt])
   @@index([userId, updatedAt])
   @@index([shareToken])
+  @@index([parentChatId])
 }
 
 enum SENDER {
@@ -86,7 +85,6 @@ model Message {
   id        String   @id @default(cuid())
   chatId    String
   chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  deletedAt DateTime?
 
   sender String
   role   SENDER? @default(user)
@@ -103,12 +101,7 @@ model Message {
   parent   Message?  @relation("MessageThread", fields: [parentId], references: [id], onDelete: SetNull)
   replies Message[] @relation("MessageThread")
 
-  // Search context - thread messages inherit search from parent
-  searchResultId String?
-  searchResult   SearchResult? @relation(fields: [searchResultId], references: [id], onDelete: SetNull)
-
   @@index([chatId])
-  @@index([deletedAt])
   @@index([parentId])
 }
 
@@ -139,8 +132,6 @@ model File {
   status FileStatus @default(PENDING_UPLOAD)
 
   createdAt DateTime @default(now())
-  deletedAt DateTime?
-  deletedBy String?
 
   // Project link (direct, not through join table for context files)
   projectId String?
@@ -150,7 +141,6 @@ model File {
   chatFiles    ChatFile[]
   messageFiles MessageFile[]
 
-  @@index([deletedAt])
   @@index([type])
   @@index([projectId])
   @@index([status])
@@ -195,8 +185,8 @@ model Project {
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
   archivedAt DateTime?
+  pinnedAt   DateTime?
 
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -205,8 +195,8 @@ model Project {
   files        File[]         // Direct relation for context files
 
   @@index([userId])
-  @@index([deletedAt])
   @@index([archivedAt])
+  @@index([pinnedAt])
   @@index([name])
 }
 
@@ -218,13 +208,11 @@ model Report {
   image       String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([deletedAt])
   @@index([createdAt])
 }
 
@@ -235,13 +223,11 @@ model Feedback {
   email     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  deletedAt DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([deletedAt])
   @@index([rating])
 }
 
@@ -278,11 +264,9 @@ model Contact {
   topic     String
   message   String
   createdAt DateTime @default(now())
-  deletedAt DateTime?
 
   @@index([email])
   @@index([topic])
-  @@index([deletedAt])
   @@index([createdAt])
 }
 
@@ -301,12 +285,9 @@ model Customize {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  deletedAt DateTime?
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([deletedAt])
 }
 
 model Memory {
@@ -319,7 +300,6 @@ model Memory {
   metadata  Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  deletedAt DateTime?
 
   @@index([userId])
   @@index([userId, category])
@@ -328,77 +308,4 @@ model Memory {
 
 model OnboardingData {
   id String @id @default(cuid())
-}
-
-enum TrashableModel {
-  USER
-  CHAT
-  MESSAGE
-  FILE
-  PROJECT
-  REPORT
-  FEEDBACK
-  CONTACT
-  CUSTOMIZE
-}
-
-enum ArchivableModel {
-  CHAT
-  PROJECT
-}
-
-model Trash {
-  id         String         @id @default(cuid())
-  modelType  TrashableModel
-  modelId    String
-  data       Json
-  deletedAt  DateTime       @default(now())
-  deletedBy  String?
-  reason     String?
-  expiresAt  DateTime?
-
-  @@index([modelType, modelId])
-  @@index([deletedAt])
-}
-
-model Archive {
-  id         String          @id @default(cuid())
-  modelType  ArchivableModel
-  modelId    String
-  data       Json
-  archivedAt DateTime        @default(now())
-  archivedBy String?
-
-  @@index([modelType, modelId])
-  @@index([archivedAt])
-}
-
-model SearchResult {
-  id        String   @id @default(cuid())
-  userId    String
-  query     String
-  sources   Json
-  createdAt DateTime @default(now())
-
-  // Inverse relations for Chat and Message links
-  chats     Chat[]
-  messages  Message[]
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-model SavedSource {
-  id        String   @id @default(cuid())
-  userId    String
-  sourceId  String   // ID from SearchSource
-  title     String
-  url       String
-  snippet   String
-  source    String   // "stackoverflow" | "reddit" | etc
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([createdAt])
-  @@unique([userId, sourceId])
 }

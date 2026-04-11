@@ -49,7 +49,7 @@ export async function buildProjectContext(
     where: { id: projectId },
     include: {
       files: {
-        where: { deletedAt: null, status: "READY" },
+        where: { status: "READY" },
         select: {
           id: true,
           name: true,

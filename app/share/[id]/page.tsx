@@ -36,7 +36,6 @@ export default async function SharePage(props: { params: Promise<{ id: string }>
         },
       },
       messages: {
-        where: { deletedAt: null },
         orderBy: { createdAt: 'asc' },
         take: 100,
       },

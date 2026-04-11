@@ -341,17 +341,22 @@ const AssistantMessage = memo(function AssistantMessage({
 
 interface ChatMessageProps {
   message: Message;
+  chatId?: string;
   onEdit?: (id: string, newContent: string) => void;
 }
 
 export const ChatMessage = memo(function ChatMessage({
   message,
+  chatId: chatIdProp,
   onEdit,
 }: ChatMessageProps) {
   const handleEdit = useCallback(
     (newContent: string) => onEdit?.(message.id, newContent),
     [message.id, onEdit],
   );
+
+  // Use passed chatId or fallback to message.chatId
+  const chatId = chatIdProp || message.chatId;
 
   return (
     <div
@@ -368,7 +373,7 @@ export const ChatMessage = memo(function ChatMessage({
           isStreaming={message.isStreaming}
           status={message.status}
           messageId={message.id}
-          chatId={message.chatId}
+          chatId={chatId}
           toolProgress={message.toolProgress}
         />
       )}

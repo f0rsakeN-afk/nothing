@@ -41,14 +41,20 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, archivedAt } = body;
+    const { title, archivedAt, projectId, pinnedAt } = body;
 
     const chat = await updateChat(id, user.id, {
       ...(title !== undefined && { title }),
       ...(archivedAt !== undefined && { archivedAt }),
+      ...(projectId !== undefined && { projectId }),
+      ...(pinnedAt !== undefined && { pinnedAt }),
     });
 
-    return NextResponse.json(chat);
+    return NextResponse.json({
+      ...chat,
+      archivedAt: chat.archivedAt?.toISOString() ?? null,
+      pinnedAt: chat.pinnedAt?.toISOString() ?? null,
+    });
   } catch (error) {
     console.error("Error updating chat:", error);
     return NextResponse.json(

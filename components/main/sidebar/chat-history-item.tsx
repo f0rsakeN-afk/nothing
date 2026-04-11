@@ -4,12 +4,19 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Archive,
+  ArchiveRestore,
   Download,
   ExternalLink,
+  GitBranch,
+  Globe,
+  Lock,
   MoreHorizontal,
   Pencil,
   Pin,
+  PinOff,
   Trash2,
+  FolderOpen,
+  FolderPlus,
 } from "lucide-react";
 
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
@@ -19,27 +26,53 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useChatPrefetch } from "@/hooks/use-chat-prefetch";
+import { useProjects } from "@/hooks/use-projects";
+import { updateChat } from "@/services/chat.service";
+import type { Project } from "@/types/project";
 
 interface HistoryItem {
   id: string;
   title: string;
   createdAt?: string;
   updatedAt?: string;
+  parentChatId?: string | null;
+  visibility?: "public" | "private";
+  archivedAt?: string | null;
+  pinnedAt?: string | null;
+  projectId?: string | null;
 }
 
 interface ChatHistoryItemProps {
   item: HistoryItem;
   onDelete?: (id: string) => Promise<void>;
   onRename?: (id: string, title: string) => Promise<void>;
+  onArchive?: (id: string) => Promise<void>;
+  onUnarchive?: (id: string) => Promise<void>;
+  onShare?: (id: string, visibility: "public" | "private") => Promise<void>;
+  onPin?: (id: string) => Promise<void>;
+  onUnpin?: (id: string) => Promise<void>;
+  isArchived?: boolean;
 }
 
 // =========================================
@@ -144,6 +177,109 @@ function RenameChatDialog({
 }
 
 // =========================================
+// Project Selection Dialog
+// =========================================
+
+function ProjectSelectDialog({
+  open,
+  onOpenChange,
+  chatId,
+  currentProjectId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  chatId: string;
+  currentProjectId: string | null | undefined;
+}) {
+  const { data: projectsData, isLoading } = useProjects();
+  const projects = projectsData?.projects || [];
+  const [isUpdating, setIsUpdating] = React.useState(false);
+
+  const handleSelect = async (project: Project | null) => {
+    setIsUpdating(true);
+    try {
+      await updateChat(chatId, { projectId: project?.id || null });
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to update chat project:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[320px]">
+        <DialogHeader>
+          <DialogTitle>Move to Project</DialogTitle>
+        </DialogHeader>
+        <div className="pt-2 space-y-1 max-h-[300px] overflow-y-auto">
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="py-6 text-center">
+              <FolderOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No projects yet</p>
+              <Link
+                href="/project"
+                className="text-xs text-primary hover:underline mt-1 inline-block"
+                onClick={() => onOpenChange(false)}
+              >
+                Create a project
+              </Link>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => handleSelect(null)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left",
+                  !currentProjectId
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-muted/60 text-muted-foreground"
+                )}
+                disabled={isUpdating}
+              >
+                <FolderOpen className="h-4 w-4" />
+                <span className="text-sm">No project</span>
+              </button>
+              <div className="h-px bg-border/60 my-1" />
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => handleSelect(project)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left",
+                    currentProjectId === project.id
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-muted/60"
+                  )}
+                  disabled={isUpdating}
+                >
+                  <FolderOpen className="h-4 w-4 text-primary/60" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{project.name}</p>
+                    {project.description && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {project.description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =========================================
 // Download Dialog (placeholder)
 // =========================================
 
@@ -177,11 +313,22 @@ function DownloadChatDialog({
 // Main Component
 // =========================================
 
-export function ChatHistoryItem({ item, onDelete, onRename }: ChatHistoryItemProps) {
+export function ChatHistoryItem({
+  item,
+  onDelete,
+  onRename,
+  onArchive,
+  onUnarchive,
+  onShare,
+  onPin,
+  onUnpin,
+  isArchived = false,
+}: ChatHistoryItemProps) {
   const { prefetchOnHover } = useChatPrefetch();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [downloadOpen, setDownloadOpen] = React.useState(false);
+  const [projectOpen, setProjectOpen] = React.useState(false);
 
   const [deleteEver, setDeleteEver] = React.useState(false);
   const [renameEver, setRenameEver] = React.useState(false);
@@ -196,6 +343,29 @@ export function ChatHistoryItem({ item, onDelete, onRename }: ChatHistoryItemPro
     onRename?.(item.id, title);
   };
 
+  const handleArchive = () => {
+    onArchive?.(item.id);
+  };
+
+  const handleUnarchive = () => {
+    onUnarchive?.(item.id);
+  };
+
+  const handleShare = (visibility: "public" | "private") => {
+    onShare?.(item.id, visibility);
+  };
+
+  const handlePin = () => {
+    onPin?.(item.id);
+  };
+
+  const handleUnpin = () => {
+    onUnpin?.(item.id);
+  };
+
+  const isPublic = item.visibility === "public";
+  const isPinned = !!item.pinnedAt;
+
   return (
     <>
       <SidebarMenuItem>
@@ -203,6 +373,9 @@ export function ChatHistoryItem({ item, onDelete, onRename }: ChatHistoryItemPro
           render={
             <Link href={`/chat/${item.id}`} className="flex min-w-0 items-center gap-2 pr-7" onMouseEnter={() => prefetchOnHover(item.id)}>
               <span className="flex-1 font-semibold tracking-wider truncate text-[12.5px]">
+                {item.parentChatId && (
+                  <GitBranch className="inline-block h-3 w-3 mr-1.5 text-sidebar-foreground/40 align-text-bottom" />
+                )}
                 {item.title}
               </span>
             </Link>
@@ -225,14 +398,29 @@ export function ChatHistoryItem({ item, onDelete, onRename }: ChatHistoryItemPro
 
           <DropdownMenuContent side="right" align="start" sideOffset={6} className="w-44">
             <DropdownMenuGroup>
-              <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer">
-                <Pin className="h-3.5 w-3.5 text-muted-foreground" />
-                Pin
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer">
+              {/* Pin/Unpin */}
+              {isPinned ? (
+                <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handleUnpin}>
+                  <PinOff className="h-3.5 w-3.5 text-muted-foreground" />
+                  Unpin
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handlePin}>
+                  <Pin className="h-3.5 w-3.5 text-muted-foreground" />
+                  Pin
+                </DropdownMenuItem>
+              )}
+
+              {/* External Link */}
+              <DropdownMenuItem
+                className="gap-2.5 text-[13px] cursor-pointer"
+                onClick={() => window.open(`/chat/${item.id}`, "_blank")}
+              >
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                 Open in new tab
               </DropdownMenuItem>
+
+              {/* Rename */}
               <DropdownMenuItem
                 className="gap-2.5 text-[13px] cursor-pointer"
                 onClick={() => { setRenameEver(true); setRenameOpen(true); }}
@@ -240,10 +428,58 @@ export function ChatHistoryItem({ item, onDelete, onRename }: ChatHistoryItemPro
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                 Rename
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer">
-                <Archive className="h-3.5 w-3.5 text-muted-foreground" />
-                Archive
+
+              {/* Add to Project */}
+              <DropdownMenuItem
+                className="gap-2.5 text-[13px] cursor-pointer"
+                onClick={() => setProjectOpen(true)}
+              >
+                <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                Move to Project
               </DropdownMenuItem>
+
+              {/* Share/Visibility */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="gap-2.5 text-[13px] cursor-pointer">
+                  {isPublic ? (
+                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  {isPublic ? "Make Private" : "Make Public"}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-40">
+                  <DropdownMenuItem
+                    className="gap-2.5 text-[13px] cursor-pointer"
+                    onClick={() => handleShare("public")}
+                  >
+                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                    Public
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="gap-2.5 text-[13px] cursor-pointer"
+                    onClick={() => handleShare("private")}
+                  >
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                    Private
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              {/* Archive/Unarchive */}
+              {isArchived ? (
+                <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handleUnarchive}>
+                  <ArchiveRestore className="h-3.5 w-3.5 text-muted-foreground" />
+                  Restore
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handleArchive}>
+                  <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+                  Archive
+                </DropdownMenuItem>
+              )}
+
+              {/* Download - placeholder */}
               <DropdownMenuItem
                 className="gap-2.5 text-[13px] cursor-pointer"
                 onClick={() => { setDownloadEver(true); setDownloadOpen(true); }}
@@ -290,6 +526,12 @@ export function ChatHistoryItem({ item, onDelete, onRename }: ChatHistoryItemPro
           title={item.title}
         />
       )}
+      <ProjectSelectDialog
+        open={projectOpen}
+        onOpenChange={setProjectOpen}
+        chatId={item.id}
+        currentProjectId={item.projectId}
+      />
     </>
   );
 }

@@ -52,9 +52,9 @@ export const KEYS = {
   chatMessages: (chatId: string) => `chat:${chatId}:messages`,
   chatMeta: (chatId: string) => `chat:${chatId}:meta`,
   userChats: (userId: string) => `chats:user:${userId}`,
+  userChatsArchived: (userId: string) => `chats:user:${userId}:archived`,
   userRateLimit: (userId: string) => `user:${userId}:rate_limit`,
   userChatCreation: (userId: string) => `user:${userId}:chat_creation`,
-  searchResult: (query: string) => `search:${Buffer.from(query).toString("base64").slice(0, 64)}`,
   imageCache: (url: string) => `img:${Buffer.from(url).toString("base64").slice(0, 64)}`,
   statusCheck: (service: string) => `status:${service}:checks`,
   userCache: (stackId: string) => `user:cache:${stackId}`,
@@ -70,7 +70,6 @@ export const TTL = {
   userChats: 5 * 60, // 5 minutes for user chat list cache
   rateLimit: 60, // 1 minute
   chatCreationLimit: 60 * 60, // 1 hour
-  searchResult: 30 * 60, // 30 minutes for search caching
   imageCache: 7 * 24 * 60 * 60, // 7 days for image cache
   userCache: 5 * 60, // 5 minutes for user cache
   statusHistory: 31 * 24 * 60 * 60, // 31 days for status history

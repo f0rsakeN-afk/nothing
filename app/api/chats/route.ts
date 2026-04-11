@@ -20,12 +20,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const rawLimit = searchParams.get("limit");
     const rawCursor = searchParams.get("cursor");
+    const archived = searchParams.get("archived") === "true";
+    const projectId = searchParams.get("projectId");
 
     // Manual parse to avoid schema caching issues
     const limit = rawLimit ? parseInt(rawLimit, 10) : 20;
     const cursor = rawCursor && rawCursor !== "null" ? rawCursor : undefined;
 
-    const result = await getUserChats(user.id, Math.min(Math.max(limit, 1), 100), cursor);
+    const result = await getUserChats(user.id, Math.min(Math.max(limit, 1), 100), cursor, { archived, projectId: projectId || undefined });
 
     return NextResponse.json(result);
   } catch (error) {
