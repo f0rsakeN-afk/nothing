@@ -1,6 +1,7 @@
 "use client";
 
-import * as React from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -34,10 +35,74 @@ function SettingRow({
   );
 }
 
+interface Settings {
+  theme: string;
+  language: string;
+  autoTitle: boolean;
+  enterToSend: boolean;
+  showSuggestions: boolean;
+  compactMode: boolean;
+  reducedMotion: boolean;
+  streaming: boolean;
+  codeHighlight: boolean;
+  persistentMemory: boolean;
+  emailUpdates: boolean;
+  emailMarketing: boolean;
+  browserNotifs: boolean;
+  usageAlerts: boolean;
+  analytics: boolean;
+  usageData: boolean;
+  crashReports: boolean;
+}
+
+async function fetchSettings(): Promise<Settings> {
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  return res.json();
+}
+
+async function updateSetting(key: string, value: boolean | string): Promise<Settings> {
+  const res = await fetch("/api/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ [key]: value }),
+  });
+  if (!res.ok) throw new Error("Failed to update settings");
+  return res.json();
+}
+
 export function GeneralSection() {
-  const [autoTitle, setAutoTitle] = React.useState(true);
-  const [suggestions, setSuggestions] = React.useState(true);
-  const [enterSend, setEnterSend] = React.useState(false);
+  const queryClient = useQueryClient();
+  const [localSettings, setLocalSettings] = useState<Settings | null>(null);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettings,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: boolean | string }) => {
+      return updateSetting(key, value);
+    },
+    onSuccess: (newData) => {
+      queryClient.setQueryData(["settings"], newData);
+      setLocalSettings(newData);
+    },
+  });
+
+  const onUpdate = useCallback((key: keyof Settings, value: boolean | string) => {
+    mutation.mutate({ key, value });
+  }, [mutation]);
+
+  const displaySettings = localSettings || settings;
+
+  if (isLoading || !displaySettings) {
+    return (
+      <div className="space-y-5">
+        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -60,8 +125,8 @@ export function GeneralSection() {
             description="Automatically generate a title from the first message."
           >
             <Switch
-              checked={autoTitle}
-              onCheckedChange={setAutoTitle}
+              checked={displaySettings.autoTitle}
+              onCheckedChange={(val) => onUpdate("autoTitle", val)}
               size="sm"
             />
           </SettingRow>
@@ -70,8 +135,8 @@ export function GeneralSection() {
             description="Display quick prompt suggestions on the home screen."
           >
             <Switch
-              checked={suggestions}
-              onCheckedChange={setSuggestions}
+              checked={displaySettings.showSuggestions}
+              onCheckedChange={(val) => onUpdate("showSuggestions", val)}
               size="sm"
             />
           </SettingRow>
@@ -80,8 +145,8 @@ export function GeneralSection() {
             description="Press Enter to send. Use Shift+Enter for a new line."
           >
             <Switch
-              checked={enterSend}
-              onCheckedChange={setEnterSend}
+              checked={displaySettings.enterToSend}
+              onCheckedChange={(val) => onUpdate("enterToSend", val)}
               size="sm"
             />
           </SettingRow>
@@ -97,7 +162,10 @@ export function GeneralSection() {
             label="Language"
             description="Interface language for the app."
           >
-            <Select defaultValue="en">
+            <Select
+              value={displaySettings.language}
+              onValueChange={(val) => onUpdate("language", val || "en")}
+            >
               <SelectTrigger size="sm" className="w-32 h-7 text-[12px]">
                 <SelectValue />
               </SelectTrigger>

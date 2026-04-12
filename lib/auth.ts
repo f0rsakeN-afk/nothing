@@ -27,9 +27,11 @@ export async function getOrCreateUser(request: Request): Promise<AuthenticatedUs
   const email = stackUser.primaryEmail || `${stackUser.id}@placeholder.local`;
 
   // Find or create user - this handles OAuth callback case
+  // Note: email is NOT updated on existing users to avoid unique constraint violations
+  // since multiple OAuth providers may have different emails for the same user
   const user = await prisma.user.upsert({
     where: { stackId: stackUser.id },
-    update: { email },
+    update: {},
     create: {
       stackId: stackUser.id,
       email,

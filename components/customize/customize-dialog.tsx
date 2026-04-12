@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Sparkles,
@@ -75,21 +76,59 @@ const TONES = [
   },
 ] as const;
 
+async function fetchCustomize(): Promise<CustomizeSchema> {
+  const res = await fetch("/api/customize");
+  if (!res.ok) throw new Error("Failed to fetch customize");
+  return res.json();
+}
+
+async function updateCustomize(data: CustomizeSchema): Promise<CustomizeSchema> {
+  const res = await fetch("/api/customize", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update customize");
+  return res.json();
+}
+
 export function CustomizeDialog({
   isOpen,
   onOpenChange,
 }: CustomizeDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: customizeData, isLoading } = useQuery({
+    queryKey: ["customize"],
+    queryFn: fetchCustomize,
+    enabled: isOpen,
+  });
+
+  const mutation = useMutation({
+    mutationFn: updateCustomize,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customize"] });
+      toast.success("Personalization updated successfully!");
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast.error("Failed to update personalization");
+    },
+  });
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<CustomizeSchema>({
     resolver: zodResolver(customizeSchema),
     defaultValues: {
+      firstName: "",
+      lastName: "",
       preferredName: "",
       responseTone: "professional",
       detailLevel: "balanced",
@@ -97,25 +136,33 @@ export function CustomizeDialog({
     },
   });
 
+  // Reset form when dialog opens and data is loaded
+  useEffect(() => {
+    if (isOpen && customizeData && !hasInitialized) {
+      reset({
+        firstName: customizeData.firstName || "",
+        lastName: customizeData.lastName || "",
+        preferredName: customizeData.preferredName || "",
+        responseTone: customizeData.responseTone || "professional",
+        detailLevel: customizeData.detailLevel || "balanced",
+        interests: customizeData.interests || "",
+      });
+      setHasInitialized(true);
+    }
+  }, [isOpen, customizeData, reset, hasInitialized]);
+
+  // Reset initialization state when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHasInitialized(false);
+    }
+  }, [isOpen]);
+
   const selectedTone = watch("responseTone");
   const selectedDetail = watch("detailLevel");
 
-  const onSubmit = async (data: CustomizeSchema) => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Personalization updated:", data);
-      toast.success("Personalization updated successfully!");
-
-      // Close
-      onOpenChange(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update personalization");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const onSubmit = (data: CustomizeSchema) => {
+    mutation.mutate(data);
   };
 
   return (
@@ -136,6 +183,35 @@ export function CustomizeDialog({
           className="space-y-6 pt-4 max-h-[75dvh] sm:max-h-full overflow-scroll sm:overflow-auto hide-scrollbar"
         >
           <div className="space-y-5">
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-xs font-medium">
+                  First Name
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="firstName"
+                    placeholder="First name"
+                    className="pl-9 h-11 rounded-xl"
+                    {...register("firstName")}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-xs font-medium">
+                  Last Name
+                </Label>
+                <Input
+                  id="lastName"
+                  placeholder="Last name"
+                  className="h-11 rounded-xl"
+                  {...register("lastName")}
+                />
+              </div>
+            </div>
+
             {/* Preferred Name */}
             <div className="space-y-2">
               <Label htmlFor="preferredName" className="text-xs font-medium">
@@ -302,17 +378,17 @@ export function CustomizeDialog({
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={mutation.isPending}
               className="rounded-xl h-11"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={mutation.isPending}
               className="rounded-xl h-11 px-8 gap-2"
             >
-              {isSubmitting ? (
+              {mutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Saving...

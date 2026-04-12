@@ -1,38 +1,96 @@
 "use client";
 
 import * as React from "react";
-import { Check, ArrowRight, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Check, ArrowRight, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { tiers, featureGroups } from "@/data/pricing";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface PricingDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface Plan {
+  name: string;
+  price: number;
+  credits: number;
+  maxChats: number;
+  maxProjects: number;
+  features: string[];
+  description?: string;
+}
+
+interface PlansData {
+  plans: {
+    free: Plan;
+    basic: Plan;
+    pro: Plan;
+    enterprise: Plan;
+  };
+  currentPlan: string;
+}
+
+const FEATURE_LABELS: Record<string, string> = {
+  "basic-chat": "Basic chat",
+  "basic-projects": "Basic projects",
+  "short-memory": "Short-term memory",
+  "longer-memory": "Longer conversation memory",
+  attachments: "File attachments",
+  "advanced-customization": "Advanced customization",
+  "chat-folders": "Chat folders",
+  "chat-branches": "Chat branches",
+  "export-chats": "Export chats",
+  "team-collaboration": "Team collaboration",
+  "api-access": "API access",
+  "priority-support": "Priority support",
+  "dedicated-support": "Dedicated support",
+};
+
+async function fetchPlans(): Promise<PlansData> {
+  const res = await fetch("/api/stripe/plans");
+  if (!res.ok) throw new Error("Failed to fetch plans");
+  return res.json();
+}
+
 // ---------------------------------------------------------------------------
-// PricingCard — memoised, renders one tier card
+// TierCard — renders one tier card
 // ---------------------------------------------------------------------------
 
 interface TierCardProps {
-  tier: (typeof tiers)[number];
+  tier: { key: string; value: Plan };
+  isCurrentPlan: boolean;
+  variant?: "default" | "featured";
+  onUpgrade: (planId: string) => void;
+  isUpgrading: boolean;
 }
 
-const TierCard = React.memo(function TierCard({ tier }: TierCardProps) {
+const TierCard = React.memo(function TierCard({
+  tier,
+  isCurrentPlan,
+  variant = "default",
+  onUpgrade,
+  isUpgrading,
+}: TierCardProps) {
+  const { key, value } = tier;
+  const isFree = key === "free";
+  const isFeatured = variant === "featured";
+
   return (
     <div
       className={cn(
         "relative rounded-xl flex flex-col overflow-hidden transition-all duration-300",
-        tier.featured
+        isFeatured
           ? "bg-card border border-primary/25 shadow-lg shadow-primary/8"
           : "bg-card border border-border hover:border-border/60",
       )}
     >
-      {tier.featured && (
+      {isFeatured && (
         <ShineBorder
           shineColor={[
             "hsl(var(--primary))",
@@ -45,7 +103,7 @@ const TierCard = React.memo(function TierCard({ tier }: TierCardProps) {
         />
       )}
 
-      {tier.featured && (
+      {isFeatured && (
         <div className="bg-primary/8 border-b border-primary/15 px-5 py-2 flex items-center justify-between">
           <span className="text-[9px] font-semibold text-primary uppercase tracking-widest">
             Most Popular
@@ -58,83 +116,141 @@ const TierCard = React.memo(function TierCard({ tier }: TierCardProps) {
         </div>
       )}
 
+      {isCurrentPlan && (
+        <div className="absolute -top-3 right-3 z-20">
+          <span className="bg-green-500/10 text-green-600 text-[9px] font-medium uppercase tracking-wider px-2 py-1 rounded-full border border-green-500/20">
+            Current Plan
+          </span>
+        </div>
+      )}
+
       <div className="p-5 flex flex-col gap-5 relative z-10 flex-1">
         <div>
           <p
             className={cn(
               "text-[10px] font-semibold uppercase tracking-widest mb-3",
-              tier.featured ? "text-primary" : "text-muted-foreground",
+              isFeatured ? "text-primary" : "text-muted-foreground",
             )}
           >
-            {tier.name}
+            {value.name}
           </p>
           <div className="flex items-end gap-1.5 mb-2">
             <span className="text-[1.875rem] font-semibold tracking-tight text-foreground leading-none">
-              {tier.price}
+              {isFree ? "$0" : `$${(value.price / 100).toFixed(2)}`}
             </span>
             <span className="text-[11px] text-muted-foreground pb-0.5">
-              {tier.priceNote}
+              /month
             </span>
           </div>
+          {value.credits > 0 && (
+            <p className="text-[11px] text-primary/80 font-medium mb-2">
+              {value.credits.toLocaleString()} credits/mo
+            </p>
+          )}
           <p className="text-[12px] text-muted-foreground leading-relaxed">
-            {tier.description}
+            {value.description}
           </p>
         </div>
 
         <div
           className={cn(
             "h-px",
-            tier.featured ? "bg-primary/15" : "bg-border/60",
+            isFeatured ? "bg-primary/15" : "bg-border/60",
           )}
         />
 
         <button
           className={cn(
             "w-full py-2 rounded-lg font-medium text-[12px] transition-all flex items-center justify-center gap-1.5 group",
-            tier.featured
+            isCurrentPlan
+              ? "bg-muted text-muted-foreground cursor-default"
+              : isFeatured
               ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : "bg-background border border-border text-foreground hover:bg-muted",
           )}
+          disabled={isCurrentPlan || isUpgrading}
+          onClick={() => onUpgrade(key)}
         >
-          {tier.cta}
-          <ArrowRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+          {isCurrentPlan ? (
+            "Current Plan"
+          ) : isUpgrading ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Redirecting...
+            </>
+          ) : (
+            <>
+              {isFree ? "Get Started" : `Upgrade to ${value.name}`}
+              <ArrowRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+            </>
+          )}
         </button>
       </div>
     </div>
   );
 });
 
-interface FeatureCellProps {
-  value: string | boolean;
-  featured?: boolean;
+// ---------------------------------------------------------------------------
+// FeatureRow
+// ---------------------------------------------------------------------------
+
+interface FeatureRowProps {
+  label: string;
+  free: string | boolean | number;
+  basic: string | boolean | number;
+  pro: string | boolean | number;
 }
 
-const FeatureCell = React.memo(function FeatureCell({
-  value,
-  featured,
-}: FeatureCellProps) {
-  if (typeof value === "boolean") {
-    return value ? (
-      <Check
-        className={cn(
-          "w-3.5 h-3.5",
-          featured ? "text-primary" : "text-foreground/70",
-        )}
-        strokeWidth={3}
-      />
-    ) : (
-      <span className="text-muted-foreground/30 text-sm">—</span>
-    );
-  }
+const FeatureRow = React.memo(function FeatureRow({
+  label,
+  free,
+  basic,
+  pro,
+}: FeatureRowProps) {
+  const cells = [
+    { value: free, featured: false },
+    { value: basic, featured: false },
+    { value: pro, featured: true },
+  ];
+
   return (
-    <span
-      className={cn(
-        "text-[11px] font-medium",
-        featured ? "text-primary" : "text-foreground/70",
-      )}
-    >
-      {value}
-    </span>
+    <div className="grid grid-cols-4 hover:bg-muted/[0.04] border-b border-border/30 last:border-0">
+      <div className="py-3 px-4 flex items-center">
+        <p className="text-[12px] text-foreground/80">{label}</p>
+      </div>
+      {cells.map((cell, i) => (
+        <div
+          key={i}
+          className={cn(
+            "py-3 px-3 flex items-center justify-center",
+            i === 2 && "bg-primary/[0.03]",
+          )}
+        >
+          {typeof cell.value === "boolean" ? (
+            cell.value ? (
+              <Check
+                className={cn(
+                  "w-3.5 h-3.5",
+                  cell.featured ? "text-primary" : "text-foreground/70",
+                )}
+                strokeWidth={3}
+              />
+            ) : (
+              <span className="text-muted-foreground/30 text-sm">—</span>
+            )
+          ) : (
+            <span
+              className={cn(
+                "text-[11px] font-medium",
+                cell.featured ? "text-primary" : "text-foreground/70",
+              )}
+            >
+              {cell.value}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
   );
 });
 
@@ -143,6 +259,117 @@ const FeatureCell = React.memo(function FeatureCell({
 // ---------------------------------------------------------------------------
 
 export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
+  const router = useRouter();
+  const { data, isLoading } = useQuery({
+    queryKey: ["stripe-plans"],
+    queryFn: fetchPlans,
+    enabled: isOpen,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create checkout");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      if (error.message.includes("Unauthorized")) {
+        toast.error("Please sign in to upgrade");
+        onOpenChange(false);
+        router.push("/login");
+      } else {
+        toast.error(error.message);
+      }
+    },
+  });
+
+  const handleUpgrade = (planId: string) => {
+    if (planId === "free") {
+      onOpenChange(false);
+      router.push("/signup");
+      return;
+    }
+    checkoutMutation.mutate(planId);
+  };
+
+  const plans = data
+    ? (Object.entries(data.plans)
+        .filter(([key]) => key !== "enterprise")
+        .map(([key, value]) => ({ key, value })) as { key: string; value: Plan }[])
+    : [];
+
+  // Group features from all plans
+  const allFeatures = React.useMemo(() => {
+    if (!data) return [];
+
+    const featureMap = new Map<string, { free: string | boolean | number; basic: string | boolean | number; pro: string | boolean | number }>();
+
+    // Add plan-level features
+    plans.forEach(({ key, value }) => {
+      const tierKey = key === "free" ? "free" : key === "basic" ? "basic" : "pro";
+      // Chats
+      if (!featureMap.has("Chats")) {
+        featureMap.set("Chats", { free: "—", basic: "—", pro: "—" });
+      }
+      const current = featureMap.get("Chats")!;
+      current[tierKey as keyof typeof current] = value.maxChats === -1 ? "Unlimited" : value.maxChats;
+
+      // Projects
+      if (!featureMap.has("Projects")) {
+        featureMap.set("Projects", { free: "—", basic: "—", pro: "—" });
+      }
+      const proj = featureMap.get("Projects")!;
+      proj[tierKey as keyof typeof proj] = value.maxProjects === -1 ? "Unlimited" : value.maxProjects;
+
+      // Credits
+      if (!featureMap.has("Monthly credits")) {
+        featureMap.set("Monthly credits", { free: "—", basic: "—", pro: "—" });
+      }
+      const cred = featureMap.get("Monthly credits")!;
+      cred[tierKey as keyof typeof cred] = value.credits > 0 ? value.credits.toLocaleString() : "—";
+    });
+
+    // Add specific features
+    data.plans.free.features.forEach((f) => {
+      if (!featureMap.has(FEATURE_LABELS[f] || f)) {
+        featureMap.set(FEATURE_LABELS[f] || f, { free: true, basic: "—", pro: "—" });
+      }
+    });
+    data.plans.basic.features.forEach((f) => {
+      const label = FEATURE_LABELS[f] || f;
+      if (!featureMap.has(label)) {
+        featureMap.set(label, { free: "—", basic: true, pro: "—" });
+      } else {
+        featureMap.get(label)!.basic = true;
+      }
+    });
+    data.plans.pro.features.forEach((f) => {
+      const label = FEATURE_LABELS[f] || f;
+      if (!featureMap.has(label)) {
+        featureMap.set(label, { free: "—", basic: "—", pro: true });
+      } else {
+        featureMap.get(label)!.pro = true;
+      }
+    });
+
+    return Array.from(featureMap.entries()).map(([label, values]) => ({
+      label,
+      ...values,
+    }));
+  }, [data]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
@@ -180,11 +407,29 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
         <ScrollArea className="flex-1 min-h-0 max-h-[70dvh] overflow-auto hide-scrollbar">
           <div className="px-6 py-5 space-y-6">
             {/* Tier cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {tiers.map((tier) => (
-                <TierCard key={tier.id} tier={tier} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-[280px] rounded-xl border border-border bg-muted/20 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {plans.map(({ key, value }) => (
+                  <TierCard
+                    key={key}
+                    tier={{ key, value }}
+                    isCurrentPlan={data?.currentPlan === key}
+                    variant={key === "pro" ? "featured" : "default"}
+                    onUpgrade={handleUpgrade}
+                    isUpgrading={checkoutMutation.isPending}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Feature comparison */}
             <div>
@@ -204,76 +449,47 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
                       Feature
                     </p>
                   </div>
-                  {tiers.map((tier) => (
+                  {plans.map(({ key, value }) => (
                     <div
-                      key={tier.id}
+                      key={key}
                       className={cn(
                         "py-3 px-3 text-center",
-                        tier.featured && "bg-primary/5",
+                        key === "pro" && "bg-primary/5",
                       )}
                     >
                       <p
                         className={cn(
                           "text-[10px] font-semibold uppercase tracking-widest",
-                          tier.featured
-                            ? "text-primary"
-                            : "text-muted-foreground",
+                          key === "pro" ? "text-primary" : "text-muted-foreground",
                         )}
                       >
-                        {tier.name}
+                        {value.name}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                {/* Feature groups */}
-                {featureGroups.map((group) => (
-                  <div key={group.group}>
-                    {/* Group label row */}
-                    <div className="grid grid-cols-4 bg-muted/10">
-                      <div className="col-span-4 py-2 px-4 border-b border-border/40">
-                        <p className="text-[9.5px] font-bold uppercase tracking-[0.15em] text-muted-foreground/40">
-                          {group.group}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Feature rows */}
-                    {group.features.map((feature, fi) => {
-                      const isLast = fi === group.features.length - 1;
-                      return (
-                        <div
-                          key={feature.label}
-                          className={cn(
-                            "grid grid-cols-4 hover:bg-muted/[0.04]  ",
-                            !isLast && "border-b border-border/30",
-                          )}
-                        >
-                          <div className="py-3 px-4 flex items-center">
-                            <p className="text-[12px] text-foreground/80">
-                              {feature.label}
-                            </p>
-                          </div>
-                          {(["free", "pro", "enterprise"] as const).map(
-                            (tid) => (
-                              <div
-                                key={tid}
-                                className={cn(
-                                  "py-3 px-3 flex items-center justify-center",
-                                  tid === "pro" && "bg-primary/[0.03]",
-                                )}
-                              >
-                                <FeatureCell
-                                  value={feature[tid] as string | boolean}
-                                  featured={tid === "pro"}
-                                />
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      );
-                    })}
+                {/* Feature rows */}
+                {isLoading ? (
+                  <div className="space-y-3 p-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div
+                        key={i}
+                        className="h-8 rounded-md bg-muted/20 animate-pulse"
+                      />
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  allFeatures.map((feature) => (
+                    <FeatureRow
+                      key={feature.label}
+                      label={feature.label}
+                      free={feature.free}
+                      basic={feature.basic}
+                      pro={feature.pro}
+                    />
+                  ))
+                )}
               </div>
             </div>
           </div>

@@ -7,6 +7,9 @@ export interface PromptConfig {
   tone?: "formal" | "casual" | "friendly" | "technical" | "concise" | "detailed" | "balanced";
   detailLevel?: "CONCISE" | "BALANCED" | "DETAILED";
   userName?: string;
+  userFirstName?: string;
+  userLastName?: string;
+  userInterests?: string[];
   projectName?: string;
   projectInstruction?: string;
   language?: string;
@@ -40,8 +43,16 @@ CORE PRINCIPLES:
 - Never fake knowledge or confidence you don't have
 - When uncertain, say so rather than guessing`);
 
-  if (config.userName) {
-    parts.push(`User context: ${config.userName}`);
+  // Build user context from available name info
+  if (config.userFirstName || config.userLastName || config.userName) {
+    const displayName = config.userFirstName || config.userName || "";
+    const fullName = [config.userFirstName, config.userLastName].filter(Boolean).join(" ") || displayName;
+    if (fullName) {
+      parts.push(`User's name: ${fullName}`);
+    }
+    if (config.userInterests && config.userInterests.length > 0) {
+      parts.push(`User interests: ${config.userInterests.join(", ")}`);
+    }
   }
 
   if (config.projectName) {
@@ -68,7 +79,9 @@ function buildCommunicationStyle(config: PromptConfig): string {
 - Keep code blocks clean, labeled, and properly formatted
 - Variable/naming: use descriptive names, not abbreviations`;
 
+  // Map customize response tones to tone overrides
   const toneOverrides: Record<string, string> = {
+    // Standard tones
     formal: `TONE OVERRIDE: Polished, business-appropriate. Use full sentences in prose. Omit casual language.`,
     casual: `TONE OVERRIDE: Conversational, relaxed. Natural flow. Can be more direct.`,
     friendly: `TONE OVERRIDE: Warm and encouraging. Positive framing. Easy to approach.`,
@@ -76,6 +89,14 @@ function buildCommunicationStyle(config: PromptConfig): string {
     concise: `TONE OVERRIDE: Lead with the answer. Minimal explanation. No filler.`,
     detailed: `TONE OVERRIDE: Comprehensive. Multiple examples, variations, and thorough explanations.`,
     balanced: `TONE OVERRIDE: Professional but approachable. Clear without being clinical.`,
+    // Customize dialog tones
+    professional: `TONE OVERRIDE: Professional and business-focused. Use industry-appropriate terminology. Be direct and action-oriented.`,
+    witty: `TONE OVERRIDE: Sharp and clever. Use dry humor when appropriate. Keep it smart but accessible.`,
+    flirty: `TONE OVERRIDE: Playful and warm. Light-hearted but still helpful and informative.`,
+    "gen-z": `TONE OVERRIDE: Modern and energetic. Use contemporary language. Avoid stuffy phrasing.`,
+    sarcastic: `TONE OVERRIDE: Dry, sarcastic wit. Don't overdo it but use it to keep things engaging.`,
+    supportive: `TONE OVERRIDE: Encouraging and empathetic. Celebrate progress, be patient with struggles.`,
+    "emoji-heavy": `TONE OVERRIDE: Use relevant emojis to enhance clarity and visual appeal. Perfect for lists and highlights.`,
   };
 
   const tone = config.tone || "balanced";
