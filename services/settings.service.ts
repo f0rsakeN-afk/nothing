@@ -92,7 +92,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
 
   // Cache the result
   try {
-    await redis.setEx(cacheKey, TTL.userSettings, JSON.stringify(userSettings));
+    await redis.setex(cacheKey, TTL.userSettings, JSON.stringify(userSettings));
   } catch {
     // Redis error, ignore
   }

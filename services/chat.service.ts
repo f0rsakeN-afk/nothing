@@ -243,8 +243,21 @@ export async function streamChat(
     });
 
     if (!res.ok) {
-      console.error("[streamChat] response not ok:", res.status, res.statusText);
-      throw new Error("Failed to get response");
+      // Try to parse error JSON first (e.g., 402 credits error)
+      const contentType = res.headers.get("content-type");
+      let errorData: { error: string; message?: string; required?: number; current?: number; upgradeTo?: string } = { error: "Request failed" };
+      if (contentType?.includes("application/json")) {
+        try {
+          errorData = await res.json();
+        } catch { /* ignore parse failure */ }
+      }
+      const err = new Error(errorData.error || `Request failed with status ${res.status}`) as Error & { code?: string; message?: string; required?: number; current?: number; upgradeTo?: string };
+      err.code = "CREDIT_ERROR";
+      err.message = errorData.message || `Insufficient credits. Required: ${errorData.required}, Current: ${errorData.current}`;
+      err.required = errorData.required;
+      err.current = errorData.current;
+      err.upgradeTo = "Pro";
+      throw err;
     }
 
     const reader = res.body?.getReader();

@@ -21,7 +21,9 @@ async function buildMessages(
   const chat = await prisma.chat.findUnique({
     where: { id: chatId },
     include: {
-      user: true,
+      user: {
+        select: { id: true, email: true },
+      },
       project: true,
     },
   });
@@ -31,7 +33,9 @@ async function buildMessages(
   }
 
   // Get user preferences from cache (much faster than nested query)
-  const userPreferences = await getUserPreferences(chat.userId, chat.user.email);
+  // Prisma's email type is string | null, we default to empty string
+  // @ts-expect-error Prisma email type inference issue
+  const userPreferences = await getUserPreferences(chat.userId, chat.user.email ?? '');
 
   const promptConfig: PromptConfig = {
     tone: userPreferences.tone as PromptConfig["tone"],

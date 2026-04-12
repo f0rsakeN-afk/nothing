@@ -29,30 +29,50 @@ export async function getOrCreateUser(request: Request): Promise<AuthenticatedUs
   // Find or create user - this handles OAuth callback case
   // Note: email is NOT updated on existing users to avoid unique constraint violations
   // since multiple OAuth providers may have different emails for the same user
-  const user = await prisma.user.upsert({
+  let user = await prisma.user.findUnique({
     where: { stackId: stackUser.id },
-    update: {},
-    create: {
-      stackId: stackUser.id,
-      email,
-      role: "USER",
-    },
   });
+
+  if (!user) {
+    try {
+      user = await prisma.user.create({
+        data: {
+          stackId: stackUser.id,
+          email,
+          role: "USER",
+        },
+      });
+    } catch (err) {
+      // Handle race condition where another request created the user
+      if ((err as { code?: string }).code === "P2002") {
+        user = await prisma.user.findUnique({
+          where: { stackId: stackUser.id },
+        });
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  // This should never happen if code is correct, but TypeScript doesn't know that
+  if (!user) {
+    throw new Error("User not found after upsert");
+  }
 
   // Update cache
   try {
     const cacheKey = KEYS.userCache(stackUser.id);
     await redis.setex(cacheKey, TTL.userCache, JSON.stringify({
-      id: user.id,
-      email: user.email,
+      id: user!.id,
+      email: user!.email,
     }));
   } catch {
     // Cache failed - not critical
   }
 
   return {
-    id: user.id,
-    email: user.email,
+    id: user!.id,
+    email: user!.email,
     stackId: stackUser.id,
   };
 }

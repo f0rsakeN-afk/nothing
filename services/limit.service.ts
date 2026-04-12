@@ -36,6 +36,9 @@ export interface UserLimits {
   hasFeature: (feature: string) => boolean;
   planName: string;
   planTier: string;
+  maxProjects: number;
+  maxChats: number;
+  maxMessages: number;
 }
 
 /**
@@ -106,7 +109,7 @@ export async function getUserLimits(userId: string): Promise<UserLimits> {
   };
 
   try {
-    await redis.setEx(cacheKey, CACHE_TTL, JSON.stringify(toCache));
+    await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(toCache));
   } catch {
     // Redis error, ignore
   }
@@ -150,6 +153,9 @@ function buildUserLimits(plan: PlanData | null): UserLimits {
     hasFeature: (feature: string) => effectivePlan.features.includes(feature),
     planName: effectivePlan.name,
     planTier: effectivePlan.tier,
+    maxProjects: effectivePlan.maxProjects,
+    maxChats: effectivePlan.maxChats,
+    maxMessages: effectivePlan.maxMessages,
   };
 }
 

@@ -21,7 +21,8 @@ export interface UserPreferences {
  * Get user preferences (customize data) with caching
  * Falls back to defaults if no customize record exists
  */
-export async function getUserPreferences(userId: string, email?: string): Promise<UserPreferences> {
+export async function getUserPreferences(userId: string, email: string | null | undefined): Promise<UserPreferences> {
+  const emailStr: string = typeof email === 'string' ? email : '';
   const cacheKey = KEYS.userPreferences(userId);
 
   // Try cache first
@@ -48,22 +49,22 @@ export async function getUserPreferences(userId: string, email?: string): Promis
         lastName: customize.lastName || "",
         interests: customize.interest || [],
         language: "en", // Default, could be from settings
-        email,
+        email: emailStr || undefined,
       }
     : {
         tone: "balanced",
         detailLevel: "BALANCED",
-        name: email?.split("@")[0] || "User",
+        name: emailStr?.split("@")[0] || "User",
         firstName: "",
         lastName: "",
         interests: [],
         language: "en",
-        email,
+        email: emailStr || undefined,
       };
 
   // Cache the result
   try {
-    await redis.setEx(cacheKey, TTL.userPreferences, JSON.stringify(preferences));
+    await redis.setex(cacheKey, TTL.userPreferences, JSON.stringify(preferences));
   } catch {
     // Redis error, ignore
   }

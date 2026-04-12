@@ -3,6 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useParams } from "next/navigation";
+import { toast } from "sonner";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { ChatHeader } from "@/components/main/chat/chat-header";
@@ -388,7 +389,20 @@ function ChatPageInner() {
   const handleSubmit = React.useCallback(
     async (value: string) => {
       setInput("");
-      await sendUserMessage(value);
+      try {
+        await sendUserMessage(value);
+      } catch (err) {
+        const error = err as { code?: string; message?: string; required?: number; current?: number; upgradeTo?: string };
+        if (error.code === "CREDIT_ERROR") {
+          toast.error("Out of credits", {
+            description: error.message || `You need more credits to continue.`,
+            action: {
+              label: "Upgrade to Pro",
+              onClick: () => window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
+            },
+          });
+        }
+      }
     },
     [sendUserMessage],
   );
