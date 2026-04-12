@@ -44,15 +44,15 @@ const NAV_ITEMS: NavItem[] = [
     comingSoon: false,
     authOnly: true,
   },
-  {
-    id: "context",
-    label: "Context",
-    icon: Library,
-    href: "/context",
-    primary: false,
-    comingSoon: false,
-    authOnly: true,
-  },
+  // {
+  //   id: "context",
+  //   label: "Context",
+  //   icon: Library,
+  //   href: "/context",
+  //   primary: false,
+  //   comingSoon: false,
+  //   authOnly: true,
+  // },
   {
     id: "memory",
     label: "Memory",
@@ -62,24 +62,16 @@ const NAV_ITEMS: NavItem[] = [
     comingSoon: false,
     authOnly: true,
   },
-  {
-    id: "files",
-    label: "Files",
-    icon: FolderOpen,
-    href: "/files",
-    primary: false,
-    comingSoon: false,
-    authOnly: true,
-  },
-  {
-    id: "trash",
-    label: "Trash",
-    icon: Trash2,
-    href: "/trash",
-    primary: false,
-    comingSoon: false,
-    authOnly: true,
-  },
+  // {
+  //   id: "files",
+  //   label: "Files",
+  //   icon: FolderOpen,
+  //   href: "/files",
+  //   primary: false,
+  //   comingSoon: false,
+  //   authOnly: true,
+  // },
+
 ];
 
 interface SidebarNavProps {

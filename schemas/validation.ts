@@ -46,6 +46,52 @@ export const updatePreferencesSchema = z.object({
   detailLevel: z.enum(["CONCISE", "BALANCED", "DETAILED"]).optional(),
 });
 
+// Customize schemas
+export const customizeSchema = z.object({
+  firstName: z.string().max(50),
+  lastName: z.string().max(50),
+  preferredName: z.string().min(1).max(50),
+  responseTone: z.enum(["professional", "witty", "flirty", "gen-z", "sarcastic", "supportive", "emoji-heavy"]),
+  detailLevel: z.enum(["concise", "balanced", "detailed"]),
+  interests: z.string().max(100),
+});
+
+export const updateCustomizeSchema = customizeSchema.partial();
+
+// Settings schemas
+export const settingsSchema = z.object({
+  theme: z.enum(["light", "dark", "system"]).optional(),
+  language: z.string().max(10).optional(),
+  autoTitle: z.boolean().optional(),
+  enterToSend: z.boolean().optional(),
+  showSuggestions: z.boolean().optional(),
+  compactMode: z.boolean().optional(),
+  reducedMotion: z.boolean().optional(),
+  streaming: z.boolean().optional(),
+  codeHighlight: z.boolean().optional(),
+  persistentMemory: z.boolean().optional(),
+  emailUpdates: z.boolean().optional(),
+  emailMarketing: z.boolean().optional(),
+  browserNotifs: z.boolean().optional(),
+  usageAlerts: z.boolean().optional(),
+  analytics: z.boolean().optional(),
+  usageData: z.boolean().optional(),
+  crashReports: z.boolean().optional(),
+});
+
+export const updateSettingsSchema = settingsSchema.partial();
+
+// Account schemas
+export const updateAccountSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  plan: z.enum(["free", "basic", "pro", "enterprise"]).optional(),
+  credits: z.number().int().min(0).optional(),
+  maxChats: z.number().int().min(1).optional(),
+  maxProjects: z.number().int().min(1).optional(),
+  maxMessages: z.number().int().min(1).optional(),
+  features: z.array(z.string()).optional(),
+});
+
 // Search schemas
 export const searchQuerySchema = z.object({
   query: z.string().min(1).max(1000),

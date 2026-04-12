@@ -440,7 +440,7 @@ export function ChatHistoryItem({
 
               {/* Share/Visibility */}
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2.5 text-[13px] cursor-pointer">
+                <DropdownMenuSubTrigger className="gap-2.5 text-[13px] font-medium cursor-pointer">
                   {isPublic ? (
                     <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                   ) : (

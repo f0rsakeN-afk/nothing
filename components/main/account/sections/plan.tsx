@@ -1,23 +1,118 @@
 "use client";
 
 import * as React from "react";
-import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-const FEATURES = [
-  "2,500 credits/mo",
-  "GPT-4o access",
-  "5 projects",
-  "File uploads",
-] as const;
+interface AccountData {
+  plan: {
+    name: string;
+    displayName: string;
+    credits: number;
+    limits: {
+      chats: string | number;
+      projects: string | number;
+      messages: string | number;
+    };
+    features: string[];
+  };
+  usage: {
+    chats: number;
+    projects: number;
+    messages: number;
+  };
+}
 
-const USAGE_BREAKDOWN = [
-  { label: "Chat messages", used: 1240, pct: "50%" },
-  { label: "Web searches", used: 380, pct: "15%" },
-  { label: "File analyses", used: 130, pct: "5%" },
-] as const;
+const FEATURE_LABELS: Record<string, string> = {
+  "basic-chat": "Basic chat",
+  "basic-projects": "Basic projects",
+  "short-memory": "Short-term memory",
+  "longer-memory": "Longer conversation memory",
+  attachments: "File attachments",
+  "advanced-customization": "Advanced customization",
+  "chat-folders": "Chat folders",
+  "chat-branches": "Chat branches",
+  "export-chats": "Export chats",
+  "team-collaboration": "Team collaboration",
+  "api-access": "API access",
+  "priority-support": "Priority support",
+  "dedicated-support": "Dedicated support",
+};
+
+async function fetchAccount(): Promise<AccountData> {
+  const res = await fetch("/api/account");
+  if (!res.ok) throw new Error("Failed to fetch account");
+  return res.json();
+}
 
 export const PlanSection = React.memo(function PlanSection() {
+  const router = useRouter();
+  const { data, isLoading } = useQuery({
+    queryKey: ["account"],
+    queryFn: fetchAccount,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (planId: string) => {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create checkout");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      if (error.message.includes("Unauthorized")) {
+        toast.error("Please sign in to upgrade");
+        router.push("/login");
+      } else {
+        toast.error(error.message);
+      }
+    },
+  });
+
+  const handleUpgrade = () => {
+    // Determine next plan based on current plan
+    const currentPlan = data?.plan?.name?.toLowerCase();
+    let targetPlan = "basic";
+    if (currentPlan === "basic") {
+      targetPlan = "pro";
+    } else if (currentPlan === "pro" || currentPlan === "enterprise") {
+      // Already at top, open pricing dialog instead
+      router.push("/pricing");
+      return;
+    }
+    checkoutMutation.mutate(targetPlan);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5">
+        <div className="h-32 rounded-lg bg-muted/20 animate-pulse" />
+      </div>
+    );
+  }
+
+  const plan = data?.plan;
+  const usage = data?.usage;
+
+  // Calculate credit usage (assuming credits = messages for simplicity)
+  const creditsUsed = usage?.messages || 0;
+  const creditsLimit = typeof plan?.limits?.messages === "number" ? plan.limits.messages : 2500;
+  const creditsPct = Math.min((creditsUsed / creditsLimit) * 100, 100);
+
   return (
     <div className="space-y-5">
       <div>
@@ -34,36 +129,51 @@ export const PlanSection = React.memo(function PlanSection() {
         <div className="space-y-0.5">
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-              Basic
+              {plan?.name.toUpperCase() || "FREE"}
             </span>
           </div>
           <p className="text-[15px] font-semibold text-foreground leading-none">
-            Basic Plan
+            {plan?.displayName || "Free Plan"} Plan
           </p>
           <p className="text-[12px] text-muted-foreground">
-            Free tier · 2,500 credits/month
+            {plan?.credits?.toLocaleString() || 0} credits remaining
           </p>
         </div>
-        <Button size="sm" className="h-7 text-[12px] shrink-0">
-          Upgrade
+        <Button
+          size="sm"
+          className="h-7 text-[12px] shrink-0"
+          onClick={handleUpgrade}
+          disabled={checkoutMutation.isPending}
+        >
+          {checkoutMutation.isPending ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+              Redirecting...
+            </>
+          ) : (
+            "Upgrade"
+          )}
         </Button>
       </div>
 
       {/* Credits usage */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Credits this month
+          Credits used
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 p-3.5 space-y-2">
           <div className="h-2 rounded-full bg-border overflow-hidden">
-            <div className="h-full rounded-full bg-amber-400" style={{ width: "70%" }} />
+            <div
+              className={`h-full rounded-full ${creditsPct > 80 ? "bg-red-500" : creditsPct > 50 ? "bg-amber-400" : "bg-primary"}`}
+              style={{ width: `${creditsPct}%` }}
+            />
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[12px] font-medium text-foreground">
-              1,750 / 2,500 remaining
+              {(creditsLimit - creditsUsed).toLocaleString()} / {creditsLimit.toLocaleString()} remaining
             </span>
             <span className="text-[11px] text-muted-foreground">
-              Resets in 18 days
+              {creditsUsed.toLocaleString()} used
             </span>
           </div>
         </div>
@@ -75,7 +185,11 @@ export const PlanSection = React.memo(function PlanSection() {
           Usage breakdown
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
-          {USAGE_BREAKDOWN.map(({ label, used, pct }) => (
+          {[
+            { label: "Chats", used: usage?.chats || 0, limit: plan?.limits?.chats },
+            { label: "Projects", used: usage?.projects || 0, limit: plan?.limits?.projects },
+            { label: "Messages", used: usage?.messages || 0, limit: plan?.limits?.messages },
+          ].map(({ label, used, limit }) => (
             <div
               key={label}
               className="flex items-center justify-between gap-4 py-3"
@@ -83,11 +197,16 @@ export const PlanSection = React.memo(function PlanSection() {
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <span className="text-[13px] text-foreground truncate">{label}</span>
                 <div className="flex-1 h-1 rounded-full bg-border overflow-hidden min-w-0 max-w-24">
-                  <div className="h-full rounded-full bg-primary/50" style={{ width: pct }} />
+                  <div
+                    className="h-full rounded-full bg-primary/50"
+                    style={{
+                      width: typeof limit === "number" ? `${Math.min((used / limit) * 100, 100)}%` : "100%",
+                    }}
+                  />
                 </div>
               </div>
               <span className="text-[12px] text-muted-foreground shrink-0">
-                {used.toLocaleString()} used
+                {typeof limit === "number" ? `${used} / ${limit}` : used.toLocaleString()}
               </span>
             </div>
           ))}
@@ -100,13 +219,13 @@ export const PlanSection = React.memo(function PlanSection() {
           Included features
         </p>
         <div className="grid grid-cols-2 gap-2">
-          {FEATURES.map((f) => (
+          {(plan?.features || []).map((f) => (
             <div
               key={f}
               className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
             >
               <Check className="h-3 w-3 text-primary shrink-0" />
-              <span className="text-[12px] text-foreground">{f}</span>
+              <span className="text-[12px] text-foreground">{FEATURE_LABELS[f] || f}</span>
             </div>
           ))}
         </div>

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const customizeSchema = z.object({
+  firstName: z.string().max(50),
+  lastName: z.string().max(50),
   preferredName: z
     .string()
     .min(1, "Name is required")
@@ -14,7 +16,7 @@ export const customizeSchema = z.object({
   detailLevel: z.enum(["concise", "balanced", "detailed"], {
     message: "Please select a detail level",
   }),
-  interests: z.string().max(100, "Too many interests!").optional(),
+  interests: z.string().max(100, "Too many interests!"),
 });
 
 export type CustomizeSchema = z.infer<typeof customizeSchema>;

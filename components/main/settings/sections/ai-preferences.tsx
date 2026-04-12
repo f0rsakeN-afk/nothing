@@ -1,14 +1,8 @@
 "use client";
 
-import * as React from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 function SettingRow({
   label,
@@ -34,10 +28,60 @@ function SettingRow({
   );
 }
 
+interface Settings {
+  streaming: boolean;
+  codeHighlight: boolean;
+  persistentMemory: boolean;
+}
+
+async function fetchSettings(): Promise<Settings> {
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  return res.json();
+}
+
+async function updateSetting(key: string, value: boolean): Promise<Settings> {
+  const res = await fetch("/api/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ [key]: value }),
+  });
+  if (!res.ok) throw new Error("Failed to update settings");
+  return res.json();
+}
+
 export function AiPreferencesSection() {
-  const [streaming, setStreaming] = React.useState(true);
-  const [codeHighlight, setCodeHighlight] = React.useState(true);
-  const [memory, setMemory] = React.useState(false);
+  const queryClient = useQueryClient();
+  const [localSettings, setLocalSettings] = useState<Settings | null>(null);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettings,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: boolean }) => {
+      return updateSetting(key, value);
+    },
+    onSuccess: (newData) => {
+      queryClient.setQueryData(["settings"], newData);
+      setLocalSettings(newData);
+    },
+  });
+
+  const onUpdate = useCallback((key: keyof Settings, value: boolean) => {
+    mutation.mutate({ key, value });
+  }, [mutation]);
+
+  const displaySettings = localSettings || settings;
+
+  if (isLoading || !displaySettings) {
+    return (
+      <div className="space-y-5">
+        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -59,16 +103,11 @@ export function AiPreferencesSection() {
             label="Default model"
             description="Model used for new conversations."
           >
-            <Select defaultValue="eryx-1">
-              <SelectTrigger size="sm" className="w-36 h-7 text-[12px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="eryx-1">Eryx-1</SelectItem>
-                <SelectItem value="eryx-1-fast">Eryx-1 Fast</SelectItem>
-                <SelectItem value="eryx-1-pro">Eryx-1 Pro</SelectItem>
-              </SelectContent>
-            </Select>
+            <select className="h-7 w-36 text-[12px] rounded-md border border-input bg-background px-2">
+              <option value="eryx-1">Eryx-1</option>
+              <option value="eryx-1-fast">Eryx-1 Fast</option>
+              <option value="eryx-1-pro">Eryx-1 Pro</option>
+            </select>
           </SettingRow>
         </div>
       </div>
@@ -82,28 +121,31 @@ export function AiPreferencesSection() {
             label="Response style"
             description="How detailed and verbose AI responses should be."
           >
-            <Select defaultValue="balanced">
-              <SelectTrigger size="sm" className="w-28 h-7 text-[12px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="concise">Concise</SelectItem>
-                <SelectItem value="balanced">Balanced</SelectItem>
-                <SelectItem value="detailed">Detailed</SelectItem>
-              </SelectContent>
-            </Select>
+            <select className="h-7 w-28 text-[12px] rounded-md border border-input bg-background px-2">
+              <option value="concise">Concise</option>
+              <option value="balanced">Balanced</option>
+              <option value="detailed">Detailed</option>
+            </select>
           </SettingRow>
           <SettingRow
             label="Stream responses"
             description="Display AI output token-by-token as it's generated."
           >
-            <Switch checked={streaming} onCheckedChange={setStreaming} size="sm" />
+            <Switch
+              checked={displaySettings.streaming}
+              onCheckedChange={(val) => onUpdate("streaming", val)}
+              size="sm"
+            />
           </SettingRow>
           <SettingRow
             label="Syntax highlighting"
             description="Highlight code blocks in AI responses."
           >
-            <Switch checked={codeHighlight} onCheckedChange={setCodeHighlight} size="sm" />
+            <Switch
+              checked={displaySettings.codeHighlight}
+              onCheckedChange={(val) => onUpdate("codeHighlight", val)}
+              size="sm"
+            />
           </SettingRow>
         </div>
       </div>
@@ -117,7 +159,11 @@ export function AiPreferencesSection() {
             label="Persistent memory"
             description="Allow AI to remember context across conversations."
           >
-            <Switch checked={memory} onCheckedChange={setMemory} size="sm" />
+            <Switch
+              checked={displaySettings.persistentMemory}
+              onCheckedChange={(val) => onUpdate("persistentMemory", val)}
+              size="sm"
+            />
           </SettingRow>
         </div>
       </div>

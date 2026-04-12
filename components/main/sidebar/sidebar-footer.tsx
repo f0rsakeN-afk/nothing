@@ -45,6 +45,7 @@ import { AccountDialog } from "@/components/main/account/account-dialog";
 import { ShortcutsDialog } from "@/components/main/sidebar/dialogs/shortcuts-dialog";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import { useStackApp, useUser } from "@stackframe/stack";
+import { useQuery } from "@tanstack/react-query";
 
 export function AppSidebarFooter() {
   const router = useRouter();
@@ -61,6 +62,19 @@ export function AppSidebarFooter() {
   const [accountOpen, setAccountOpen] = React.useState<boolean>(false);
   const [shortcutsOpen, setShortcutsOpen] = React.useState<boolean>(false);
   const isCollapsed = state === "collapsed";
+
+  // Fetch user plan info
+  const { data: accountData } = useQuery({
+    queryKey: ["account"],
+    queryFn: async () => {
+      const res = await fetch("/api/account");
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  const planName = accountData?.plan?.displayName || "Free";
 
   const toggleTheme = React.useCallback(() => {
     setTheme(theme === "light" ? "dark" : "light");
@@ -173,7 +187,7 @@ export function AppSidebarFooter() {
                       {user.displayName || "Unnamed User"}
                     </p>
                     <span className="inline-flex items-center rounded-full bg-sidebar-accent/50 px-1.5 py-0.5 text-[9.5px] font-medium text-sidebar-foreground/50 tracking-wide">
-                      Basic
+                      {planName}
                     </span>
                   </div>
                   <ChevronUp className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/30" />

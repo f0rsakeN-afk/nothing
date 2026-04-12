@@ -12,10 +12,26 @@ datasource db {
   provider = "postgresql"
 }
 
+// Enums
 enum Role {
   USER
   MODERATOR
   ADMIN
+}
+
+enum PlanTier {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  UNPAID
 }
 
 model User {
@@ -35,9 +51,25 @@ model User {
   chats     Chat[]
 
   customize Customize?
+  settings   Settings?
+
+  // SaaS Premium (legacy - use planTier and planId for new system)
+  plan          String    @default("free") @map("old_plan") // DEPRECATED: use planTier
+  planTier      PlanTier  @default(FREE)
+  planId        String?   // references Plan.id (null for legacy users)
+  credits       Int       @default(25)
+  maxChats      Int       @default(100)
+  maxProjects   Int       @default(2)
+  maxMessages   Int       @default(100)
+  features      String[]  @default([])
+
+  // Relations
+  subscription  Subscription?
+  userPlan      Plan?      @relation("UserPlan", fields: [planId], references: [id], onDelete: SetNull)
 
   @@index([stackId])
   @@index([role])
+  @@index([planTier])
 }
 
 model Chat {
@@ -278,7 +310,9 @@ enum KnowledgeDetail {
 
 model Customize {
   id              String          @id @default(cuid())
-  name            String
+  firstName       String          @default("")
+  lastName        String          @default("")
+  name            String          @default("")
   interest        String[]
   responseTone    String
   knowledgeDetail KnowledgeDetail @default(BALANCED)
@@ -288,6 +322,32 @@ model Customize {
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  theme         String  @default("system")
+  language      String  @default("en")
+  autoTitle     Boolean @default(true)
+  enterToSend   Boolean @default(false)
+  showSuggestions Boolean @default(true)
+  compactMode   Boolean @default(false)
+  reducedMotion Boolean @default(false)
+  streaming     Boolean @default(true)
+  codeHighlight Boolean @default(true)
+  persistentMemory Boolean @default(false)
+  emailUpdates  Boolean @default(true)
+  emailMarketing Boolean @default(false)
+  browserNotifs Boolean @default(false)
+  usageAlerts   Boolean @default(true)
+  analytics     Boolean @default(true)
+  usageData     Boolean @default(false)
+  crashReports  Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Memory {
@@ -308,4 +368,100 @@ model Memory {
 
 model OnboardingData {
   id String @id @default(cuid())
+}
+
+// ---------------------------------------------------------------------------
+// SaaS Plans & Subscriptions
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id            String    @id // "free" | "basic" | "pro" | "enterprise"
+  tier          PlanTier  @unique
+
+  // Display
+  name          String
+  description   String    @db.Text
+
+  // Pricing (in cents)
+  price         Int       @default(0) // 0 = free
+
+  // Stripe integration
+  stripePriceId String?   @unique // Stripe Price ID (null for free)
+  stripeProductId String? // Stripe Product ID
+
+  // Limits
+  credits       Int       @default(25)
+  maxChats      Int       @default(100)  // -1 = unlimited
+  maxProjects   Int       @default(2)
+  maxMessages   Int       @default(100)  // -1 = unlimited
+
+  // Feature-specific limits
+  maxMemoryItems Int      @default(0)    // 0 = not allowed, -1 = unlimited
+  maxBranchesPerChat Int @default(0)    // 0 = not allowed
+  maxFolders    Int       @default(0)    // 0 = not allowed, -1 = unlimited
+  maxAttachmentsPerChat Int @default(0)  // 0 = not allowed
+  maxFileSizeMb Int       @default(0)    // 0 = not allowed
+  canExport     Boolean   @default(false)
+  canApiAccess  Boolean   @default(false)
+
+  // Features (feature flags for this plan)
+  features      String[]  @default([])
+
+  // Scalability fields
+  metadata      Json?     // extra data, add/remove without schema changes
+  sortOrder     Int       @default(0)  // for admin ordering
+
+  // Status
+  isActive      Boolean   @default(true)
+  isVisible     Boolean   @default(true)  // hide from pricing page but keep for existing users
+  isDefault     Boolean   @default(false) // default plan for new users
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  users         User[]    @relation("UserPlan")
+  subscriptions Subscription[]
+
+  @@index([tier])
+  @@index([isActive, isVisible])
+}
+
+model Subscription {
+  id            String    @id @default(cuid())
+
+  // User
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Plan
+  planId        String
+  plan          Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  // Stripe
+  stripeSubId   String?   @unique // Stripe subscription ID
+  stripeCustomerId String? // Stripe customer ID
+
+  // Status
+  status        SubscriptionStatus @default(ACTIVE)
+
+  // Billing
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd Boolean   @default(false)
+  canceledAt         DateTime?
+
+  // Legacy support (old flat-rate subscriptions)
+  legacyPlanId   String?   // old "basic"/"pro" plan identifier
+
+  // Scalability
+  metadata      Json?     // extra data without schema changes
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([stripeCustomerId])
+  @@index([currentPeriodEnd])
 }

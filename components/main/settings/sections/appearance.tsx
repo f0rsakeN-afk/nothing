@@ -1,6 +1,7 @@
 "use client";
 
-import * as React from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -36,10 +37,61 @@ function SettingRow({
   );
 }
 
+interface Settings {
+  theme: string;
+  compactMode: boolean;
+  reducedMotion: boolean;
+}
+
+async function fetchSettings(): Promise<Settings> {
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  return res.json();
+}
+
+async function updateSetting(key: string, value: boolean | string): Promise<Settings> {
+  const res = await fetch("/api/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ [key]: value }),
+  });
+  if (!res.ok) throw new Error("Failed to update settings");
+  return res.json();
+}
+
 export function AppearanceSection() {
   const { theme, setTheme } = useTheme();
-  const [reducedMotion, setReducedMotion] = React.useState(false);
-  const [compactMode, setCompactMode] = React.useState(false);
+  const queryClient = useQueryClient();
+  const [localSettings, setLocalSettings] = useState<Settings | null>(null);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettings,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: boolean | string }) => {
+      return updateSetting(key, value);
+    },
+    onSuccess: (newData) => {
+      queryClient.setQueryData(["settings"], newData);
+      setLocalSettings(newData);
+    },
+  });
+
+  const onUpdate = useCallback((key: keyof Settings, value: boolean | string) => {
+    mutation.mutate({ key, value });
+  }, [mutation]);
+
+  const displaySettings = localSettings || settings;
+
+  if (isLoading || !displaySettings) {
+    return (
+      <div className="space-y-5">
+        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -60,7 +112,10 @@ export function AppearanceSection() {
           {THEMES.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setTheme(id)}
+              onClick={() => {
+                setTheme(id);
+                onUpdate("theme", id);
+              }}
               className={cn(
                 "flex flex-col items-center gap-2 rounded-lg border p-3 text-center transition-all",
                 theme === id
@@ -86,13 +141,21 @@ export function AppearanceSection() {
             label="Compact mode"
             description="Reduce spacing between messages for a denser layout."
           >
-            <Switch checked={compactMode} onCheckedChange={setCompactMode} size="sm" />
+            <Switch
+              checked={displaySettings.compactMode}
+              onCheckedChange={(val) => onUpdate("compactMode", val)}
+              size="sm"
+            />
           </SettingRow>
           <SettingRow
             label="Reduce motion"
             description="Minimize animations throughout the interface."
           >
-            <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} size="sm" />
+            <Switch
+              checked={displaySettings.reducedMotion}
+              onCheckedChange={(val) => onUpdate("reducedMotion", val)}
+              size="sm"
+            />
           </SettingRow>
         </div>
       </div>

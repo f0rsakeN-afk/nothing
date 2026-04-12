@@ -1,6 +1,7 @@
 "use client";
 
-import * as React from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 
 function SettingRow({
@@ -27,11 +28,61 @@ function SettingRow({
   );
 }
 
+interface Settings {
+  emailUpdates: boolean;
+  emailMarketing: boolean;
+  browserNotifs: boolean;
+  usageAlerts: boolean;
+}
+
+async function fetchSettings(): Promise<Settings> {
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("Failed to fetch settings");
+  return res.json();
+}
+
+async function updateSetting(key: string, value: boolean): Promise<Settings> {
+  const res = await fetch("/api/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ [key]: value }),
+  });
+  if (!res.ok) throw new Error("Failed to update settings");
+  return res.json();
+}
+
 export function NotificationsSection() {
-  const [emailUpdates, setEmailUpdates] = React.useState(true);
-  const [emailMarketing, setEmailMarketing] = React.useState(false);
-  const [browserNotifs, setBrowserNotifs] = React.useState(false);
-  const [usageAlerts, setUsageAlerts] = React.useState(true);
+  const queryClient = useQueryClient();
+  const [localSettings, setLocalSettings] = useState<Settings | null>(null);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettings,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: boolean }) => {
+      return updateSetting(key, value);
+    },
+    onSuccess: (newData) => {
+      queryClient.setQueryData(["settings"], newData);
+      setLocalSettings(newData);
+    },
+  });
+
+  const onUpdate = useCallback((key: keyof Settings, value: boolean) => {
+    mutation.mutate({ key, value });
+  }, [mutation]);
+
+  const displaySettings = localSettings || settings;
+
+  if (isLoading || !displaySettings) {
+    return (
+      <div className="space-y-5">
+        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -53,13 +104,21 @@ export function NotificationsSection() {
             label="Product updates"
             description="New features, improvements, and release notes."
           >
-            <Switch checked={emailUpdates} onCheckedChange={setEmailUpdates} size="sm" />
+            <Switch
+              checked={displaySettings.emailUpdates}
+              onCheckedChange={(val) => onUpdate("emailUpdates", val)}
+              size="sm"
+            />
           </SettingRow>
           <SettingRow
             label="Tips &amp; tutorials"
             description="Helpful guides to get the most out of Eryx."
           >
-            <Switch checked={emailMarketing} onCheckedChange={setEmailMarketing} size="sm" />
+            <Switch
+              checked={displaySettings.emailMarketing}
+              onCheckedChange={(val) => onUpdate("emailMarketing", val)}
+              size="sm"
+            />
           </SettingRow>
         </div>
       </div>
@@ -73,13 +132,21 @@ export function NotificationsSection() {
             label="Browser notifications"
             description="Receive push notifications in your browser."
           >
-            <Switch checked={browserNotifs} onCheckedChange={setBrowserNotifs} size="sm" />
+            <Switch
+              checked={displaySettings.browserNotifs}
+              onCheckedChange={(val) => onUpdate("browserNotifs", val)}
+              size="sm"
+            />
           </SettingRow>
           <SettingRow
             label="Usage alerts"
             description="Notify when you're approaching plan limits."
           >
-            <Switch checked={usageAlerts} onCheckedChange={setUsageAlerts} size="sm" />
+            <Switch
+              checked={displaySettings.usageAlerts}
+              onCheckedChange={(val) => onUpdate("usageAlerts", val)}
+              size="sm"
+            />
           </SettingRow>
         </div>
       </div>

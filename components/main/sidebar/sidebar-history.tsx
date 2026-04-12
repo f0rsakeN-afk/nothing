@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -9,15 +8,21 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ChatHistoryItem } from "./chat-history-item";
 import { ProjectHistoryItem } from "./project-history-item";
 import { useChatEvents } from "@/hooks/useChatEvents";
 import { useSidebarChats } from "@/hooks/use-sidebar-chats";
-import { useProjects, useArchivedProjects, useArchiveProject, useUnarchiveProject, usePinProject, useUnpinProject } from "@/hooks/use-projects";
+import {
+  useProjects,
+  useArchivedProjects,
+  useArchiveProject,
+  useUnarchiveProject,
+  usePinProject,
+  useUnpinProject,
+} from "@/hooks/use-projects";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TabId } from "./data";
-import type { Project } from "@/types/project";
 
 interface SidebarHistoryProps {
   activeTab: TabId;
@@ -64,10 +69,6 @@ function groupChatsByDate(chats: ChatItem[]) {
   return groups.filter((g) => g.items.length > 0);
 }
 
-// =========================================
-// Skeleton components
-// =========================================
-
 function SidebarSkeleton({ type }: { type: "chats" | "projects" }) {
   const items = type === "chats" ? 5 : 3;
 
@@ -86,7 +87,7 @@ function SidebarSkeleton({ type }: { type: "chats" | "projects" }) {
 function SidebarErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 gap-3">
-      <p className="text-xs text-destructive font-medium">Failed to load</p>
+      <p className="text-xs text-destructive tracking-wide font-semibold">Failed to load</p>
       <button
         onClick={onRetry}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -97,7 +98,11 @@ function SidebarErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function SidebarEmptyState({ type }: { type: "chats" | "projects" | "archive" }) {
+function SidebarEmptyState({
+  type,
+}: {
+  type: "chats" | "projects" | "archive";
+}) {
   const messages = {
     chats: "No chats yet",
     projects: "No projects yet",
@@ -143,8 +148,18 @@ export function SidebarHistory({
   } = useSidebarChats();
 
   // Projects hooks
-  const { data: projectsData, isLoading: isProjectsLoading, isError: isProjectsError, refetch: refetchProjects } = useProjects();
-  const { data: archivedProjectsData, isLoading: isArchiveProjectsLoading, isError: isArchiveProjectsError, refetch: refetchArchiveProjects } = useArchivedProjects();
+  const {
+    data: projectsData,
+    isLoading: isProjectsLoading,
+    isError: isProjectsError,
+    refetch: refetchProjects,
+  } = useProjects();
+  const {
+    data: archivedProjectsData,
+    isLoading: isArchiveProjectsLoading,
+    isError: isArchiveProjectsError,
+    refetch: refetchArchiveProjects,
+  } = useArchivedProjects();
 
   const archiveProject = useArchiveProject();
   const unarchiveProject = useUnarchiveProject();
@@ -167,7 +182,10 @@ export function SidebarHistory({
     }
   };
 
-  const handleShareChat = async (chatId: string, visibility: "public" | "private") => {
+  const handleShareChat = async (
+    chatId: string,
+    visibility: "public" | "private",
+  ) => {
     try {
       await shareChat(chatId, visibility);
     } catch (error) {
@@ -191,7 +209,10 @@ export function SidebarHistory({
     }
   };
 
-  const handleArchiveProject = async (project: { id: string; name: string }) => {
+  const handleArchiveProject = async (project: {
+    id: string;
+    name: string;
+  }) => {
     try {
       await archiveProject.mutateAsync(project.id);
     } catch (error) {
@@ -199,7 +220,10 @@ export function SidebarHistory({
     }
   };
 
-  const handleUnarchiveProject = async (project: { id: string; name: string }) => {
+  const handleUnarchiveProject = async (project: {
+    id: string;
+    name: string;
+  }) => {
     try {
       await unarchiveProject.mutateAsync(project.id);
     } catch (error) {
@@ -279,7 +303,11 @@ export function SidebarHistory({
                 {(archivedProjectsData?.projects || []).map((project) => (
                   <ProjectHistoryItem
                     key={project.id}
-                    item={{ id: project.id, title: project.name, pinnedAt: project.pinnedAt }}
+                    item={{
+                      id: project.id,
+                      title: project.name,
+                      pinnedAt: project.pinnedAt,
+                    }}
                     onRename={onRenameProject || (() => {})}
                     onDelete={onDeleteProject || (() => {})}
                     onArchive={handleUnarchiveProject}
@@ -369,7 +397,9 @@ export function SidebarHistory({
                   className="w-full justify-center gap-2 h-9 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-xl transition-all shadow-sm active:scale-[0.98]"
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="text-[12px] font-semibold">Create Project</span>
+                  <span className="text-[12px] font-semibold">
+                    Create Project
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -386,7 +416,11 @@ export function SidebarHistory({
               {projects.map((project) => (
                 <ProjectHistoryItem
                   key={project.id}
-                  item={{ id: project.id, title: project.name, pinnedAt: project.pinnedAt }}
+                  item={{
+                    id: project.id,
+                    title: project.name,
+                    pinnedAt: project.pinnedAt,
+                  }}
                   onRename={onRenameProject || (() => {})}
                   onDelete={onDeleteProject || (() => {})}
                   onArchive={handleArchiveProject}
@@ -405,7 +439,9 @@ export function SidebarHistory({
                 className="w-full justify-center gap-2 h-9 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-xl transition-all shadow-sm active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" />
-                <span className="text-[12px] font-semibold">Create Project</span>
+                <span className="text-[12px] font-semibold">
+                  Create Project
+                </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useCallback, useState } from "react";
-import { Zap, ArrowUpRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Zap, ArrowUpRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -10,19 +11,47 @@ import {
 } from "@/components/ui/popover";
 import { PricingDialog } from "../sidebar/dialogs/pricing/pricing-dialog";
 
-const CREDITS = {
-  remaining: 1_750,
-  total: 2_500,
-  resetsInDays: 18,
-};
+interface CreditsData {
+  credits: {
+    current: number;
+    plan: number;
+    used: number;
+    usedPct: number;
+    isRollover: boolean;
+  };
+  subscription: {
+    active: boolean;
+    status?: string;
+    periodEnd?: string;
+    daysUntilReset?: number;
+  };
+  plan: {
+    name: string;
+    tier: string;
+  };
+}
 
-const used = CREDITS.total - CREDITS.remaining;
-const usedPct = Math.round((used / CREDITS.total) * 100);
+async function fetchCredits(): Promise<CreditsData> {
+  const res = await fetch("/api/credits");
+  if (!res.ok) throw new Error("Failed to fetch credits");
+  return res.json();
+}
 
 export const CreditsButton = memo(function CreditsButton() {
   const [pricingDialogOpen, setPricingDialogOpen] = useState<boolean>(false);
+  const { data, isLoading } = useQuery({
+    queryKey: ["credits"],
+    queryFn: fetchCredits,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
   const openPricing = useCallback(() => setPricingDialogOpen(true), []);
+
+  const currentCredits = data?.credits.current ?? 0;
+  const planCredits = data?.credits.plan ?? 25;
+  const usedPct = data?.credits.usedPct ?? 0;
+  const daysUntilReset = data?.subscription.daysUntilReset;
+  const hasSubscription = data?.subscription.active ?? false;
 
   return (
     <>
@@ -37,7 +66,11 @@ export const CreditsButton = memo(function CreditsButton() {
           aria-label="View credits"
         >
           <Zap className="h-3 w-3 fill-amber-400 text-amber-400" />
-          {CREDITS.remaining.toLocaleString()}
+          {isLoading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            currentCredits.toLocaleString()
+          )}
         </PopoverTrigger>
 
         <PopoverContent
@@ -48,14 +81,27 @@ export const CreditsButton = memo(function CreditsButton() {
         >
           {/* Header */}
           <div className="border-b border-border px-4 py-3">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Credits
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Credits
+              </p>
+              {hasSubscription && (
+                <span className="text-[10px] text-primary font-medium">
+                  Rollover enabled
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-              {CREDITS.remaining.toLocaleString()}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">
-                / {CREDITS.total.toLocaleString()}
-              </span>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <>
+                  {currentCredits.toLocaleString()}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">
+                    / {planCredits.toLocaleString()}
+                  </span>
+                </>
+              )}
             </p>
           </div>
 
@@ -67,17 +113,33 @@ export const CreditsButton = memo(function CreditsButton() {
                 <span className="text-[11px] text-muted-foreground">
                   {usedPct}% used
                 </span>
-                <span className="text-[11px] text-muted-foreground">
-                  Resets in {CREDITS.resetsInDays}d
-                </span>
+                {daysUntilReset !== null && daysUntilReset !== undefined ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    Resets in {daysUntilReset}d
+                  </span>
+                ) : hasSubscription ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    Credits roll over
+                  </span>
+                ) : null}
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-amber-400 transition-all"
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    usedPct > 80 ? "bg-red-500" : usedPct > 50 ? "bg-amber-400" : "bg-primary"
+                  )}
                   style={{ width: `${usedPct}%` }}
                 />
               </div>
             </div>
+
+            {/* Plan name */}
+            {data?.plan && (
+              <p className="text-[11px] text-muted-foreground text-center">
+                {data.plan.name} plan
+              </p>
+            )}
 
             {/* Upgrade CTA */}
             <button
@@ -102,4 +164,3 @@ export const CreditsButton = memo(function CreditsButton() {
     </>
   );
 });
-
