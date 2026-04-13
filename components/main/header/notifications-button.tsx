@@ -25,6 +25,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNotificationStream } from "@/hooks/useNotificationStream";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -325,6 +327,15 @@ const PrefRow = memo(function PrefRow({
 export const NotificationsButton = memo(function NotificationsButton() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<ViewType>("inbox");
+
+  // Subscribe to real-time notification updates
+  useNotificationStream({
+    onNewNotification: (notification) => {
+      toast(notification.title, {
+        description: notification.description,
+      });
+    },
+  });
   const [filter, setFilter] = useState<FilterType>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);

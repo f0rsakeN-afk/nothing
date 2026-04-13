@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useChatMessages } from "@/hooks/use-chat-messages";
+import { useChatStream } from "@/hooks/useChatStream";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { ChatHeader } from "@/components/main/chat/chat-header";
 import type { Message } from "@/services/chat.service";
@@ -368,6 +369,19 @@ function ChatPageInner() {
     chatId,
     initialQuery,
     skipFirstMessage: shouldTriggerAI,
+  });
+
+  // Subscribe to real-time message updates from other devices
+  useChatStream({
+    chatId,
+    onNewMessage: (message) => {
+      // Only show toast if message is from AI (someone else using the account)
+      if (message.role === "assistant") {
+        toast("New AI response", {
+          description: message.content.slice(0, 100) + (message.content.length > 100 ? "..." : ""),
+        });
+      }
+    },
   });
 
   // Auto-trigger AI response for first message when navigating from home

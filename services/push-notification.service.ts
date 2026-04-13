@@ -147,7 +147,7 @@ export async function sendPushNotification(
 
   const results = await Promise.allSettled(
     subscriptions.map((sub) =>
-      webpush.sendNotification(sub as any, payload).catch((err) => {
+      webpush.sendNotification(sub as any, payload).catch((err: unknown) => {
         console.error("[Push] Failed to send:", err);
         return err;
       })

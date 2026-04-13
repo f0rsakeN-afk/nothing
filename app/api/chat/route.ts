@@ -8,6 +8,8 @@ import { aiConfig } from "@/lib/config";
 import { getUserPreferences } from "@/services/preferences.service";
 import { getChatContext, queueSummarization } from "@/services/summarize.service";
 import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-breaker.service";
+import { publishMessageNew } from "@/services/chat-pubsub.service";
+import { notifyNewMessage } from "@/services/push-notification.service";
 
 const groq = new Groq();
 const groqBreaker = getCircuitBreaker("groq");
@@ -274,6 +276,26 @@ async function saveAIResponse(
     } catch {
       // Redis error, ignore
     }
+
+    // Publish to Redis for real-time SSE subscribers
+    // This notifies other devices viewing the same chat
+    await publishMessageNew(chatId, userId, {
+      id: message.id,
+      role: message.role || "assistant",
+      content: message.content,
+      createdAt: message.createdAt,
+    });
+
+    // Send push notification (fire and forget)
+    // This notifies users who are not currently viewing the chat
+    notifyNewMessage(
+      userId,
+      chatId,
+      content.slice(0, 100),
+      "Eryx"
+    ).catch((err) => {
+      console.error("[Push] Failed to send notification:", err);
+    });
 
     // Trigger async summarization check (fire and forget)
     queueSummarization(chatId).catch(console.error);

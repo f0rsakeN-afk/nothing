@@ -62,7 +62,12 @@ export async function POST(
     const message = await addChatMessage(chatId, user.id, { role, content });
 
     // Publish new message event for real-time sync
-    await publishMessageNew(chatId, user.id, message);
+    await publishMessageNew(chatId, user.id, {
+      id: message.id,
+      role: message.role || "user",
+      content: message.content,
+      createdAt: message.createdAt,
+    });
 
     return NextResponse.json(
       {
