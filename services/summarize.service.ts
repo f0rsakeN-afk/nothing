@@ -336,9 +336,12 @@ export async function getChatContext(
 }
 
 /**
- * Queue async summarization - fire and forget
+ * Queue async summarization via BullMQ
  */
 export async function queueSummarization(chatId: string): Promise<void> {
+  // Import here to avoid circular dependency
+  const { queueSummarizationJob } = await import("@/services/queue.service");
+
   // Increment message count for threshold tracking
   await incrementMessageCount(chatId);
 
@@ -354,10 +357,8 @@ export async function queueSummarization(chatId: string): Promise<void> {
     // Redis miss, proceed
   }
 
-  // Fire and forget summarization
-  summarizeChat(chatId).catch(err => {
-    console.error(`Summarization failed for chat ${chatId}:`, err);
-  });
+  // Queue via BullMQ with retry
+  await queueSummarizationJob(chatId);
 }
 
 /**

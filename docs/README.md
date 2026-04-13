@@ -13,6 +13,7 @@ Welcome to the Eryx AI Assistant codebase documentation. This folder contains de
 7. [Database](./07-database.md) - Prisma schema and models
 8. [Services](./08-services.md) - Business logic layer
 9. [API Routes](./09-api-routes.md) - HTTP endpoints
+10. [Optimizations](./10-optimizations.md) - Performance optimizations
 
 ## Architecture Overview
 

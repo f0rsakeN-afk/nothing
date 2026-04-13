@@ -34,7 +34,7 @@ export async function getUserCredits(userId: string): Promise<number> {
 /**
  * Invalidate user credits cache
  */
-async function invalidateUserCreditsCache(userId: string): Promise<void> {
+export async function invalidateUserCreditsCache(userId: string): Promise<void> {
   try {
     await redis.del(KEYS.userCredits(userId));
   } catch {
