@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
+import redis, { KEYS } from "@/lib/redis";
+
+/**
+ * Invalidate projects cache
+ */
+async function invalidateProjectsCache(userId: string): Promise<void> {
+  try {
+    await redis.del(KEYS.userProjects(userId));
+  } catch {
+    // Redis error, ignore
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -95,6 +107,9 @@ export async function PATCH(
       },
     });
 
+    // Invalidate project list cache
+    await invalidateProjectsCache(user.id);
+
     return NextResponse.json({
       ...project,
       createdAt: project.createdAt.toISOString(),
@@ -138,6 +153,9 @@ export async function DELETE(
     await prisma.project.delete({
       where: { id },
     });
+
+    // Invalidate project list cache
+    await invalidateProjectsCache(user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

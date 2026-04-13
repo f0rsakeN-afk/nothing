@@ -1,8 +1,10 @@
 /**
  * Memory Service - Own memory system for user preferences and facts
+ * Includes Redis caching to avoid hitting DB on every request
  */
 
 import prisma from "@/lib/prisma";
+import redis, { KEYS, TTL } from "@/lib/redis";
 
 export interface MemoryItem {
   id: string;
@@ -19,6 +21,24 @@ export interface MemoryItem {
 export interface MemorySearchResult {
   memories: MemoryItem[];
   total: number;
+}
+
+interface MemoryCache {
+  memories: MemoryItem[];
+  total: number;
+}
+
+/**
+ * Get cache key for memories
+ */
+function getMemoryCacheKey(userId: string, category?: string, query?: string): string {
+  if (query) {
+    return `user:${userId}:memories:search:${Buffer.from(`${query}:${category || "all"}`).toString("base64").slice(0, 32)}`;
+  }
+  if (category) {
+    return `user:${userId}:memories:category:${category}`;
+  }
+  return KEYS.userMemories(userId);
 }
 
 /**
@@ -45,7 +65,25 @@ export async function addMemory(
     },
   });
 
+  // Invalidate user's memories cache
+  await invalidateUserMemoriesCache(userId);
+
   return memory as MemoryItem;
+}
+
+/**
+ * Invalidate all memory caches for a user
+ */
+async function invalidateUserMemoriesCache(userId: string): Promise<void> {
+  try {
+    const pattern = `user:${userId}:memories*`;
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } catch {
+    // Redis error, ignore
+  }
 }
 
 /**
@@ -57,6 +95,25 @@ export async function searchMemories(
   options: { limit?: number; category?: string } = {}
 ): Promise<MemorySearchResult> {
   const { limit = 20, category } = options;
+  const cacheKey = getMemoryCacheKey(userId, category, query);
+
+  // Try cache first
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached) as MemoryCache;
+      return {
+        memories: parsed.memories.slice(0, limit).map(m => ({
+          ...m,
+          createdAt: new Date(m.createdAt),
+          updatedAt: new Date(m.updatedAt),
+        })),
+        total: parsed.total,
+      };
+    }
+  } catch {
+    // Redis error, continue to DB
+  }
 
   const where: Record<string, unknown> = {
     userId,
@@ -83,7 +140,31 @@ export async function searchMemories(
     prisma.memory.count({ where }),
   ]);
 
-  return { memories: memories as MemoryItem[], total };
+  const result: MemorySearchResult = { memories: memories as MemoryItem[], total };
+
+  // Cache the result (without limit applied)
+  try {
+    const fullWhere: Record<string, unknown> = { userId };
+    if (query.trim()) {
+      fullWhere.OR = [
+        { title: { contains: query, mode: "insensitive" } },
+        { content: { contains: query, mode: "insensitive" } },
+        { tags: { hasSome: [query.toLowerCase()] } },
+      ];
+    }
+    if (category) {
+      fullWhere.category = category;
+    }
+    const allMemories = await prisma.memory.findMany({
+      where: fullWhere,
+      orderBy: { createdAt: "desc" },
+    });
+    await redis.setex(cacheKey, TTL.userMemories, JSON.stringify({ memories: allMemories, total }));
+  } catch {
+    // Redis error, ignore
+  }
+
+  return result;
 }
 
 /**
@@ -94,6 +175,25 @@ export async function getMemories(
   options: { limit?: number; category?: string } = {}
 ): Promise<MemorySearchResult> {
   const { limit = 50, category } = options;
+  const cacheKey = getMemoryCacheKey(userId, category);
+
+  // Try cache first
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached) as MemoryCache;
+      return {
+        memories: parsed.memories.slice(0, limit).map(m => ({
+          ...m,
+          createdAt: new Date(m.createdAt),
+          updatedAt: new Date(m.updatedAt),
+        })),
+        total: parsed.total,
+      };
+    }
+  } catch {
+    // Redis error, continue to DB
+  }
 
   const where: Record<string, unknown> = {
     userId,
@@ -112,7 +212,24 @@ export async function getMemories(
     prisma.memory.count({ where }),
   ]);
 
-  return { memories: memories as MemoryItem[], total };
+  const result: MemorySearchResult = { memories: memories as MemoryItem[], total };
+
+  // Cache the result (without limit applied)
+  try {
+    const fullWhere: Record<string, unknown> = { userId };
+    if (category) {
+      fullWhere.category = category;
+    }
+    const allMemories = await prisma.memory.findMany({
+      where: fullWhere,
+      orderBy: { createdAt: "desc" },
+    });
+    await redis.setex(cacheKey, TTL.userMemories, JSON.stringify({ memories: allMemories, total }));
+  } catch {
+    // Redis error, ignore
+  }
+
+  return result;
 }
 
 /**
@@ -155,6 +272,9 @@ export async function updateMemory(
     },
   });
 
+  // Invalidate cache
+  await invalidateUserMemoriesCache(userId);
+
   return memory as MemoryItem;
 }
 
@@ -162,9 +282,22 @@ export async function updateMemory(
  * Delete a memory
  */
 export async function deleteMemory(memoryId: string, userId: string): Promise<boolean> {
+  // Get the memory first to find the userId
+  const memory = await prisma.memory.findUnique({
+    where: { id: memoryId },
+    select: { userId: true },
+  });
+
+  if (!memory) {
+    return false;
+  }
+
   await prisma.memory.delete({
     where: { id: memoryId },
   });
+
+  // Invalidate cache
+  await invalidateUserMemoriesCache(memory.userId);
 
   return true;
 }

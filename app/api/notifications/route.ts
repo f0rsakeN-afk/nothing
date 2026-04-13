@@ -1,6 +1,6 @@
 /**
  * Notifications API
- * GET /api/notifications - Get user notifications
+ * GET /api/notifications - Get user notifications (with Redis caching)
  * PATCH /api/notifications - Update notification preferences
  * POST /api/notifications/read-all - Mark all as read
  */
@@ -8,6 +8,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import redis, { KEYS, TTL, CHANNELS } from "@/lib/redis";
+
+interface NotificationsCache {
+  notifications: Array<{
+    id: string;
+    title: string;
+    description: string;
+    time: string;
+    read: boolean;
+    archived: boolean;
+    snoozed: boolean;
+    accent: string;
+  }>;
+  unreadCount: number;
+  prefs: {
+    newFeature: boolean;
+    credits: boolean;
+    system: boolean;
+    tips: boolean;
+    security: boolean;
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +38,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get("filter") || "all";
     const now = new Date();
+
+    // For "all" filter, try cache first
+    if (filter === "all") {
+      const cacheKey = KEYS.userNotifications(user.id);
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          const response = NextResponse.json(JSON.parse(cached) as NotificationsCache);
+          response.headers.set("Cache-Control", "private, max-age=30");
+          return response;
+        }
+      } catch {
+        // Redis error, continue to DB
+      }
+    }
 
     // Build query based on filter
     const where: Record<string, unknown> = { userId: user.id };
@@ -60,7 +97,7 @@ export async function GET(request: NextRequest) {
       accent: n.accent,
     }));
 
-    const response = NextResponse.json({
+    const result: NotificationsCache = {
       notifications: formattedNotifications,
       unreadCount,
       prefs: {
@@ -70,9 +107,20 @@ export async function GET(request: NextRequest) {
         tips: prefs.tips,
         security: prefs.security,
       },
-    });
+    };
 
-    // Cache for 30 seconds on the client
+    // Cache for non-filtered requests
+    if (filter === "all") {
+      const cacheKey = KEYS.userNotifications(user.id);
+      try {
+        await redis.setex(cacheKey, TTL.userNotifications, JSON.stringify(result));
+      } catch {
+        // Redis error, ignore
+      }
+    }
+
+    const response = NextResponse.json(result);
+    // Client-side cache for 30 seconds
     response.headers.set("Cache-Control", "private, max-age=30");
 
     return response;
@@ -110,6 +158,9 @@ export async function PATCH(request: NextRequest) {
         update: updateData,
       });
 
+      // Invalidate notifications cache
+      await invalidateNotificationsCache(user.id);
+
       return NextResponse.json({ prefs });
     }
 
@@ -140,6 +191,17 @@ export async function PATCH(request: NextRequest) {
         data: updateData,
       });
 
+      // Invalidate notifications cache
+      await invalidateNotificationsCache(user.id);
+
+      // Publish to Redis for real-time SSE subscribers
+      await publishNotificationUpdate(user.id, "notification:updated", {
+        id: updated.id,
+        read: updated.read,
+        archived: updated.archived,
+        snoozed: updated.snoozedUntil !== null && updated.snoozedUntil > new Date(),
+      });
+
       return NextResponse.json({
         id: updated.id,
         read: updated.read,
@@ -167,6 +229,8 @@ export async function POST(request: NextRequest) {
         where: { userId: user.id, read: false, archived: false },
         data: { read: true },
       });
+      await invalidateNotificationsCache(user.id);
+      await publishNotificationUpdate(user.id, "notifications:bulk", { action: "read-all" });
       return NextResponse.json({ success: true });
     }
 
@@ -176,6 +240,8 @@ export async function POST(request: NextRequest) {
         where: { userId: user.id, read: true, archived: false },
         data: { archived: true },
       });
+      await invalidateNotificationsCache(user.id);
+      await publishNotificationUpdate(user.id, "notifications:bulk", { action: "archive-read" });
       return NextResponse.json({ success: true });
     }
 
@@ -185,6 +251,8 @@ export async function POST(request: NextRequest) {
         where: { userId: user.id, archived: false },
         data: { archived: true },
       });
+      await invalidateNotificationsCache(user.id);
+      await publishNotificationUpdate(user.id, "notifications:bulk", { action: "archive-all" });
       return NextResponse.json({ success: true });
     }
 
@@ -194,6 +262,8 @@ export async function POST(request: NextRequest) {
         where: { userId: user.id, archived: true },
         data: { archived: false },
       });
+      await invalidateNotificationsCache(user.id);
+      await publishNotificationUpdate(user.id, "notifications:bulk", { action: "unarchive-all" });
       return NextResponse.json({ success: true });
     }
 
@@ -201,6 +271,38 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Notifications action error:", error);
     return NextResponse.json({ error: "Failed to perform action" }, { status: 500 });
+  }
+}
+
+/**
+ * Invalidate notifications cache
+ */
+async function invalidateNotificationsCache(userId: string): Promise<void> {
+  try {
+    await redis.del(KEYS.userNotifications(userId));
+  } catch {
+    // Redis error, ignore
+  }
+}
+
+/**
+ * Publish notification update to Redis for real-time SSE subscribers
+ */
+async function publishNotificationUpdate(
+  userId: string,
+  type: "notification:updated" | "notification:created" | "notifications:bulk",
+  data?: Record<string, unknown>
+): Promise<void> {
+  try {
+    const channel = CHANNELS.notifications(userId);
+    const payload = JSON.stringify({
+      type,
+      timestamp: new Date().toISOString(),
+      ...data,
+    });
+    await redis.publish(channel, payload);
+  } catch {
+    // Redis publish error, ignore - SSE subscribers will reconnect
   }
 }
 

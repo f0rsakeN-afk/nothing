@@ -2,17 +2,21 @@ import { NextRequest } from "next/server";
 import Groq from "groq-sdk";
 import prisma from "@/lib/prisma";
 import redis, { KEYS } from "@/lib/redis";
-import { getRecentMessages } from "@/lib/stack-server";
-import { buildChatContext } from "@/lib/context-manager";
 import { buildSystemPrompt, type PromptConfig } from "@/lib/prompts";
 import { validateAuth } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
 import { getUserPreferences } from "@/services/preferences.service";
+import { getChatContext, queueSummarization } from "@/services/summarize.service";
 
 const groq = new Groq();
 
 /**
- * Build system prompt with search context
+ * Build messages for AI with smart context retrieval
+ *
+ * Uses hierarchical context:
+ * 1. If chat has summary: summary + recent messages
+ * 2. If chat is short: all messages
+ * 3. Always preserves key facts
  */
 async function buildMessages(
   chatId: string,
@@ -32,8 +36,7 @@ async function buildMessages(
     throw new Error("Chat not found");
   }
 
-  // Get user preferences from cache (much faster than nested query)
-  // Prisma's email type is string | null, we default to empty string
+  // Get user preferences from cache
   // @ts-expect-error Prisma email type inference issue
   const userPreferences = await getUserPreferences(chat.userId, chat.user.email ?? '');
 
@@ -48,28 +51,42 @@ async function buildMessages(
     projectInstruction: chat.project?.instruction || undefined,
   };
 
-  const recentMessages = await getRecentMessages(chatId, aiConfig.maxRecentMessages);
+  // Get smart context (uses summary + recent messages)
+  const { messages: contextMessages, summary, topics, keyFacts, truncated } = await getChatContext(chatId, {
+    maxTokens: aiConfig.maxContextTokens,
+  });
 
-  const { messages: contextMessages, systemPrompt: optimizedSystemPrompt, truncated, keyFacts } =
-    await buildChatContext(recentMessages, {
-      maxTokens: aiConfig.maxContextTokens,
-      systemPrompt: buildSystemPrompt(promptConfig),
-    });
+  // Build system prompt
+  let systemPrompt = buildSystemPrompt(promptConfig);
 
-  let systemNote = "";
-  if (truncated) {
-    systemNote = `\n\n[Earlier conversation summarized. Key facts preserved: ${keyFacts.length} items]`;
+  // Add summary context if available
+  if (summary) {
+    systemPrompt += `\n\nCONVERSATION SUMMARY:\n${summary}`;
   }
 
-  const systemContent = (optimizedSystemPrompt || "") + systemNote;
+  // Add topics if we have them
+  if (topics && topics.length > 0) {
+    systemPrompt += `\n\nTopics: ${topics.join(", ")}`;
+  }
 
+  // Add key facts preservation note
+  if (keyFacts && keyFacts.length > 0) {
+    systemPrompt += `\n\nKEY FACTS TO PRESERVE:\n${keyFacts.map((f, i) => `${i + 1}. ${f}`).join("\n")}`;
+  }
+
+  // Add truncation notice if needed
+  if (truncated) {
+    systemPrompt += `\n\n[Note: Earlier messages were summarized for context efficiency. Recent messages are shown below.]`;
+  }
+
+  // Build final message array
   const contextParts = contextMessages.map((m): { role: "user" | "assistant"; content: string } => ({
     role: m.role as "user" | "assistant",
     content: m.content,
   }));
 
   return [
-    { role: "system" as const, content: systemContent },
+    { role: "system" as const, content: systemPrompt },
     ...contextParts,
     ...incomingMessages,
   ];
@@ -85,7 +102,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const body = await req.json().catch((e) => ({}) );
+    const body = await req.json().catch(() => ({}));
     const { messages, chatId, mode } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -117,16 +134,15 @@ export async function POST(req: NextRequest) {
 
     // Check credits before processing
     const { checkCreditsForOperation, deductCredits } = await import("@/services/credit.service");
-    const { stripeConfig } = await import("@/lib/stripe-config");
+    const { polarConfig } = await import("@/lib/polar-config");
 
     // Determine cost based on model
-    const model = aiConfig.model as keyof typeof stripeConfig.creditCosts;
-    const cost = stripeConfig.creditCosts[model] || 1;
+    const model = aiConfig.model as keyof typeof polarConfig.creditCosts;
+    const cost = polarConfig.creditCosts[model] || 1;
 
     // Check if user has enough credits
     const hasCredits = await checkCreditsForOperation(user.id, model);
     if (!hasCredits) {
-      // Get current balance
       const { getUserCredits } = await import("@/services/credit.service");
       const balance = await getUserCredits(user.id);
       return new Response(JSON.stringify({
@@ -140,13 +156,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Deduct credits (will be refunded if operation fails)
+    // Deduct credits
     const deduction = await deductCredits(user.id, model);
 
-    // Build messages with optimized context
+    // Build messages with smart context
     const fullMessages = await buildMessages(chatId, messages);
 
-    // Validate we have at least a system message or incoming messages
     if (fullMessages.length === 0 || (fullMessages.length === 1 && fullMessages[0].role === "system")) {
       return new Response(JSON.stringify({ error: "No messages available" }), {
         status: 400,
@@ -183,6 +198,7 @@ export async function POST(req: NextRequest) {
         } finally {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
+          // Save response and trigger summarization check
           saveAIResponse(chatId, user.id, fullResponse).catch(console.error);
         }
       },
@@ -206,7 +222,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * Backend-side save of AI response
- * Saves directly to database after stream completes
+ * Saves to database and triggers async summarization
  */
 async function saveAIResponse(
   chatId: string,
@@ -232,12 +248,15 @@ async function saveAIResponse(
       data: { updatedAt: new Date() },
     });
 
-    // Invalidate user chat list cache (AI response changes chat's updatedAt sort order)
+    // Invalidate user chat list cache
     try {
       await redis.del(KEYS.userChats(userId));
     } catch {
       // Redis error, ignore
     }
+
+    // Trigger async summarization check (fire and forget)
+    queueSummarization(chatId).catch(console.error);
 
     return message;
   } catch (error) {
