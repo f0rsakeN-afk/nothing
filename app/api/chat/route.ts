@@ -7,8 +7,10 @@ import { validateAuth } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
 import { getUserPreferences } from "@/services/preferences.service";
 import { getChatContext, queueSummarization } from "@/services/summarize.service";
+import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-breaker.service";
 
 const groq = new Groq();
+const groqBreaker = getCircuitBreaker("groq");
 
 /**
  * Build messages for AI with smart context retrieval
@@ -169,14 +171,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Stream from Groq
-    const stream = await groq.chat.completions.create({
-      model: aiConfig.model,
-      messages: fullMessages as any,
-      stream: true,
-      temperature: aiConfig.temperature,
-      max_tokens: aiConfig.maxTokens,
-    });
+    // Stream from Groq with circuit breaker protection
+    let stream;
+    try {
+      stream = await groqBreaker.execute(() =>
+        groq.chat.completions.create({
+          model: aiConfig.model,
+          messages: fullMessages as any,
+          stream: true,
+          temperature: aiConfig.temperature,
+          max_tokens: aiConfig.maxTokens,
+        })
+      );
+    } catch (error) {
+      // Refund credits if Groq call failed
+      if (error instanceof CircuitBreakerOpenError) {
+        return new Response(JSON.stringify({
+          error: "AI service temporarily unavailable",
+          message: "The AI service is experiencing issues. Please try again in a moment.",
+          retryAfter: 30,
+        }), {
+          status: 503,
+          headers: { "Content-Type": "application/json", "Retry-After": "30" },
+        });
+      }
+      throw error;
+    }
 
     const encoder = new TextEncoder();
     let fullResponse = "";
