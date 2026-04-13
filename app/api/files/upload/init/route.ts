@@ -8,9 +8,16 @@ import { stackServerApp } from "@/src/stack/server";
 import { createMultipartUploadInit, calculateParts, getFileSizeLimit, isContentTypeSupported } from "@/services/s3.service";
 import prisma from "@/lib/prisma";
 import { getUserLimits } from "@/services/limit.service";
+import { checkUploadRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimit = await checkUploadRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

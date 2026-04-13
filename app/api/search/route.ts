@@ -11,9 +11,16 @@ import { stackServerApp } from "@/src/stack/server";
 import { webSearch } from "@/lib/web-search";
 import { scrapeUrls, type ScrapedContent } from "@/lib/scraper";
 import { logger } from "@/lib/logger";
+import { checkSearchRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimit = await checkSearchRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     // Auth check - optional for search
     let userId = "anonymous";
     try {

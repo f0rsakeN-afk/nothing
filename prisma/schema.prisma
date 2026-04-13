@@ -110,6 +110,7 @@ model Chat {
   @@index([userId, updatedAt])
   @@index([shareToken])
   @@index([parentChatId])
+  @@index([userId, archivedAt]) // For fetching user's chats filtered by archive status
 }
 
 enum SENDER {
@@ -140,6 +141,7 @@ model Message {
 
   @@index([chatId])
   @@index([parentId])
+  @@index([chatId, createdAt]) // For fetching messages in chronological order within a chat
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +220,7 @@ model File {
   @@index([type])
   @@index([projectId])
   @@index([status])
+  @@index([projectId, status]) // For fetching files by project with status filter
 }
 
 model ProjectFile {

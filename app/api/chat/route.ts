@@ -10,6 +10,7 @@ import { getChatContext, queueSummarization } from "@/services/summarize.service
 import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-breaker.service";
 import { publishMessageNew } from "@/services/chat-pubsub.service";
 import { notifyNewMessage } from "@/services/push-notification.service";
+import { checkChatRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const groq = new Groq();
 const groqBreaker = getCircuitBreaker("groq");
@@ -98,6 +99,12 @@ async function buildMessages(
 
 export async function POST(req: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimit = await checkChatRateLimit(req);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await validateAuth(req);
     if (!user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
