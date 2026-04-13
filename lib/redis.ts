@@ -64,7 +64,13 @@ export const KEYS = {
   userPreferences: (userId: string) => `user:${userId}:preferences`,
   userLimits: (userId: string) => `user:limits:${userId}`,
   userSettings: (userId: string) => `user:${userId}:settings`,
+  userCredits: (userId: string) => `user:${userId}:credits`,
+  userMemories: (userId: string) => `user:${userId}:memories`,
+  userNotifications: (userId: string) => `user:${userId}:notifications`,
+  userProjects: (userId: string) => `user:${userId}:projects`,
   searchResults: (query: string) => `search:${Buffer.from(query).toString("base64").slice(0, 32)}`,
+  chatSummary: (chatId: string) => `chat:${chatId}:summary`,
+  summarizing: (chatId: string) => `chat:${chatId}:summarizing`,
 } as const;
 
 // TTL constants (in seconds)
@@ -81,7 +87,12 @@ export const TTL = {
   userPreferences: 30 * 60, // 30 minutes for user preferences/customize
   userLimits: 5 * 60, // 5 minutes for user limits
   userSettings: 30 * 60, // 30 minutes for user settings
+  userCredits: 5 * 60, // 5 minutes for credits
+  userMemories: 5 * 60, // 5 minutes for memories list
+  userNotifications: 30, // 30 seconds for notifications (real-time sensitive)
+  userProjects: 5 * 60, // 5 minutes for project list
   searchResults: 60 * 60, // 1 hour for web search results
+  chatSummary: 7 * 24 * 60 * 60, // 7 days for chat summaries
 } as const;
 
 // Pub/Sub channel helpers
@@ -89,4 +100,5 @@ export const CHANNELS = {
   sidebar: (userId: string) => `sidebar:${userId}`,
   chat: (chatId: string) => `chat:${chatId}`,
   status: () => "status:updates",
+  notifications: (userId: string) => `notifications:${userId}`,
 } as const;

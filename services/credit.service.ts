@@ -5,11 +5,12 @@
  */
 
 import prisma from "@/lib/prisma";
-import { stripeConfig } from "@/lib/stripe-config";
+import { polarConfig } from "@/lib/polar-config";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
+import redis, { KEYS } from "@/lib/redis";
 
-// Credit costs remain in stripe-config (not plan-specific)
-export type CreditOperation = keyof typeof stripeConfig.creditCosts;
+// Credit costs remain in polar-config (not plan-specific)
+export type CreditOperation = keyof typeof polarConfig.creditCosts;
 
 export interface CreditResult {
   success: boolean;
@@ -30,12 +31,23 @@ export async function getUserCredits(userId: string): Promise<number> {
   return user?.credits || 0;
 }
 
+/**
+ * Invalidate user credits cache
+ */
+async function invalidateUserCreditsCache(userId: string): Promise<void> {
+  try {
+    await redis.del(KEYS.userCredits(userId));
+  } catch {
+    // Redis error, ignore
+  }
+}
+
 export async function deductCredits(
   userId: string,
   operation: CreditOperation,
   customAmount?: number
 ): Promise<DeductionResult> {
-  const cost = customAmount ?? stripeConfig.creditCosts[operation] ?? 1;
+  const cost = customAmount ?? polarConfig.creditCosts[operation] ?? 1;
 
   try {
     const user = await prisma.user.findUnique({
@@ -74,6 +86,9 @@ export async function deductCredits(
       },
       select: { credits: true },
     });
+
+    // Invalidate credits cache after deduction
+    await invalidateUserCreditsCache(userId);
 
     // If credits reached 0 after deduction and user had a paid tier, remove premium features
     // This handles the edge case where subscription ended but user had credits that just ran out
@@ -128,6 +143,9 @@ export async function addCredits(
       select: { credits: true },
     });
 
+    // Invalidate credits cache after addition
+    await invalidateUserCreditsCache(userId);
+
     return {
       success: true,
       remainingCredits: updatedUser.credits || 0,
@@ -146,7 +164,7 @@ export async function checkCreditsForOperation(
   userId: string,
   operation: CreditOperation
 ): Promise<boolean> {
-  const cost = stripeConfig.creditCosts[operation] ?? 1;
+  const cost = polarConfig.creditCosts[operation] ?? 1;
   const balance = await getUserCredits(userId);
   return balance >= cost;
 }

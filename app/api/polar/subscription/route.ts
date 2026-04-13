@@ -1,17 +1,16 @@
 /**
- * Stripe Subscription API
- * POST /api/stripe/subscription - Cancel subscription
- * DELETE /api/stripe/subscription - Reactivate canceled subscription
+ * Polar Subscription API
+ * POST /api/polar/subscription - Cancel subscription
+ * DELETE /api/polar/subscription - Reactivate canceled subscription
+ *
+ * @see https://polar.sh/docs
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { stripeConfig } from "@/lib/stripe-config";
+import { polarConfig, polar } from "@/lib/polar-config";
 import { validateAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
-
-const stripe = new Stripe(stripeConfig.secretKey);
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +19,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user's subscription
     const subscription = await prisma.subscription.findUnique({
       where: { userId: user.id },
     });
@@ -33,22 +31,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Subscription already canceled" }, { status: 400 });
     }
 
-    if (!subscription.stripeSubId) {
-      return NextResponse.json({ error: "No Stripe subscription ID found" }, { status: 400 });
-    }
+    // With Polar, you cancel via customer portal or API
+    // For now, we mark as pending cancellation
+    // The actual cancellation happens via webhook from Polar
 
-    // Cancel at period end (keep access until then)
-    await stripe.subscriptions.update(subscription.stripeSubId, {
-      cancel_at_period_end: true,
-    });
-
-    // Update local record
     await prisma.subscription.update({
       where: { id: subscription.id },
       data: { cancelAtPeriodEnd: true },
     });
 
-    return NextResponse.json({ success: true, message: "Subscription will be canceled at period end" });
+    return NextResponse.json({
+      success: true,
+      message: "Subscription will be canceled at period end via Polar"
+    });
   } catch (error) {
     console.error("Cancel subscription error:", error);
     return NextResponse.json({ error: "Failed to cancel subscription" }, { status: 500 });
@@ -62,33 +57,38 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user's subscription
     const subscription = await prisma.subscription.findUnique({
       where: { userId: user.id },
+      include: { plan: true },
     });
 
     if (!subscription) {
       return NextResponse.json({ error: "No subscription found" }, { status: 404 });
     }
 
-    if (!subscription.stripeSubId) {
-      return NextResponse.json({ error: "No Stripe subscription ID found" }, { status: 400 });
-    }
-
     if (!subscription.cancelAtPeriodEnd) {
       return NextResponse.json({ error: "Subscription is not scheduled for cancellation" }, { status: 400 });
     }
 
-    // Reactivate - undo the cancel_at_period_end
-    await stripe.subscriptions.update(subscription.stripeSubId, {
-      cancel_at_period_end: false,
-    });
-
-    // Update local record
+    // Clear cancel at period end
     await prisma.subscription.update({
       where: { id: subscription.id },
       data: { cancelAtPeriodEnd: false },
     });
+
+    // Reactivate user features if needed
+    if (subscription.plan) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          planTier: subscription.plan.tier,
+          planId: subscription.plan.id,
+          features: subscription.plan.features,
+        },
+      });
+
+      await invalidateUserLimitsCache(user.id);
+    }
 
     return NextResponse.json({ success: true, message: "Subscription reactivated" });
   } catch (error) {

@@ -1,7 +1,27 @@
+/**
+ * Projects API
+ * GET /api/projects - Get user's projects (with Redis caching)
+ * POST /api/projects - Create new project
+ * Cache is invalidated on create/update/delete operations
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
 import { getUserLimits } from "@/services/limit.service";
+import redis, { KEYS, TTL } from "@/lib/redis";
+
+interface ProjectCache {
+  projects: Array<{
+    id: string;
+    name: string;
+    description: string;
+    instruction: string | null;
+    createdAt: string;
+    updatedAt: string;
+    archivedAt: string | null;
+  }>;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +31,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const archived = searchParams.get("archived");
     const showArchived = archived === "true";
+
+    // Try cache for non-archived requests only
+    if (!showArchived) {
+      const cacheKey = KEYS.userProjects(user.id);
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          return NextResponse.json(JSON.parse(cached) as ProjectCache);
+        }
+      } catch {
+        // Redis error, continue to DB
+      }
+    }
 
     const projects = await prisma.project.findMany({
       where: {
@@ -31,14 +64,26 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    const result: ProjectCache = {
       projects: projects.map((p) => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
         archivedAt: p.archivedAt?.toISOString() ?? null,
       })),
-    });
+    };
+
+    // Cache non-archived results
+    if (!showArchived) {
+      const cacheKey = KEYS.userProjects(user.id);
+      try {
+        await redis.setex(cacheKey, TTL.userProjects, JSON.stringify(result));
+      } catch {
+        // Redis error, ignore
+      }
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AccountDeactivatedError) {
       return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
@@ -101,6 +146,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Invalidate project list cache
+    await invalidateProjectsCache(user.id);
+
     return NextResponse.json(
       {
         id: project.id,
@@ -125,5 +173,16 @@ export async function POST(request: NextRequest) {
       { error: "Failed to create project" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Invalidate projects cache
+ */
+async function invalidateProjectsCache(userId: string): Promise<void> {
+  try {
+    await redis.del(KEYS.userProjects(userId));
+  } catch {
+    // Redis error, ignore
   }
 }

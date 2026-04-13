@@ -1,13 +1,15 @@
 /**
  * Customize API
  * GET/PATCH /api/customize - Get or update user customization preferences
+ * GET uses Redis caching via preferences.service.ts
+ * PATCH invalidates cache after update
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { updateCustomizeSchema } from "@/schemas/validation";
-import { invalidateUserPreferencesCache } from "@/services/preferences.service";
+import { getUserPreferences, invalidateUserPreferencesCache } from "@/services/preferences.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,32 +21,19 @@ export async function GET(request: NextRequest) {
     // Get user from Prisma to access email
     const prismaUser = await prisma.user.findUnique({
       where: { id: user.id },
+      select: { email: true },
     });
 
-    const customize = await prisma.customize.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (!customize) {
-      // Return default preferences
-      const emailName = prismaUser?.email?.split("@")[0] || "User";
-      return NextResponse.json({
-        firstName: "",
-        lastName: "",
-        preferredName: emailName,
-        responseTone: "professional",
-        detailLevel: "balanced",
-        interests: "",
-      });
-    }
+    // Use cached preferences
+    const preferences = await getUserPreferences(user.id, prismaUser?.email);
 
     return NextResponse.json({
-      firstName: customize.firstName || "",
-      lastName: customize.lastName || "",
-      preferredName: customize.name,
-      responseTone: customize.responseTone,
-      detailLevel: customize.knowledgeDetail.toLowerCase(),
-      interests: customize.interest?.join(", ") || "",
+      firstName: preferences.firstName,
+      lastName: preferences.lastName,
+      preferredName: preferences.name,
+      responseTone: preferences.tone,
+      detailLevel: preferences.detailLevel.toLowerCase(),
+      interests: preferences.interests.join(", ") || "",
     });
   } catch (error) {
     console.error("Get customize error:", error);
@@ -62,6 +51,7 @@ export async function PATCH(request: NextRequest) {
     // Get user from Prisma to access email
     const prismaUser = await prisma.user.findUnique({
       where: { id: user.id },
+      select: { email: true },
     });
 
     const body = await request.json();
