@@ -1,9 +1,10 @@
 /**
  * Web Search Service
- * Wraps SearxNG with Redis caching
+ * Wraps SearxNG with Redis caching and circuit breaker
  */
 
 import redis, { KEYS, TTL } from "@/lib/redis";
+import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-breaker.service";
 
 const SEARXNG_BASE_URL = process.env.SEARXNG_BASE_URL || "http://localhost:8888";
 
@@ -60,8 +61,11 @@ function getCacheKey(query: string): string {
   return `search:${query.toLowerCase().trim()}`;
 }
 
+// Get circuit breaker for SearxNG
+const searxBreaker = getCircuitBreaker("searxng");
+
 /**
- * Search using SearxNG with Redis caching
+ * Search using SearxNG with Redis caching and circuit breaker
  */
 export async function webSearch(
   query: string,
@@ -77,7 +81,7 @@ export async function webSearch(
   const { limit = 10, offset = 0 } = options || {};
   const cacheKey = getCacheKey(query);
 
-  // Try cache first
+  // Try cache first (cache bypasses circuit breaker)
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {
@@ -88,27 +92,29 @@ export async function webSearch(
     // Redis not available, continue without cache
   }
 
-  // Query SearxNG
-  const searxUrl = new URL(`${SEARXNG_BASE_URL}/search`);
-  searxUrl.searchParams.set("q", query);
-  searxUrl.searchParams.set("format", "json");
-  searxUrl.searchParams.set("engines", "google,bing,duckduckgo");
-  searxUrl.searchParams.set("count", String(limit));
-
+  // Query SearxNG with circuit breaker protection
   try {
-    const response = await fetch(searxUrl.toString(), {
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "Eryx/1.0 (search interface)",
-      },
-      signal: AbortSignal.timeout(10000),
+    const data = await searxBreaker.execute(async () => {
+      const searxUrl = new URL(`${SEARXNG_BASE_URL}/search`);
+      searxUrl.searchParams.set("q", query);
+      searxUrl.searchParams.set("format", "json");
+      searxUrl.searchParams.set("engines", "google,bing,duckduckgo");
+      searxUrl.searchParams.set("count", String(limit));
+
+      const response = await fetch(searxUrl.toString(), {
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "Eryx/1.0 (search interface)",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`SearxNG returned ${response.status}`);
+      }
+
+      return response.json() as Promise<SearxNGResponse>;
     });
-
-    if (!response.ok) {
-      throw new Error(`SearxNG returned ${response.status}`);
-    }
-
-    const data: SearxNGResponse = await response.json();
 
     const results: SearchResult[] = (data.results || []).map(normalizeResult);
     const total = data.number_of_results || results.length;
@@ -130,6 +136,10 @@ export async function webSearch(
 
     return searchResponse;
   } catch (error) {
+    // If circuit breaker is open, throw specific error
+    if (error instanceof CircuitBreakerOpenError) {
+      throw new Error("Search service unavailable");
+    }
     console.error("Web search error:", error);
     throw new Error("Search service unavailable");
   }
