@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getChatById, updateChat, deleteChat } from "@/lib/stack-server";
 import { validateAuth } from "@/lib/auth";
+import { publishChatRenamed, publishChatArchived, publishChatDeleted } from "@/services/chat-pubsub.service";
 
 export async function GET(
   request: NextRequest,
@@ -50,6 +51,14 @@ export async function PATCH(
       ...(pinnedAt !== undefined && { pinnedAt }),
     });
 
+    // Publish events for real-time sync
+    if (title !== undefined) {
+      await publishChatRenamed(id, user.id, title);
+    }
+    if (archivedAt !== undefined) {
+      await publishChatArchived(id, user.id);
+    }
+
     return NextResponse.json({
       ...chat,
       archivedAt: chat.archivedAt?.toISOString() ?? null,
@@ -76,6 +85,9 @@ export async function DELETE(
 
     const { id } = await params;
     await deleteChat(id, user.id);
+
+    // Publish delete event for real-time sync
+    await publishChatDeleted(id, user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

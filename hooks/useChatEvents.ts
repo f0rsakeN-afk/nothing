@@ -90,7 +90,7 @@ export function useChatEvents() {
       eventSourceRef.current.close();
     }
 
-    const eventSource = new EventSource("/api/events");
+    const eventSource = new EventSource("/api/chats/stream");
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = handleMessage;

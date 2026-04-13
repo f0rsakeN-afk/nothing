@@ -4,6 +4,7 @@ import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
 import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
 import { createChatSchema } from "@/schemas/validation";
 import { logger } from "@/lib/logger";
+import { publishChatCreated } from "@/services/chat-pubsub.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
     logger.info("Creating chat", { userId: user.id, projectId });
 
     const chat = await createChat(user.id, { projectId, firstMessage });
+
+    // Publish new chat event for real-time sync
+    await publishChatCreated(chat, user.id);
 
     return NextResponse.json(
       {

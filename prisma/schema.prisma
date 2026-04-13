@@ -549,3 +549,23 @@ model Subscription {
   @@index([stripeCustomerId])
   @@index([currentPeriodEnd])
 }
+
+// ---------------------------------------------------------------------------
+// Push Notifications
+// ---------------------------------------------------------------------------
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   // Push subscription endpoint URL
+  p256dh    String   // User's public key for encryption
+  auth      String   // User's auth secret for encryption
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Composite unique - user can have multiple devices but same endpoint per device
+  @@unique([userId, endpoint])
+  @@index([userId])
+}
+

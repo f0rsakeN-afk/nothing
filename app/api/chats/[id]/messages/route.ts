@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getChatMessages, addChatMessage } from "@/lib/stack-server";
 import { validateAuth } from "@/lib/auth";
+import { publishMessageNew } from "@/services/chat-pubsub.service";
 
 export async function GET(
   request: NextRequest,
@@ -59,6 +60,9 @@ export async function POST(
     }
 
     const message = await addChatMessage(chatId, user.id, { role, content });
+
+    // Publish new message event for real-time sync
+    await publishMessageNew(chatId, user.id, message);
 
     return NextResponse.json(
       {
