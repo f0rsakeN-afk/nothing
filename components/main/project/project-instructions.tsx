@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useUpdateProject } from "@/hooks/use-projects";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 
 interface ProjectInstructionsProps {
   projectId: string;

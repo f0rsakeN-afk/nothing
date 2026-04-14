@@ -4,7 +4,7 @@ import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Lock, Trash2, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";

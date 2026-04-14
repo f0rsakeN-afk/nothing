@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 import { Loader2 } from "lucide-react";
 
 // ---------------------------------------------------------------------------

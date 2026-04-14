@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Square } from "lucide-react";
 import { ChatMessage } from "@/components/main/chat/chat-message";
 import type { Message } from "@/components/main/chat/chat-message";
+import { toast } from "@/components/ui/sileo-toast";
 
 const STATIC_SEARCH_RESULTS = [
   {
@@ -253,6 +254,62 @@ export default function Page() {
             {currentMessage && (
               <ChatMessage message={currentMessage} />
             )}
+          </div>
+        </div>
+
+        {/* Toast Demo */}
+        <div className="w-full p-6 border border-border/40 bg-card rounded-2xl">
+          <p className="text-xs text-muted-foreground mb-4">Toast Notifications (Sileo Style)</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast.success("Operation completed successfully!")}
+            >
+              Success
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast.error("Something went wrong. Please try again.")}
+            >
+              Error
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast.info("Here's some helpful information.")}
+            >
+              Info
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast.loading("Processing your request...")}
+            >
+              Loading
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast("This is a default toast message", {
+                description: "With an optional description",
+              })}
+            >
+              Default
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast("With action", {
+                action: {
+                  label: "Undo",
+                  onClick: () => toast.info("Action clicked!"),
+                },
+              })}
+            >
+              With Action
+            </Button>
           </div>
         </div>
       </div>

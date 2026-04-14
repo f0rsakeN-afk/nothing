@@ -5,7 +5,7 @@ import { Plus_Jakarta_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import MainLayout from "./mainLayout";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sileo-toast";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/src/stack/server";
 //import { PageTransitionProvider } from "@/components/shared/page-transition-provider";
@@ -57,8 +57,7 @@ export default function RootLayout({
           <StackTheme>
 
           <ThemeProvider defaultTheme="dark" attribute="class">
-            <Toaster position="top-center" richColors />
-            {/* <PageTransitionProvider>{children}</PageTransitionProvider> */}
+            <Toaster position="top-center" />
             <MainLayout>
               {children}
             </MainLayout>

@@ -3,7 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useParams } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatStream } from "@/hooks/useChatStream";
 import { ChatInput } from "@/components/main/home/chat-input";

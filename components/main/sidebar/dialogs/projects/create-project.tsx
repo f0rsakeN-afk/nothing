@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, FolderPlus } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 
 import {
   Dialog,
