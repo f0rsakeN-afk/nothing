@@ -45,7 +45,7 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 async function fetchPlans(): Promise<PlansData> {
-  const res = await fetch("/api/stripe/plans");
+  const res = await fetch("/api/polar/plans");
   if (!res.ok) throw new Error("Failed to fetch plans");
   return res.json();
 }

@@ -11,9 +11,47 @@ import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-b
 import { publishMessageNew } from "@/services/chat-pubsub.service";
 import { notifyNewMessage } from "@/services/push-notification.service";
 import { checkChatRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { webSearch, type SearchResult } from "@/lib/web-search";
 
 const groq = new Groq();
 const groqBreaker = getCircuitBreaker("groq");
+
+/**
+ * Format search results for injection into system prompt
+ */
+function formatSearchResultsForPrompt(results: SearchResult[]): string {
+  if (!results.length) return "";
+
+  const formatted = results.slice(0, 8).map((r, i) => {
+    const date = r.publishedDate ? ` • ${r.publishedDate}` : "";
+    const source = extractDomain(r.url);
+    return `[${i + 1}] ${r.title}\n    URL: ${r.url}\n    Source: ${source}${date}\n    Summary: ${r.description}`;
+  }).join("\n\n");
+
+  return `
+
+## Web Search Results (Use these to answer the user's question)
+
+${formatted}
+
+## Citation Guidelines
+- When using information from search results, cite inline with [1], [2], etc. matching the numbered sources above
+- Always include the source number when referencing specific facts, data, or claims from search results
+- Prefer citing the most recent and authoritative sources
+- If information is from your own knowledge (not search results), don't cite`;
+}
+
+/**
+ * Extract domain from URL for cleaner display
+ */
+function extractDomain(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
 
 /**
  * Build messages for AI with smart context retrieval
@@ -25,7 +63,8 @@ const groqBreaker = getCircuitBreaker("groq");
  */
 async function buildMessages(
   chatId: string,
-  incomingMessages: Array<{ role: "user" | "assistant"; content: string }>
+  incomingMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  searchResults?: SearchResult[]
 ): Promise<Array<{ role: "system" | "user" | "assistant"; content: string }>> {
   const chat = await prisma.chat.findUnique({
     where: { id: chatId },
@@ -82,6 +121,11 @@ async function buildMessages(
   // Add truncation notice if needed
   if (truncated) {
     systemPrompt += `\n\n[Note: Earlier messages were summarized for context efficiency. Recent messages are shown below.]`;
+  }
+
+  // Add web search results if available
+  if (searchResults && searchResults.length > 0) {
+    systemPrompt += formatSearchResultsForPrompt(searchResults);
   }
 
   // Build final message array
@@ -168,7 +212,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build messages with smart context (before deducting - if this fails, no credits deducted)
-    const fullMessages = await buildMessages(chatId, messages);
+    let fullMessages = await buildMessages(chatId, messages);
 
     if (fullMessages.length === 0 || (fullMessages.length === 1 && fullMessages[0].role === "system")) {
       return new Response(JSON.stringify({ error: "No messages available" }), {
@@ -180,9 +224,76 @@ export async function POST(req: NextRequest) {
     // Stream from Groq with circuit breaker protection
     let stream;
     let creditsDeducted = false;
+    let webSearchCreditsDeducted = false;
+    let searchResults: SearchResult[] = [];
+
+    // Helper to emit SSE event
+    const emitEvent = (controller: ReadableStreamDefaultController, event: object) => {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+    };
+
+    const encoder = new TextEncoder();
+
+    // Web search mode: perform search with timeout, don't block AI
+    if (mode === "web") {
+      // Check web search credits
+      const webSearchCost = polarConfig.creditCosts["web-search"] || 3;
+      const hasWebSearchCredits = await checkCreditsForOperation(user.id, "web-search");
+      if (!hasWebSearchCredits) {
+        const { getUserCredits } = await import("@/services/credit.service");
+        const balance = await getUserCredits(user.id);
+        return new Response(JSON.stringify({
+          error: "Insufficient credits",
+          required: webSearchCost,
+          current: balance,
+          type: "web_search",
+          message: `Web search requires ${webSearchCost} credits. You have ${balance} credits remaining.`,
+        }), {
+          status: 402,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Deduct web search credits upfront (will be refunded if AI fails)
+      try {
+        await deductCredits(user.id, "web-search");
+        webSearchCreditsDeducted = true;
+      } catch (deductError) {
+        console.error("[Chat] Failed to deduct web search credits:", deductError);
+      }
+    }
+
+    let fullResponse = "";
+
+    // Build initial messages without search (for streaming start)
+    fullMessages = await buildMessages(chatId, messages);
+
+    // Web search mode: prepare search but don't block
+    let searchPromise: Promise<void> | null = null;
+    let searchCompleted = false;
+
+    if (mode === "web") {
+      const lastUserMessage = messages[messages.length - 1]?.content || "";
+      const searchQuery = lastUserMessage.slice(0, 500);
+
+      // Fire search in background
+      searchPromise = webSearch(searchQuery, { limit: 10 })
+        .then(async (searchResponse) => {
+          searchResults = searchResponse.results;
+          if (searchResults.length > 0) {
+            fullMessages = await buildMessages(chatId, messages, searchResults);
+          }
+          searchCompleted = true;
+        })
+        .catch((searchError) => {
+          console.error("[Chat] Web search error:", searchError);
+          searchCompleted = true;
+        });
+    }
+
+    // Deduct AI credits and start AI stream
     try {
-      // Deduct credits AFTER message building succeeds
-      const deduction = await deductCredits(user.id, model);
+      await deductCredits(user.id, model);
       creditsDeducted = true;
 
       stream = await groqBreaker.execute(() =>
@@ -195,10 +306,15 @@ export async function POST(req: NextRequest) {
         })
       );
     } catch (error) {
-      // Refund credits if Groq call failed (only if we already deducted)
+      // Refund credits if Groq call failed
       if (creditsDeducted) {
         addCredits(user.id, cost).catch((err) => {
-          console.error("[Chat] Failed to refund credits after Groq failure:", err);
+          console.error("[Chat] Failed to refund AI credits after Groq failure:", err);
+        });
+      }
+      if (webSearchCreditsDeducted) {
+        addCredits(user.id, polarConfig.creditCosts["web-search"] || 3).catch((err) => {
+          console.error("[Chat] Failed to refund web search credits:", err);
         });
       }
 
@@ -215,12 +331,53 @@ export async function POST(req: NextRequest) {
       throw error;
     }
 
-    const encoder = new TextEncoder();
-    let fullResponse = "";
-
     const readable = new ReadableStream({
       async start(controller) {
         try {
+          // Web mode: emit step events for progress feedback
+          if (mode === "web") {
+            // Emit search_start event immediately
+            emitEvent(controller, {
+              type: "step",
+              step: "search",
+              status: "start",
+              message: "Searching the web...",
+            });
+
+            // Wait for search to complete (with 5s timeout) while AI is warming up
+            const timeoutPromise = new Promise<void>((resolve) =>
+              setTimeout(() => resolve(), 5000)
+            );
+
+            await Promise.race([searchPromise, timeoutPromise]);
+
+            // Emit search complete/skip
+            if (searchResults.length > 0) {
+              emitEvent(controller, {
+                type: "step",
+                step: "search",
+                status: "complete",
+                message: `Found ${searchResults.length} sources`,
+                results: searchResults,
+              });
+            } else {
+              emitEvent(controller, {
+                type: "step",
+                step: "search",
+                status: "skipped",
+                message: "No search results",
+              });
+            }
+          }
+
+          // Emit AI start event
+          emitEvent(controller, {
+            type: "step",
+            step: "ai",
+            status: "start",
+            message: "Generating response...",
+          });
+
           for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content;
             if (content) {
@@ -233,6 +390,13 @@ export async function POST(req: NextRequest) {
         } catch (streamError) {
           console.error("[chat] Stream error:", streamError);
         } finally {
+          // Emit completion step
+          emitEvent(controller, {
+            type: "step",
+            step: "ai",
+            status: "complete",
+            message: "Response complete",
+          });
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
           // Save response and trigger summarization check

@@ -1,13 +1,16 @@
 'use client';
 
 import React, { memo, useState, useCallback, useRef, useEffect } from "react";
-import { Copy, Check, Pencil, X, Loader2, Globe, AlertCircle, Check as CheckIcon } from "lucide-react";
+import { Copy, Check, Pencil, X, Loader2, Globe, AlertCircle, Check as CheckIcon, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AiResponseFormatter } from "./ai-response-formatter";
 import { MessageActions } from "./message-actions";
 import { BorderTrail } from "@/components/ui/border-trail";
 import { ShimmerText } from "@/components/odysseyui/text-shimmer";
 import { Card, CardContent } from "@/components/ui/card";
+import { WebSearchResults } from "./web-search-results";
+import { Steps, StepsItem, StepsContent, StepsBar } from "@/components/odysseyui/steps";
+import { AILoader } from "./ai-loader";
 
 export type MessageRole = "user" | "assistant";
 
@@ -25,6 +28,17 @@ export interface Message {
     status: "running" | "completed" | "error";
     progress?: number;
   };
+  searchResults?: SearchResult[];
+  steps?: Array<{ step: string; status: string; message: string }>;
+}
+
+export interface SearchResult {
+  title: string;
+  url: string;
+  description: string;
+  engine?: string;
+  publishedDate?: string;
+  thumbnail?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,39 +51,32 @@ export const SearchLoadingState = memo(function SearchLoadingState({
   query?: string;
 }) {
   return (
-    <Card className="relative w-full my-4 overflow-hidden shadow-none">
-      <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200 dark:from-blue-400 dark:via-blue-500 dark:to-blue-700" size={80} />
-      <CardContent className="px-6!">
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 rounded-full flex items-center justify-center bg-blue-50 dark:bg-blue-950">
-              <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200" size={40} />
-              <Globe className="h-5 w-5 text-blue-500" />
-            </div>
-            <div className="space-y-2">
-              <ShimmerText
-                text={query ? `Searching: ${query}` : "Searching the web..."}
-                className="text-base font-medium"
-                duration={2}
-              />
-              <div className="flex gap-2">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 animate-pulse"
-                    style={{
-                      width: `${Math.random() * 40 + 20}px`,
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+    <div className="relative w-full my-4 p-4 rounded-xl bg-muted/30 border border-border/50 overflow-hidden">
+      <div className="flex items-center gap-3">
+        <div className="relative h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10 dark:bg-primary/20">
+          <Globe className="h-4 w-4 text-primary" />
         </div>
-      </CardContent>
-    </Card>
+        <div className="space-y-1.5 flex-1">
+          <ShimmerText
+            text={query ? `Searching: ${query}` : "Searching the web..."}
+            className="text-sm font-medium"
+            duration={1.5}
+          />
+          <div className="flex gap-1.5">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="h-1 rounded-full bg-muted-foreground/20 animate-pulse"
+                style={{
+                  width: `${Math.random() * 30 + 20}px`,
+                  animationDelay: `${i * 0.15}s`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
 
@@ -304,6 +311,8 @@ const AssistantMessage = memo(function AssistantMessage({
   chatId,
   toolProgress,
   isSearchMode,
+  searchResults,
+  steps,
 }: {
   content: string;
   isStreaming?: boolean;
@@ -312,16 +321,108 @@ const AssistantMessage = memo(function AssistantMessage({
   chatId?: string;
   toolProgress?: Message["toolProgress"];
   isSearchMode?: boolean;
+  searchResults?: SearchResult[];
+  steps?: Array<{ step: string; status: string; message: string }>;
 }) {
+  const getStepIcon = (stepType: string, stepStatus: string) => {
+    const isComplete = stepStatus === "complete";
+    const isActive = stepStatus === "start";
+    const isSkipped = stepStatus === "skipped";
+
+    const baseClass = "shrink-0";
+
+    if (isSkipped) {
+      return (
+        <div className={cn(baseClass, "w-5 h-5 rounded-full bg-muted flex items-center justify-center")}>
+          <span className="text-[10px] text-muted-foreground">—</span>
+        </div>
+      );
+    }
+
+    if (isComplete) {
+      return (
+        <div className={cn(baseClass, "w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center")}>
+          <CheckIcon className="w-3 h-3 text-green-500" />
+        </div>
+      );
+    }
+
+    if (isActive) {
+      if (stepType === "search") {
+        return (
+          <div className={cn(baseClass, "w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center")}>
+            <Loader2 className="w-3 h-3 text-primary animate-spin" />
+          </div>
+        );
+      }
+      if (stepType === "ai") {
+        return (
+          <div className={cn(baseClass, "w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center")}>
+            <Sparkles className="w-3 h-3 text-primary" />
+          </div>
+        );
+      }
+    }
+
+    return (
+      <div className={cn(baseClass, "w-5 h-5 rounded-full bg-muted flex items-center justify-center")}>
+        <span className="text-[10px] text-muted-foreground">—</span>
+      </div>
+    );
+  };
+
+  const getStepTextColor = (stepStatus: string) => {
+    switch (stepStatus) {
+      case "complete":
+        return "text-foreground";
+      case "start":
+        return "text-foreground";
+      case "skipped":
+        return "text-muted-foreground";
+      default:
+        return "text-muted-foreground";
+    }
+  };
+
   return (
     <div className="group/assistant-msg min-w-0 sm:max-w-[97%]">
       <StreamingStatusIndicator status={status || "idle"} isSearchMode={isSearchMode} />
+      {isStreaming && (
+        <div className="flex items-center justify-center py-4">
+          <AILoader />
+        </div>
+      )}
+      {steps && steps.length > 0 && (
+        <div className="my-3 flex items-center gap-2">
+          {steps.map((step, idx) => (
+            <React.Fragment key={step.step}>
+              {/* Icon */}
+              <div className="flex items-center gap-1.5">
+                {getStepIcon(step.step, step.status)}
+                <span className={cn("text-xs", getStepTextColor(step.status))}>
+                  {step.message}
+                </span>
+              </div>
+              {/* Connector */}
+              {idx < steps.length - 1 && (
+                <div className={cn(
+                  "h-[2px] w-4 rounded-full",
+                  steps[idx + 1]?.status === "complete" ? "bg-green-500/40" : "bg-muted"
+                )} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
       {toolProgress && (
         <ToolProgressCard
           name={toolProgress.name}
           status={toolProgress.status}
           progress={toolProgress.progress}
         />
+      )}
+      {searchResults && searchResults.length > 0 && (
+        <WebSearchResults results={searchResults} />
       )}
       <AiResponseFormatter content={content} isStreaming={isStreaming} />
       {!isStreaming && messageId && (
@@ -375,6 +476,8 @@ export const ChatMessage = memo(function ChatMessage({
           messageId={message.id}
           chatId={chatId}
           toolProgress={message.toolProgress}
+          searchResults={message.searchResults}
+          steps={message.steps}
         />
       )}
     </div>

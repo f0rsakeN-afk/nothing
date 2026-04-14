@@ -404,7 +404,7 @@ function ChatPageInner() {
     async (value: string) => {
       setInput("");
       try {
-        await sendUserMessage(value);
+        await sendUserMessage(value, webSearch ? "web" : "chat");
       } catch (err) {
         const error = err as { code?: string; message?: string; required?: number; current?: number; upgradeTo?: string };
         if (error.code === "CREDIT_ERROR") {
@@ -418,7 +418,7 @@ function ChatPageInner() {
         }
       }
     },
-    [sendUserMessage],
+    [sendUserMessage, webSearch],
   );
 
   if (isLoading) return <div />;
@@ -445,6 +445,8 @@ function ChatPageInner() {
               onSubmit={handleSubmit}
               placeholder="Ask a follow-up…"
               onOpenMemory={() => setMemoryDialogOpen(true)}
+              webSearchEnabled={webSearch}
+              onWebSearchToggle={(enabled) => setWebSearch(enabled)}
             />
           </div>
         </div>

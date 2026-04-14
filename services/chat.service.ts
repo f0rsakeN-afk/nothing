@@ -9,6 +9,8 @@ export interface Message {
   createdAt?: string;
   isStreaming?: boolean;
   chatId?: string; // Included so branch feature can access chatId from message
+  searchResults?: SearchResult[]; // Web search results for AI response
+  steps?: Array<{ step: string; status: string; message: string }>; // Progress steps
 }
 
 export interface Chat {
@@ -219,10 +221,21 @@ export async function searchWeb(
 }
 
 // Chat API (streaming)
+export interface SearchResult {
+  title: string;
+  url: string;
+  description: string;
+  engine?: string;
+  publishedDate?: string;
+  thumbnail?: string;
+}
+
 export interface StreamCallbacks {
   onChunk: (content: string) => void;
   onComplete?: (fullResponse: string) => void;
   onError?: (error: Error) => void;
+  onSearchComplete?: (results: SearchResult[]) => void;
+  onStep?: (step: { step: string; status: string; message: string; results?: SearchResult[] }) => void;
 }
 
 export async function streamChat(
@@ -232,7 +245,7 @@ export async function streamChat(
   signal?: AbortSignal,
   mode?: "chat" | "web"
 ): Promise<string> {
-  const { onChunk, onComplete, onError } = callbacks;
+  const { onChunk, onComplete, onError, onSearchComplete, onStep } = callbacks;
 
   try {
     const res = await fetch("/api/chat", {
@@ -266,6 +279,20 @@ export async function streamChat(
     const decoder = new TextDecoder();
     let accumulated = "";
 
+    // Throttle chunk updates for smooth rendering (~60fps)
+    let pendingDeltas: string[] = [];
+    let throttleTimeout: ReturnType<typeof setTimeout> | null = null;
+    const THROTTLE_MS = 16; // ~60fps
+
+    const flushDeltas = () => {
+      if (pendingDeltas.length > 0) {
+        const combined = pendingDeltas.join("");
+        onChunk(combined);
+        pendingDeltas = [];
+      }
+      throttleTimeout = null;
+    };
+
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
@@ -281,15 +308,41 @@ export async function streamChat(
 
         try {
           const parsed = JSON.parse(data);
+
+          // Handle step events immediately (not throttled)
+          if (parsed.type === "step") {
+            onStep?.({
+              step: parsed.step,
+              status: parsed.status,
+              message: parsed.message,
+              results: parsed.results,
+            });
+            // Also call onSearchComplete if search step completed with results
+            if (parsed.step === "search" && parsed.status === "complete" && parsed.results) {
+              onSearchComplete?.(parsed.results);
+            }
+            continue;
+          }
+
           const delta = parsed.choices?.[0]?.delta?.content;
           if (delta) {
             accumulated += delta;
-            onChunk(delta);
+            // Throttle chunk callbacks to ~60fps for smooth rendering
+            pendingDeltas.push(delta);
+            if (!throttleTimeout) {
+              throttleTimeout = setTimeout(flushDeltas, THROTTLE_MS);
+            }
           }
         } catch {
           // Skip malformed JSON
         }
       }
+    }
+
+    // Flush any remaining deltas
+    if (throttleTimeout) {
+      clearTimeout(throttleTimeout);
+      flushDeltas();
     }
 
     onComplete?.(accumulated);

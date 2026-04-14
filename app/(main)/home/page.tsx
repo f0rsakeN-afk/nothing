@@ -24,6 +24,7 @@ export default function HomePage() {
   const [activeChip, setActiveChip] = useState<ChipData | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
   // Check auth and onboarding status on mount
   useEffect(() => {
@@ -92,7 +93,8 @@ export default function HomePage() {
 
         // Navigate to the new chat with the message as a query param
         const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
-        router.push(`/chat/${chatId}?q=${encodeURIComponent(value)}${triggerParam}`);
+        const webParam = webSearchEnabled ? "&web=1" : "";
+        router.push(`/chat/${chatId}?q=${encodeURIComponent(value)}${triggerParam}${webParam}`);
       } catch (error) {
         console.error("Error creating chat:", error);
         setIsCreating(false);
@@ -150,6 +152,8 @@ export default function HomePage() {
             onSubmit={handleSubmit}
             isLoading={isCreating}
             onOpenMemory={() => setMemoryDialogOpen(true)}
+            webSearchEnabled={webSearchEnabled}
+            onWebSearchToggle={(enabled) => setWebSearchEnabled(enabled)}
           />
         </div>
       </div>

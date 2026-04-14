@@ -27,6 +27,8 @@ interface ChatInputProps {
   isLoading?: boolean;
   onOpenMemory?: () => void;
   onMemoriesSelect?: (memoryIds: string[]) => void;
+  webSearchEnabled?: boolean;
+  onWebSearchToggle?: (enabled: boolean) => void;
 }
 
 export function ChatInput({
@@ -38,6 +40,8 @@ export function ChatInput({
   isLoading = false,
   onOpenMemory,
   onMemoriesSelect,
+  webSearchEnabled = false,
+  onWebSearchToggle,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -179,6 +183,31 @@ export function ChatInput({
               onOpenMemory={onOpenMemory}
               onMemoriesSelect={onMemoriesSelect}
             />
+
+            {/* Web search toggle */}
+            {onWebSearchToggle && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => onWebSearchToggle(!webSearchEnabled)}
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 active:scale-95",
+                        webSearchEnabled
+                          ? "bg-blue-50 text-blue-500 dark:bg-blue-950 dark:text-blue-400"
+                          : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/70"
+                      )}
+                    >
+                      <Globe className="h-[18px] w-[18px]" />
+                    </button>
+                  }
+                />
+                <TooltipContent side="bottom" sideOffset={8}>
+                  {webSearchEnabled ? "Disable web search" : "Enable web search"}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
 
           {/* Right: send button */}

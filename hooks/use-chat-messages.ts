@@ -21,7 +21,7 @@ interface UseChatMessagesResult {
   hasOlder: boolean;
   isFetchingOlder: boolean;
   refetch: () => void;
-  sendUserMessage: (content: string) => Promise<void>;
+  sendUserMessage: (content: string, mode?: "chat" | "web") => Promise<void>;
   loadOlder: () => void;
   abortCurrentMessage: () => void;
   isStreaming: boolean;
@@ -106,7 +106,7 @@ export function useChatMessages({
 
   // Send user message and get AI response
   const sendUserMessage = useCallback(
-    async (content: string) => {
+    async (content: string, mode: "chat" | "web" = "chat") => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -180,8 +180,51 @@ export function useChatMessages({
                 );
                 queryClient.invalidateQueries({ queryKey: ["chat-messages", chatId] });
               },
+              onSearchComplete: (results) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) =>
+                          m.id === aiMsgId ? { ...m, searchResults: results } : m
+                        ),
+                      })),
+                    };
+                  }
+                );
+              },
+              onStep: (step) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const steps = m.steps ? [...m.steps] : [];
+                          const existingIdx = steps.findIndex((s) => s.step === step.step);
+                          if (existingIdx >= 0) {
+                            steps[existingIdx] = step;
+                          } else {
+                            steps.push(step);
+                          }
+                          return { ...m, steps };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
             },
-            abortControllerRef.current.signal
+            abortControllerRef.current.signal,
+            mode
           );
         } catch (err) {
           console.error("[sendUserMessage] error:", err);
@@ -266,9 +309,51 @@ export function useChatMessages({
                 // Only after streaming completes, sync with server
                 queryClient.invalidateQueries({ queryKey: ["chat-messages", chatId] });
               },
+              onSearchComplete: (results) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) =>
+                          m.id === aiMsgId ? { ...m, searchResults: results } : m
+                        ),
+                      })),
+                    };
+                  }
+                );
+              },
+              onStep: (step) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const steps = m.steps ? [...m.steps] : [];
+                          const existingIdx = steps.findIndex((s) => s.step === step.step);
+                          if (existingIdx >= 0) {
+                            steps[existingIdx] = step;
+                          } else {
+                            steps.push(step);
+                          }
+                          return { ...m, steps };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
             },
             abortControllerRef.current.signal,
-            "chat"
+            mode
           );
         } catch (err) {
           console.error("[sendUserMessage] error:", err);
@@ -368,9 +453,51 @@ export function useChatMessages({
                 );
                 queryClient.invalidateQueries({ queryKey: ["chat-messages", chatId] });
               },
+              onSearchComplete: (results) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) =>
+                          m.id === aiMsgId ? { ...m, searchResults: results } : m
+                        ),
+                      })),
+                    };
+                  }
+                );
+              },
+              onStep: (step) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const steps = m.steps ? [...m.steps] : [];
+                          const existingIdx = steps.findIndex((s) => s.step === step.step);
+                          if (existingIdx >= 0) {
+                            steps[existingIdx] = step;
+                          } else {
+                            steps.push(step);
+                          }
+                          return { ...m, steps };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
             },
             abortControllerRef.current.signal,
-            "chat"
+            mode
           );
         } catch (err) {
           console.error("[sendUserMessage] error:", err);
