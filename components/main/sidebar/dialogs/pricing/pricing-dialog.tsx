@@ -9,7 +9,7 @@ import { ShineBorder } from "@/components/ui/shine-border";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 
 interface PricingDialogProps {
   isOpen: boolean;

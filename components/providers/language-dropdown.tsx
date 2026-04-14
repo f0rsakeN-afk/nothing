@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sileo-toast";
 import { SUPPORTED_LOCALES, type Locale } from "@/routing";
 
 interface LanguageDropdownProps {

@@ -1,8 +1,8 @@
 "use client";
 
 import { memo, useState, useCallback, useEffect, useRef } from "react";
-import { Copy, Check, Volume2, Pause, ThumbsUp, ThumbsDown, GitBranch, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Copy, Check, Volume2, Pause, ThumbsUp, ThumbsDown, GitBranch, Loader2, Download, FileText } from "lucide-react";
+import { toast } from "@/components/ui/sileo-toast";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -238,6 +238,68 @@ export const MessageActions = memo(function MessageActions({
     }
   }, [messageId, chatId]);
 
+  const handleDownloadPDF = useCallback(async () => {
+    if (!content) return;
+
+    try {
+      const res = await fetch("/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ai-response-${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully!");
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      toast.error("Failed to generate PDF. Please try again.");
+    }
+  }, [content]);
+
+  const handleDownloadDOCX = useCallback(async () => {
+    if (!content) return;
+
+    try {
+      const res = await fetch("/api/export/docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate DOCX");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ai-response-${Date.now()}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("DOCX downloaded successfully!");
+    } catch (err) {
+      console.error("Failed to generate DOCX:", err);
+      toast.error("Failed to generate DOCX. Please try again.");
+    }
+  }, [content]);
+
   return (
     <TooltipProvider delay={400}>
       <div
@@ -344,6 +406,34 @@ export const MessageActions = memo(function MessageActions({
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center">
             Branch from here
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Download PDF Action */}
+        <Tooltip>
+          <TooltipTrigger
+            onClick={handleDownloadPDF}
+            aria-label="Download as PDF"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 hover:bg-muted/80 hover:text-muted-foreground focus-visible:bg-muted/80"
+          >
+            <Download className="h-4 w-4" />
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="center">
+            Download as PDF
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Download DOCX Action */}
+        <Tooltip>
+          <TooltipTrigger
+            onClick={handleDownloadDOCX}
+            aria-label="Download as DOCX"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 hover:bg-muted/80 hover:text-muted-foreground focus-visible:bg-muted/80"
+          >
+            <FileText className="h-4 w-4" />
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="center">
+            Download as DOCX
           </TooltipContent>
         </Tooltip>
       </div>
