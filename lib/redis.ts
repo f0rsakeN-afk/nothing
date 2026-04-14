@@ -101,4 +101,5 @@ export const CHANNELS = {
   chat: (chatId: string) => `chat:${chatId}`,
   status: () => "status:updates",
   notifications: (userId: string) => `notifications:${userId}`,
+  credits: (userId: string) => `credits:${userId}`,
 } as const;
