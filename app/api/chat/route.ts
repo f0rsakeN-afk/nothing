@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check credits before processing
-    const { checkCreditsForOperation, deductCredits } = await import("@/services/credit.service");
+    const { checkCreditsForOperation, deductCredits, addCredits } = await import("@/services/credit.service");
     const { polarConfig } = await import("@/lib/polar-config");
 
     // Determine cost based on model
@@ -167,10 +167,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Deduct credits
-    const deduction = await deductCredits(user.id, model);
-
-    // Build messages with smart context
+    // Build messages with smart context (before deducting - if this fails, no credits deducted)
     const fullMessages = await buildMessages(chatId, messages);
 
     if (fullMessages.length === 0 || (fullMessages.length === 1 && fullMessages[0].role === "system")) {
@@ -182,7 +179,12 @@ export async function POST(req: NextRequest) {
 
     // Stream from Groq with circuit breaker protection
     let stream;
+    let creditsDeducted = false;
     try {
+      // Deduct credits AFTER message building succeeds
+      const deduction = await deductCredits(user.id, model);
+      creditsDeducted = true;
+
       stream = await groqBreaker.execute(() =>
         groq.chat.completions.create({
           model: aiConfig.model,
@@ -193,7 +195,13 @@ export async function POST(req: NextRequest) {
         })
       );
     } catch (error) {
-      // Refund credits if Groq call failed
+      // Refund credits if Groq call failed (only if we already deducted)
+      if (creditsDeducted) {
+        addCredits(user.id, cost).catch((err) => {
+          console.error("[Chat] Failed to refund credits after Groq failure:", err);
+        });
+      }
+
       if (error instanceof CircuitBreakerOpenError) {
         return new Response(JSON.stringify({
           error: "AI service temporarily unavailable",

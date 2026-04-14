@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { polarConfig } from "@/lib/polar-config";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
 import redis, { KEYS } from "@/lib/redis";
+import { publishCreditsUpdated } from "@/services/credit-pubsub.service";
 
 // Credit costs remain in polar-config (not plan-specific)
 export type CreditOperation = keyof typeof polarConfig.creditCosts;
@@ -90,6 +91,11 @@ export async function deductCredits(
     // Invalidate credits cache after deduction
     await invalidateUserCreditsCache(userId);
 
+    // Publish real-time update to subscribers (fire and forget)
+    publishCreditsUpdated(userId, "deduction").catch((err) => {
+      console.error("[Credit] Failed to publish deduction update:", err);
+    });
+
     // If credits reached 0 after deduction and user had a paid tier, remove premium features
     // This handles the edge case where subscription ended but user had credits that just ran out
     if (updatedUser.credits === 0 && user.planTier !== "FREE") {
@@ -145,6 +151,11 @@ export async function addCredits(
 
     // Invalidate credits cache after addition
     await invalidateUserCreditsCache(userId);
+
+    // Publish real-time update to subscribers (fire and forget)
+    publishCreditsUpdated(userId, "purchase").catch((err) => {
+      console.error("[Credit] Failed to publish add credits update:", err);
+    });
 
     return {
       success: true,

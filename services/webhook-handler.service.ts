@@ -10,6 +10,7 @@ import { SubscriptionStatus } from "@/src/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
 import { invalidateUserCreditsCache } from "@/services/credit.service";
+import { publishCreditsUpdated } from "@/services/credit-pubsub.service";
 import { logger } from "@/lib/logger";
 
 /**
@@ -118,6 +119,11 @@ async function handleOrderPaid(payload: Record<string, unknown>): Promise<void> 
   // Invalidate caches
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+
+  // Publish real-time update to subscribers
+  publishCreditsUpdated(userId, "purchase").catch((err) => {
+    logger.error("[WebhookHandler] Failed to publish credits update:", err);
+  });
 
   logger.info(`[WebhookHandler] Added ${credits} credits to user ${userId}`);
 }
@@ -328,6 +334,11 @@ async function handleBenefitGrantCycled(payload: Record<string, unknown>): Promi
   });
 
   await invalidateUserCreditsCache(userId);
+
+  // Publish real-time update to subscribers
+  publishCreditsUpdated(userId, "subscription_cycle").catch((err) => {
+    logger.error("[WebhookHandler] Failed to publish credits update:", err);
+  });
 
   logger.info(`[WebhookHandler] Added ${user.userPlan.credits} credits for subscription cycle, user: ${userId}`);
 }

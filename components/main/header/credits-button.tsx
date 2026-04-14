@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { PricingDialog } from "../sidebar/dialogs/pricing/pricing-dialog";
+import { useCreditsStream } from "@/hooks/useCreditsStream";
 
 interface CreditsData {
   credits: {
@@ -39,10 +40,15 @@ async function fetchCredits(): Promise<CreditsData> {
 
 export const CreditsButton = memo(function CreditsButton() {
   const [pricingDialogOpen, setPricingDialogOpen] = useState<boolean>(false);
+
+  // Subscribe to real-time credit updates via SSE instead of polling
+  useCreditsStream();
+
   const { data, isLoading } = useQuery({
     queryKey: ["credits"],
     queryFn: fetchCredits,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    // No refetchInterval - updates come via SSE push
+    staleTime: Infinity, // Data is fresh until SSE update arrives
   });
 
   const openPricing = useCallback(() => setPricingDialogOpen(true), []);
