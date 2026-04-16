@@ -67,7 +67,8 @@ model User {
 
   // Relations
   subscription Subscription?
-  userPlan     Plan?         @relation("UserPlan", fields: [planId], references: [id], onDelete: SetNull)
+  userPlan     Plan?           @relation("UserPlan", fields: [planId], references: [id], onDelete: SetNull)
+  mcpServers   McpUserServer[]
 
   @@index([stackId])
   @@index([role])
@@ -216,7 +217,7 @@ model File {
   projectFiles ProjectFile[]
   chatFiles    ChatFile[]
   messageFiles MessageFile[]
-  fileChunks   FileChunk[]
+  // fileChunks  FileChunk[] // Requires pgvector extension
 
   @@index([type])
   @@index([projectId])
@@ -406,7 +407,7 @@ model Memory {
   metadata         Json?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  memoryEmbeddings MemoryEmbedding[]
+  // memoryEmbeddings MemoryEmbedding[] // Requires pgvector extension
 
   @@index([userId])
   @@index([userId, category])
@@ -575,35 +576,95 @@ model PushSubscription {
 }
 
 // ---------------------------------------------------------------------------
+// MCP Catalog (Pre-configured connectors marketplace)
+// ---------------------------------------------------------------------------
+
+model McpCatalogItem {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // "dev" | "productivity" | "design" | "crm" | "payments" | "database" | "search" | "data" | "travel" | "email" | "shopping" | "other"
+  url         String   @unique
+  authType    String   @default("open") // "oauth" | "apikey" | "open"
+  maintainer  String
+  maintainerUrl String
+  customIcon  String?
+  isFeatured   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([isFeatured])
+  @@index([isActive])
+}
+
+model McpUserServer {
+  id                         String    @id @default(cuid())
+  userId                     String
+  name                       String
+  transportType              String    @default("http")
+  url                        String
+  authType                   String    @default("none")
+  encryptedCredentials       String?
+  oauthIssuerUrl             String?
+  oauthAuthorizationUrl       String?
+  oauthTokenUrl              String?
+  oauthScopes                String?
+  oauthClientId              String?
+  oauthClientSecretEncrypted String?
+  oauthAccessTokenEncrypted  String?
+  oauthRefreshTokenEncrypted String?
+  oauthAccessTokenExpiresAt  DateTime?
+  oauthConnectedAt           DateTime?
+  oauthError                String?
+  isEnabled                  Boolean   @default(true)
+  disabledTools             String[]  @default([])
+  lastTestedAt               DateTime?
+  lastError                  String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isEnabled])
+}
+
+// ---------------------------------------------------------------------------
 // RAG Embeddings (pgvector)
 // ---------------------------------------------------------------------------
 
-model FileChunk {
-  id         String                      @id @default(cuid())
-  fileId     String
-  chunkIndex Int
-  content    String
-  embedding  Unsupported("vector(1536)") // Cohere embed-v7-multilingual uses 1536 dims
-  tokenCount Int
+// NOTE: vector(1536) requires pgvector extension to be installed on the database
+// CREATE EXTENSION vector;
+// If pgvector is not available, these models will fail to migrate.
 
-  createdAt DateTime @default(now())
-
-  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
-
-  @@index([fileId])
-  @@index([fileId, chunkIndex])
-}
-
-model MemoryEmbedding {
-  id         String                      @id @default(cuid())
-  memoryId   String
-  content    String
-  embedding  Unsupported("vector(1536)")
-  tokenCount Int
-
-  createdAt DateTime @default(now())
-
-  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
-
-  @@index([memoryId])
-}
+// model FileChunk {
+//   id         String                      @id @default(cuid())
+//   fileId     String
+//   chunkIndex Int
+//   content    String
+//   embedding  Unsupported("vector(1536)") // Cohere embed-v7-multilingual uses 1536 dims
+//   tokenCount Int
+//
+//   createdAt DateTime @default(now())
+//
+//   file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+//
+//   @@index([fileId])
+//   @@index([fileId, chunkIndex])
+// }
+//
+// model MemoryEmbedding {
+//   id         String                      @id @default(cuid())
+//   memoryId   String
+//   content    String
+//   embedding  Unsupported("vector(1536)")
+//   tokenCount Int
+//
+//   createdAt DateTime @default(now())
+//
+//   memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+//
+//   @@index([memoryId])
+// }

@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-interface AuthStatus {
-  authenticated: boolean;
-  seenOnboarding?: boolean;
-  email?: string;
-}
+import { useAuthStatus } from "@/hooks/use-auth-status";
 
 interface OnboardingGuardProps {
   children: React.ReactNode;
@@ -16,27 +11,7 @@ interface OnboardingGuardProps {
 
 export function OnboardingGuard({ children, fallback }: OnboardingGuardProps) {
   const router = useRouter();
-  const [status, setStatus] = useState<AuthStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch("/api/auth/status");
-        if (!res.ok) {
-          setStatus({ authenticated: false });
-          return;
-        }
-        const data: AuthStatus = await res.json();
-        setStatus(data);
-      } catch {
-        setStatus({ authenticated: false });
-      } finally {
-        setLoading(false);
-      }
-    }
-    checkAuth();
-  }, []);
+  const { data: status, isLoading } = useAuthStatus();
 
   useEffect(() => {
     if (status && status.authenticated && !status.seenOnboarding) {
@@ -44,7 +19,7 @@ export function OnboardingGuard({ children, fallback }: OnboardingGuardProps) {
     }
   }, [status, router]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

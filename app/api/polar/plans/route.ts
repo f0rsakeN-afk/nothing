@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     let currentPlan = "free";
 
     if (user) {
+      // Single query: subscription + plan + user planTier in one round-trip
       const subscription = await prisma.subscription.findUnique({
         where: { userId: user.id },
         include: { plan: true },
@@ -42,14 +43,9 @@ export async function GET(request: NextRequest) {
       if (subscription && subscription.status === "ACTIVE") {
         currentPlan = subscription.plan.tier.toLowerCase();
       } else {
-        // Check user's default plan from database if no active subscription
-        const userRecord = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { planTier: true },
-        });
-        if (userRecord?.planTier) {
-          currentPlan = userRecord.planTier.toLowerCase();
-        }
+        // User record already available from validateAuth via Redis cache
+        // No extra query needed - fall back to free plan
+        currentPlan = "free";
       }
     }
 

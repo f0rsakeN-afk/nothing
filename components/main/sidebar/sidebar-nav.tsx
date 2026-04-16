@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import React from "react";
 import Link from "next/link";
-import { FolderOpen, Plus, Search, Library, Trash2, Brain } from "lucide-react";
+import { FolderOpen, Plus, Search, Library, Trash2, Brain, Blocks } from "lucide-react";
 
 import {
   SidebarGroup,
@@ -67,6 +67,15 @@ const NAV_ITEMS: NavItem[] = [
     label: "Files",
     icon: FolderOpen,
     href: "/files",
+    primary: false,
+    comingSoon: false,
+    authOnly: true,
+  },
+  {
+    id: "apps",
+    label: "Apps",
+    icon: Blocks,
+    href: "/apps",
     primary: false,
     comingSoon: false,
     authOnly: true,

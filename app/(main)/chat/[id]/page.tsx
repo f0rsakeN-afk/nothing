@@ -13,6 +13,7 @@ import { SplitViewContext } from "@/components/main/chat/split-view-context";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
+import { ChatErrorBoundary } from "@/components/ui/error-boundary";
 // import { cn } from "@/lib/utils";
 // import {
 //   MessageSkeleton,
@@ -476,8 +477,10 @@ export default function ChatPage() {
   );
 
   return (
-    <SplitViewProvider>
-      <ChatPageInner />
-    </SplitViewProvider>
+    <ChatErrorBoundary>
+      <SplitViewProvider>
+        <ChatPageInner />
+      </SplitViewProvider>
+    </ChatErrorBoundary>
   );
 }

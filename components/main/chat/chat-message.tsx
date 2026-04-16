@@ -1,20 +1,34 @@
 'use client';
 
 import React, { memo, useState, useCallback, useRef, useEffect } from "react";
-import { Copy, Check, Pencil, X, Loader2, Globe, AlertCircle, Check as CheckIcon, Sparkles } from "lucide-react";
+import { Copy, Check, Pencil, X, Loader2, Globe, AlertCircle, Check as CheckIcon, Sparkles, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AiResponseFormatter } from "./ai-response-formatter";
 import { MessageActions } from "./message-actions";
+import { MCPToolResultCard } from "./mcp-tool-result-card";
 import { BorderTrail } from "@/components/ui/border-trail";
 import { ShimmerText } from "@/components/odysseyui/text-shimmer";
 import { Card, CardContent } from "@/components/ui/card";
 import { WebSearchResults } from "./web-search-results";
 import { Steps, StepsItem, StepsContent, StepsBar } from "@/components/odysseyui/steps";
 import { AILoader } from "./ai-loader";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export type MessageRole = "user" | "assistant";
 
 export type MessageStatus = "idle" | "submitting" | "streaming" | "done" | "error";
+
+export interface ToolResult {
+  toolCallId: string;
+  toolName: string;
+  status: "running" | "completed" | "error";
+  result?: unknown;
+  error?: string;
+}
 
 export interface Message {
   id: string;
@@ -23,11 +37,7 @@ export interface Message {
   isStreaming?: boolean;
   status?: MessageStatus;
   chatId?: string;
-  toolProgress?: {
-    name: string;
-    status: "running" | "completed" | "error";
-    progress?: number;
-  };
+  toolResults?: ToolResult[];
   searchResults?: SearchResult[];
   steps?: Array<{ step: string; status: string; message: string }>;
 }
@@ -42,7 +52,7 @@ export interface SearchResult {
 }
 
 // ---------------------------------------------------------------------------
-// Search Loading State (shown during web search)
+// Search Loading State (Scira pattern - BorderTrail + TextShimmer)
 // ---------------------------------------------------------------------------
 
 export const SearchLoadingState = memo(function SearchLoadingState({
@@ -51,25 +61,27 @@ export const SearchLoadingState = memo(function SearchLoadingState({
   query?: string;
 }) {
   return (
-    <div className="relative w-full my-4 p-4 rounded-xl bg-muted/30 border border-border/50 overflow-hidden">
-      <div className="flex items-center gap-3">
-        <div className="relative h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10 dark:bg-primary/20">
-          <Globe className="h-4 w-4 text-primary" />
+    <div className="relative w-full my-4 overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm">
+      <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200 dark:from-blue-400 dark:via-blue-500 dark:to-blue-600" size={80} />
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className="relative h-10 w-10 rounded-full flex items-center justify-center bg-blue-50 dark:bg-blue-950/50 shrink-0">
+          <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200" size={40} />
+          <Globe className="h-5 w-5 text-blue-500" />
         </div>
-        <div className="space-y-1.5 flex-1">
+        <div className="space-y-2 flex-1 min-w-0">
           <ShimmerText
             text={query ? `Searching: ${query}` : "Searching the web..."}
-            className="text-sm font-medium"
+            className="text-sm font-medium text-foreground"
             duration={1.5}
           />
           <div className="flex gap-1.5">
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
-                className="h-1 rounded-full bg-muted-foreground/20 animate-pulse"
+                className="h-1.5 rounded-full bg-muted-foreground/20 animate-pulse"
                 style={{
-                  width: `${Math.random() * 30 + 20}px`,
-                  animationDelay: `${i * 0.15}s`,
+                  width: `${Math.random() * 40 + 20}px`,
+                  animationDelay: `${i * 0.2}s`,
                 }}
               />
             ))}
@@ -93,46 +105,73 @@ export const ToolProgressCard = memo(function ToolProgressCard({
   status: "running" | "completed" | "error";
   progress?: number;
 }) {
+  const isActive = status === "running" || status === "error";
+
   return (
-    <div className="flex items-center gap-3 py-3 px-2">
-      <div
+    <Collapsible defaultOpen={isActive} className="w-full">
+      <CollapsibleTrigger
         className={cn(
-          "relative h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-          status === "running" && "bg-blue-50 dark:bg-blue-950",
-          status === "completed" && "bg-green-50 dark:bg-green-950",
-          status === "error" && "bg-red-50 dark:bg-red-950"
+          "flex items-center gap-3 py-2.5 px-2 w-full rounded-lg transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+          !isActive && "py-1.5"
         )}
       >
-        {status === "running" && (
-          <>
-            <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200" size={40} />
-            <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
-          </>
-        )}
-        {status === "completed" && (
-          <CheckIcon className="h-4 w-4 text-green-500" />
-        )}
-        {status === "error" && (
-          <AlertCircle className="h-4 w-4 text-red-500" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-foreground truncate">{name}</p>
-          {status === "running" && progress !== undefined && (
-            <span className="text-xs text-muted-foreground">{progress}%</span>
+        {/* Status icon */}
+        <div
+          className={cn(
+            "relative h-7 w-7 rounded-full flex items-center justify-center shrink-0",
+            status === "running" && "bg-blue-50 dark:bg-blue-950",
+            status === "completed" && "bg-green-50 dark:bg-green-950",
+            status === "error" && "bg-red-50 dark:bg-red-950"
+          )}
+        >
+          {status === "running" && (
+            <>
+              <BorderTrail className="bg-linear-to-l from-blue-200 via-blue-500 to-blue-200" size={36} />
+              <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
+            </>
+          )}
+          {status === "completed" && (
+            <CheckIcon className="h-3.5 w-3.5 text-green-500" />
+          )}
+          {status === "error" && (
+            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
           )}
         </div>
+
+        {/* Tool name + status */}
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <p className="text-sm font-medium text-foreground truncate text-left">{name}</p>
+          {status === "running" && (
+            <span className="shrink-0 text-[10px] font-medium text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-md">
+              Running
+            </span>
+          )}
+          {status === "error" && (
+            <span className="shrink-0 text-[10px] font-medium text-red-500 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded-md">
+              Error
+            </span>
+          )}
+        </div>
+
+        {/* Collapse chevron (only when completed) */}
+        {status === "completed" && (
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        )}
+      </CollapsibleTrigger>
+
+      <CollapsibleContent>
         {status === "running" && (
-          <div className="h-1 mt-1 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full bg-blue-500 transition-all duration-300"
-              style={{ width: `${progress || 0}%` }}
-            />
+          <div className="px-2 pb-2">
+            <div className="h-1 mt-1 rounded-full bg-muted overflow-hidden ml-9">
+              <div
+                className="h-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${progress || 0}%` }}
+              />
+            </div>
           </div>
         )}
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 });
 
@@ -309,7 +348,7 @@ const AssistantMessage = memo(function AssistantMessage({
   status,
   messageId,
   chatId,
-  toolProgress,
+  toolResults,
   isSearchMode,
   searchResults,
   steps,
@@ -319,7 +358,7 @@ const AssistantMessage = memo(function AssistantMessage({
   status?: MessageStatus;
   messageId?: string;
   chatId?: string;
-  toolProgress?: Message["toolProgress"];
+  toolResults?: ToolResult[];
   isSearchMode?: boolean;
   searchResults?: SearchResult[];
   steps?: Array<{ step: string; status: string; message: string }>;
@@ -414,12 +453,26 @@ const AssistantMessage = memo(function AssistantMessage({
           ))}
         </div>
       )}
-      {toolProgress && (
-        <ToolProgressCard
-          name={toolProgress.name}
-          status={toolProgress.status}
-          progress={toolProgress.progress}
-        />
+      {toolResults && toolResults.length > 0 && (
+        <div className="my-3 space-y-2">
+          {toolResults.map((toolResult) =>
+            toolResult.status === "running" ? (
+              <ToolProgressCard
+                key={toolResult.toolCallId}
+                name={toolResult.toolName}
+                status={toolResult.status}
+              />
+            ) : (
+              <MCPToolResultCard
+                key={toolResult.toolCallId}
+                toolName={toolResult.toolName}
+                status={toolResult.status}
+                result={toolResult.result}
+                error={toolResult.error}
+              />
+            )
+          )}
+        </div>
       )}
       {searchResults && searchResults.length > 0 && (
         <WebSearchResults results={searchResults} />
@@ -475,7 +528,7 @@ export const ChatMessage = memo(function ChatMessage({
           status={message.status}
           messageId={message.id}
           chatId={chatId}
-          toolProgress={message.toolProgress}
+          toolResults={message.toolResults}
           searchResults={message.searchResults}
           steps={message.steps}
         />

@@ -222,6 +222,59 @@ export function useChatMessages({
                   }
                 );
               },
+              onToolStart: (toolName, toolCallId) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const existingResults = m.toolResults || [];
+                          // Avoid duplicates if same toolCallId fires twice
+                          if (existingResults.some((r: any) => r.toolCallId === toolCallId)) return m;
+                          return {
+                            ...m,
+                            toolResults: [
+                              ...existingResults,
+                              { toolCallId, toolName, status: "running" as const },
+                            ],
+                          };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
+              onToolComplete: (toolName, toolCallId, result, error) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const toolResults = m.toolResults || [];
+                          return {
+                            ...m,
+                            toolResults: toolResults.map((r: any) =>
+                              r.toolCallId === toolCallId
+                                ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
+                                : r
+                            ),
+                          };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
             },
             abortControllerRef.current.signal,
             mode
@@ -345,6 +398,59 @@ export function useChatMessages({
                             steps.push(step);
                           }
                           return { ...m, steps };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
+              onToolStart: (toolName, toolCallId) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const existingResults = m.toolResults || [];
+                          // Avoid duplicates if same toolCallId fires twice
+                          if (existingResults.some((r: any) => r.toolCallId === toolCallId)) return m;
+                          return {
+                            ...m,
+                            toolResults: [
+                              ...existingResults,
+                              { toolCallId, toolName, status: "running" as const },
+                            ],
+                          };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
+              onToolComplete: (toolName, toolCallId, result, error) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const toolResults = m.toolResults || [];
+                          return {
+                            ...m,
+                            toolResults: toolResults.map((r: any) =>
+                              r.toolCallId === toolCallId
+                                ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
+                                : r
+                            ),
+                          };
                         }),
                       })),
                     };
@@ -489,6 +595,59 @@ export function useChatMessages({
                             steps.push(step);
                           }
                           return { ...m, steps };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
+              onToolStart: (toolName, toolCallId) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const existingResults = m.toolResults || [];
+                          // Avoid duplicates if same toolCallId fires twice
+                          if (existingResults.some((r: any) => r.toolCallId === toolCallId)) return m;
+                          return {
+                            ...m,
+                            toolResults: [
+                              ...existingResults,
+                              { toolCallId, toolName, status: "running" as const },
+                            ],
+                          };
+                        }),
+                      })),
+                    };
+                  }
+                );
+              },
+              onToolComplete: (toolName, toolCallId, result, error) => {
+                queryClient.setQueryData(
+                  ["chat-messages", chatId],
+                  (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      pages: old.pages.map((page) => ({
+                        ...page,
+                        messages: page.messages.map((m) => {
+                          if (m.id !== aiMsgId) return m;
+                          const toolResults = m.toolResults || [];
+                          return {
+                            ...m,
+                            toolResults: toolResults.map((r: any) =>
+                              r.toolCallId === toolCallId
+                                ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
+                                : r
+                            ),
+                          };
                         }),
                       })),
                     };
