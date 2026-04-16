@@ -8,6 +8,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useMemories } from "@/hooks/use-memories";
 import type { MemoryItem } from "@/components/main/memory/memory-modal";
 import { cn } from "@/lib/utils";
@@ -54,14 +59,20 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
             type="button"
             onClick={() => setOpen(true)}
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 active:scale-95",
+              "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
               selected.size > 0
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/70",
             )}
-            title="Memory"
           >
-            <Brain className="h-[18px] w-[18px]" />
+            <Tooltip>
+              <TooltipTrigger
+                render={<div className="flex items-center justify-center h-full w-full"><Brain className="h-[14px] w-[14px]" /></div>}
+              />
+              <TooltipContent side="bottom" sideOffset={8}>
+                Memory
+              </TooltipContent>
+            </Tooltip>
           </button>
         }
       />
@@ -71,7 +82,7 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
             side="bottom"
             align="start"
             sideOffset={12}
-            className="w-80 p-0 overflow-hidden rounded-xl border border-border bg-background shadow-lg"
+            className="w-64 p-0 overflow-hidden"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -81,28 +92,28 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
               className="flex flex-col"
             >
               {/* Minimal header */}
-              <div className="flex items-center justify-between px-3 py-2.5 shrink-0">
+              <div className="flex items-center justify-between px-3 py-2 shrink-0">
                 <div className="flex items-center gap-2">
-                  <Brain className="h-[15px] w-[15px] text-muted-foreground" />
-                  <span className="text-[13px] font-medium text-foreground">Memory</span>
+                  <Brain className="h-[13px] w-[13px] text-muted-foreground" />
+                  <span className="text-[12px] font-medium text-foreground">Memory</span>
                 </div>
                 {selected.size > 0 && (
-                  <span className="text-[11px] text-muted-foreground tabular-nums">
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
                     {selected.size}/5
                   </span>
                 )}
               </div>
 
               {/* Scrollable memory list */}
-              <div className="overflow-y-auto max-h-72 p-2">
+              <div className="overflow-y-auto max-h-64 p-1.5">
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 ) : memories.length === 0 ? (
-                  <div className="py-6 text-center">
-                    <p className="text-sm text-muted-foreground">No memories saved</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
+                  <div className="py-5 text-center">
+                    <p className="text-xs text-muted-foreground">No memories saved</p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-1">
                       Add memories to use them here
                     </p>
                   </div>
@@ -115,7 +126,7 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
                           key={memory.id}
                           onClick={() => toggleMemory(memory.id)}
                           className={cn(
-                            "group flex items-start gap-2.5 rounded-xl p-2.5 transition-all cursor-pointer",
+                            "group flex items-start gap-2 rounded-lg p-2 transition-all cursor-pointer",
                             isSelected
                               ? "bg-primary/8 border border-primary/20"
                               : "hover:bg-muted/60 border border-transparent",
@@ -123,22 +134,22 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
                         >
                           <div
                             className={cn(
-                              "mt-1 h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                              "mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
                               isSelected
                                 ? "bg-primary border-primary text-primary-foreground"
                                 : "border-muted-foreground/30 group-hover:border-muted-foreground/60",
                             )}
                           >
-                            {isSelected && <Check className="h-3 w-3" />}
+                            {isSelected && <Check className="h-2.5 w-2.5" />}
                           </div>
 
                           <div className="flex-1 min-w-0">
                             {memory.title && (
-                              <p className="text-[13px] font-medium text-foreground truncate">
+                              <p className="text-[12px] font-medium text-foreground truncate">
                                 {memory.title}
                               </p>
                             )}
-                            <p className="text-[12px] text-muted-foreground line-clamp-2 leading-snug">
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">
                               {memory.content}
                             </p>
                           </div>
@@ -151,11 +162,11 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
 
               {/* Use button */}
               {selected.size > 0 && (
-                <div className="px-2 pb-2 shrink-0">
+                <div className="px-1.5 pb-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={handleConfirm}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[13px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
                   >
                     Use {selected.size} memory{selected.size !== 1 ? "s" : ""}
                   </button>

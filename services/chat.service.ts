@@ -2,6 +2,14 @@
  * Chat API Client - Clean API calls separated from UI logic
  */
 
+export interface ToolResult {
+  toolCallId: string;
+  toolName: string;
+  status: "running" | "completed" | "error";
+  result?: unknown;
+  error?: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
@@ -11,6 +19,7 @@ export interface Message {
   chatId?: string; // Included so branch feature can access chatId from message
   searchResults?: SearchResult[]; // Web search results for AI response
   steps?: Array<{ step: string; status: string; message: string }>; // Progress steps
+  toolResults?: ToolResult[]; // MCP tool execution results
 }
 
 export interface Chat {
@@ -238,6 +247,8 @@ export interface StreamCallbacks {
   onSearchComplete?: (results: SearchResult[]) => void;
   onStep?: (step: { step: string; status: string; message: string; results?: SearchResult[] }) => void;
   onResume?: () => void; // Called when stream was resumed from existing chunks
+  onToolStart?: (toolName: string, toolCallId: string) => void;
+  onToolComplete?: (toolName: string, toolCallId: string, result?: unknown, error?: string) => void;
 }
 
 export async function streamChat(
@@ -248,7 +259,7 @@ export async function streamChat(
   mode?: "chat" | "web",
   options?: { resume?: boolean; maxRetries?: number }
 ): Promise<string> {
-  const { onChunk, onComplete, onError, onSearchComplete, onStep, onResume } = callbacks;
+  const { onChunk, onComplete, onError, onSearchComplete, onStep, onResume, onToolStart, onToolComplete } = callbacks;
   const maxRetries = options?.maxRetries ?? 2;
   let attempt = 0;
 
@@ -341,6 +352,16 @@ export async function streamChat(
               if (parsed.step === "search" && parsed.status === "complete" && parsed.results) {
                 onSearchComplete?.(parsed.results);
               }
+              continue;
+            }
+
+            if (parsed.type === "tool_call") {
+              onToolStart?.(parsed.toolName, parsed.toolCallId);
+              continue;
+            }
+
+            if (parsed.type === "tool_result") {
+              onToolComplete?.(parsed.toolName, parsed.toolCallId, parsed.result, parsed.error);
               continue;
             }
 

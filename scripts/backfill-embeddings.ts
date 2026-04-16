@@ -30,16 +30,10 @@ async function backfillFileEmbeddings() {
   let errors = 0;
 
   for (const file of files) {
-    // Check if already has embeddings by counting chunks
-    const chunkCount = await prisma.fileChunk.count({
-      where: { fileId: file.id },
-    });
-
-    if (chunkCount > 0) {
-      console.log(`  SKIP: ${file.name} (already has ${chunkCount} chunks)`);
-      skipped++;
-      continue;
-    }
+    // FileChunk model is commented out in schema - skip this check
+    // const chunkCount = await prisma.fileChunk.count({
+    //   where: { fileId: file.id },
+    // });
 
     if (!file.extractedContent) {
       skipped++;
@@ -85,16 +79,10 @@ async function backfillMemoryEmbeddings() {
   let errors = 0;
 
   for (const memory of memories) {
-    // Check if already has embeddings
-    const chunkCount = await prisma.memoryEmbedding.count({
-      where: { memoryId: memory.id },
-    });
-
-    if (chunkCount > 0) {
-      console.log(`  SKIP: ${memory.title} (already has ${chunkCount} chunks)`);
-      skipped++;
-      continue;
-    }
+    // MemoryEmbedding model is commented out in schema - skip this check
+    // const chunkCount = await prisma.memoryEmbedding.count({
+    //   where: { memoryId: memory.id },
+    // });
 
     if (!memory.content) {
       skipped++;

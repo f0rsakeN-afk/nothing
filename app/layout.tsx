@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 // import { Plus_Jakarta_Sans } from "next/font/google";
 import { Plus_Jakarta_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
+import "../styles/hide-scrollbar.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import MainLayout from "./mainLayout";
 import { Toaster } from "@/components/ui/sileo-toast";
@@ -35,7 +36,9 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+  ),
   title: "Eryx — AI Assistant",
   description:
     "Eryx is a powerful, intelligent AI chat assistant. Ask questions, get help with coding, and explore ideas seamlessly.",
@@ -55,13 +58,10 @@ export default function RootLayout({
       <body className="min-h-dvh flex flex-col bg-background text-foreground">
         <StackProvider app={stackServerApp}>
           <StackTheme>
-
-          <ThemeProvider defaultTheme="dark" attribute="class">
-            <Toaster position="top-center" />
-            <MainLayout>
-              {children}
-            </MainLayout>
-          </ThemeProvider>
+            <ThemeProvider defaultTheme="dark" attribute="class">
+              <Toaster position="top-center" />
+              <MainLayout>{children}</MainLayout>
+            </ThemeProvider>
           </StackTheme>
         </StackProvider>
       </body>

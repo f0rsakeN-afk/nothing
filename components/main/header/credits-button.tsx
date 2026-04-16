@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Zap, ArrowUpRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,8 +38,15 @@ async function fetchCredits(): Promise<CreditsData> {
   return res.json();
 }
 
+async function fetchPlans() {
+  const res = await fetch("/api/polar/plans");
+  if (!res.ok) throw new Error("Failed to fetch plans");
+  return res.json();
+}
+
 export const CreditsButton = memo(function CreditsButton() {
   const [pricingDialogOpen, setPricingDialogOpen] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
   // Subscribe to real-time credit updates via SSE instead of polling
   useCreditsStream();
@@ -52,6 +59,15 @@ export const CreditsButton = memo(function CreditsButton() {
   });
 
   const openPricing = useCallback(() => setPricingDialogOpen(true), []);
+
+  // Prefetch plans when user hovers over upgrade button
+  const prefetchPlans = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: ["stripe-plans"],
+      queryFn: fetchPlans,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  }, [queryClient]);
 
   const currentCredits = data?.credits.current ?? 0;
   const planCredits = data?.credits.plan ?? 25;
@@ -150,6 +166,7 @@ export const CreditsButton = memo(function CreditsButton() {
             {/* Upgrade CTA */}
             <button
               onClick={openPricing}
+              onMouseEnter={prefetchPlans}
               className={cn(
                 "flex w-full items-center justify-center gap-1.5 rounded-lg",
                 "border border-border bg-background py-2 text-[12px] font-medium",

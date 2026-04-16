@@ -18,6 +18,8 @@ import {
   getStreamId,
   isStreamActive,
 } from "@/services/resumable-stream.service";
+import { getMCPToolsForChat, formatMCPToolsForGroq } from "@/services/mcp-tools.service";
+import { executeMCPToolCalls } from "@/services/mcp-tool-executor.service";
 import { buildProjectContext, buildProjectContextSection, getProjectFilesForContext } from "@/services/project-context.service";
 import { retrieveContext, formatContextForPrompt } from "@/services/rag.service";
 
@@ -564,6 +566,27 @@ export async function POST(req: NextRequest) {
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
     };
 
+    // Load MCP tools for user's enabled servers
+    let mcpTools: Array<{
+      type: 'function';
+      function: {
+        name: string;
+        description: string;
+        parameters: {
+          type: 'object';
+          properties: Record<string, { type: string; description?: string }>;
+          required?: string[];
+        };
+      };
+    }> = [];
+    try {
+      const rawTools = await getMCPToolsForChat(user.id);
+      mcpTools = formatMCPToolsForGroq(rawTools);
+    } catch (mcpError) {
+      console.error("[Chat] Failed to load MCP tools:", mcpError);
+      // Continue without MCP tools - graceful degradation
+    }
+
     // Web search mode
     if (mode === "web") {
       const webSearchCost = polarConfig.creditCosts["web-search"] || 3;
@@ -638,6 +661,10 @@ export async function POST(req: NextRequest) {
       const result = await startResumableStream(
         chatId,
         fullMessages,
+        {
+          tools: mcpTools,
+          onToolCall: async (toolCalls) => executeMCPToolCalls(toolCalls, user.id),
+        },
         (chunk, isResume) => {
           // onChunk - content streamed to client via SSE
         },
@@ -753,6 +780,13 @@ export async function POST(req: NextRequest) {
 
               try {
                 const parsed = JSON.parse(data);
+                // Forward tool events directly
+                if (parsed.type === 'tool_call' || parsed.type === 'tool_result') {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`)
+                  );
+                  continue;
+                }
                 const delta = parsed.content || parsed.choices?.[0]?.delta?.content;
                 if (delta) {
                   controller.enqueue(
