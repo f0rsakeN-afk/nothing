@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { Chip } from "@/components/main/home/chip";
 import { PromptModal } from "@/components/main/home/prompt-modal";
 import { CHIPS, type ChipData } from "@/components/main/home/data";
-import { HEADING_PHRASES } from "@/components/main/home/data/headings";
+import { getTimeBasedHeading } from "@/components/main/home/data/headings";
 import { CreditsButton } from "@/components/main/header/credits-button";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
+import { ShortcutHandler } from "@/components/main/shortcut-handler";
+import { useAuthStatus } from "@/hooks/use-auth-status";
 import type { Chat } from "@/services/chat.service";
 
 export default function HomePage() {
@@ -18,38 +20,22 @@ export default function HomePage() {
   const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [memoryDialogOpen, setMemoryDialogOpen] = useState(false);
-  const [heading] = useState(
-    () => HEADING_PHRASES[Math.floor(Math.random() * HEADING_PHRASES.length)],
-  );
+  const [heading] = useState(() => getTimeBasedHeading());
   const [activeChip, setActiveChip] = useState<ChipData | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
-  // Check auth and onboarding status on mount
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch("/api/auth/status");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated && !data.seenOnboarding) {
-            router.push("/onboarding");
-            return;
-          }
-          if (data.authenticated && data.isActive === false) {
-            router.push("/deactivated");
-            return;
-          }
-        }
-      } catch {
-        // Auth check failed, let user continue
-      } finally {
-        setAuthChecked(true);
-      }
-    }
-    checkAuth();
-  }, [router]);
+  const { data: authStatus, isLoading: authLoading } = useAuthStatus();
+
+  // Redirect based on auth status
+  if (authStatus?.authenticated && !authStatus.seenOnboarding) {
+    router.push("/onboarding");
+    return null;
+  }
+  if (authStatus?.authenticated && authStatus.isActive === false) {
+    router.push("/deactivated");
+    return null;
+  }
 
   const handleSubmit = useCallback(
     async (value: string) => {
@@ -88,19 +74,21 @@ export default function HomePage() {
             // Avoid duplicates
             if (old.chats.some((c) => c.id === chatId)) return old;
             return { ...old, chats: [tempChat, ...old.chats] };
-          }
+          },
         );
 
         // Navigate to the new chat with the message as a query param
         const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
         const webParam = webSearchEnabled ? "&web=1" : "";
-        router.push(`/chat/${chatId}?q=${encodeURIComponent(value)}${triggerParam}${webParam}`);
+        router.push(
+          `/chat/${chatId}?q=${encodeURIComponent(value)}${triggerParam}${webParam}`,
+        );
       } catch (error) {
         console.error("Error creating chat:", error);
         setIsCreating(false);
       }
     },
-    [router, isCreating, queryClient]
+    [router, isCreating, queryClient],
   );
 
   // Closes the modal and populates the input in one go.
@@ -112,7 +100,7 @@ export default function HomePage() {
   const handleModalClose = useCallback(() => setActiveChip(null), []);
 
   // Show loading while checking auth
-  if (!authChecked) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -133,7 +121,7 @@ export default function HomePage() {
         <div className="flex flex-1 flex-col items-center justify-center w-full md:flex-none">
           <h1
             suppressHydrationWarning
-            className="mb-8 text-center text-3xl font-semibold text-foreground md:text-4xl font-display tracking-wide"
+            className="mb-8 text-center text-3xl font-semibold text-foreground md:text-4xl font-display tracking-wide select-none"
           >
             {heading}
           </h1>
@@ -168,6 +156,8 @@ export default function HomePage() {
         isOpen={memoryDialogOpen}
         onOpenChange={setMemoryDialogOpen}
       />
+
+      <ShortcutHandler />
     </div>
   );
 }
