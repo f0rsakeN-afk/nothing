@@ -19,6 +19,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/use-projects";
 import { useProjectDialogs } from "@/components/main/sidebar/dialogs/projects/create-project-context";
@@ -72,10 +77,17 @@ export function MoreOptionsPopover({
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
               currentProjectId || currentStyle !== "normal"
                 ? "bg-primary/10 text-primary"
-                : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
+                : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70"
             )}
           >
-            <Plus className="h-4 w-4" />
+            <Tooltip>
+              <TooltipTrigger
+                render={<div className="flex items-center justify-center"><Plus className="h-[14px] w-[14px]" /></div>}
+              />
+              <TooltipContent side="bottom" sideOffset={8}>
+                More options
+              </TooltipContent>
+            </Tooltip>
           </button>
         }
       />
