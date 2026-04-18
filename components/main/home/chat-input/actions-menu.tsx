@@ -1,18 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Globe, Link2, ChevronRight } from "lucide-react";
+import { Globe, Link2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ConnectorsPanel } from "./connectors-panel";
 import { useServers } from "@/hooks/use-mcp-servers";
@@ -26,146 +25,100 @@ interface ChatActionsMenuProps {
   onWebSearchToggle: (enabled: boolean) => void;
 }
 
-type MenuPanel = "main" | "connectors";
-
 export function ChatActionsMenu({
-  onFileSelect,
   webSearchEnabled,
   onWebSearchToggle,
 }: ChatActionsMenuProps) {
-  const [open, setOpen] = React.useState(false);
-  const [panel, setPanel] = React.useState<MenuPanel>("main");
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const [connectorsDialogOpen, setConnectorsDialogOpen] = React.useState(false);
   const user = useUser();
   const { data: servers = [] } = useServers(user?.id);
 
   const enabledServers = servers.filter((s) => s.isEnabled).slice(0, 4);
-  const extraCount = Math.max(0, servers.filter((s) => s.isEnabled).length - 4);
-
-  const handleOpenChange = React.useCallback((isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-      setTimeout(() => setPanel("main"), 150);
-    }
-  }, []);
-
-  const handleFileClick = React.useCallback(() => {
-    onFileSelect();
-    setOpen(false);
-  }, [onFileSelect]);
-
-  const handleWebSearchToggle = React.useCallback(() => {
-    onWebSearchToggle(!webSearchEnabled);
-    setOpen(false);
-  }, [onWebSearchToggle, webSearchEnabled]);
-
-  const hasActive = webSearchEnabled || enabledServers.length > 0;
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger
-        render={
-          <motion.button
-            layoutId="chat-actions-trigger"
-            aria-label="Connectors"
-            className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
-              "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70",
-            )}
-          >
-            <Tooltip>
-              <TooltipTrigger
-                render={<div className="flex items-center justify-center"><Link2 className="h-[14px] w-[14px]" /></div>}
-              />
-              <TooltipContent side="bottom" sideOffset={8}>
-                Connectors
-              </TooltipContent>
-            </Tooltip>
-          </motion.button>
-        }
-      />
-      <PopoverContent
-        side="bottom"
-        align="start"
-        className={'w-max'}
-        sideOffset={6}
-      >
-        <AnimatePresence mode="wait">
-          {panel === "main" ? (
-            <motion.div
-              key="main"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className="py-1"
-            >
-              {/* Connectors */}
-              <button
-                onClick={() => setPanel("connectors")}
-                className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[12px] text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all active:scale-[0.98] rounded-md mx-0.5"
-              >
-                <Link2 className="h-[14px] w-[14px] shrink-0" />
-                <span className="flex-1 text-left font-medium">Connectors</span>
-                {enabledServers.length > 0 && (
-                  <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
-                    {servers.filter((s) => s.isEnabled).length}
-                  </span>
-                )}
-                <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
-              </button>
-
-              {/* Web search */}
-              <button
-                onClick={handleWebSearchToggle}
-                className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[12px] text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all active:scale-[0.98] rounded-md mx-0.5"
-              >
-                <Globe
-                  className={cn(
-                    "h-[14px] w-[14px] shrink-0",
-                    webSearchEnabled && "text-blue-500",
-                  )}
-                />
-                <span className="flex-1 text-left font-medium">Web search</span>
-                <div
-                  className={cn(
-                    "w-3.5 h-3.5 rounded-full border transition-all",
-                    webSearchEnabled
-                      ? "bg-blue-500 border-blue-500"
-                      : "border-muted-foreground/30",
-                  )}
-                >
-                  {webSearchEnabled && (
-                    <svg
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      className="w-full h-full"
-                    >
-                      <path
-                        d="M2 6l3 3 5-5"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </div>
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="connectors"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.12 }}
-              className="flex"
-            >
-              <ConnectorsPanel onClose={() => setOpen(false)} />
-            </motion.div>
+    <>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
+            "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70",
           )}
-        </AnimatePresence>
-      </PopoverContent>
-    </Popover>
+        >
+          <Link2 className="h-[14px] w-[14px]" />
+        </PopoverTrigger>
+        <PopoverContent
+          side="bottom"
+          align="start"
+          sideOffset={12}
+          className="w-48 p-1.5"
+        >
+          {/* Connectors */}
+          <button
+            onClick={() => {
+              setPopoverOpen(false);
+              setTimeout(() => setConnectorsDialogOpen(true), 100);
+            }}
+            className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[12px] text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all active:scale-[0.98] rounded-md cursor-pointer"
+          >
+            <Link2 className="h-[14px] w-[14px] shrink-0" />
+            <span className="flex-1 text-left font-medium">Connectors</span>
+            {enabledServers.length > 0 && (
+              <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                {servers.filter((s) => s.isEnabled).length}
+              </span>
+            )}
+          </button>
+
+          {/* Web search */}
+          <button
+            onClick={() => {
+              onWebSearchToggle(!webSearchEnabled);
+              setPopoverOpen(false);
+            }}
+            className="flex items-center gap-2.5 w-full px-2 py-1.5 text-[12px] text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all active:scale-[0.98] rounded-md cursor-pointer"
+          >
+            <Globe
+              className={cn(
+                "h-[14px] w-[14px] shrink-0",
+                webSearchEnabled && "text-blue-500",
+              )}
+            />
+            <span className="flex-1 text-left font-medium">Web search</span>
+            <div
+              className={cn(
+                "w-3.5 h-3.5 rounded-full border transition-all",
+                webSearchEnabled
+                  ? "bg-blue-500 border-blue-500"
+                  : "border-muted-foreground/30",
+              )}
+            >
+              {webSearchEnabled && (
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  className="w-full h-full"
+                >
+                  <path
+                    d="M2 6l3 3 5-5"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
+          </button>
+        </PopoverContent>
+      </Popover>
+
+      <Dialog open={connectorsDialogOpen} onOpenChange={setConnectorsDialogOpen}>
+        <DialogContent className="p-0 gap-0 w-fit">
+          <ConnectorsPanel onClose={() => setConnectorsDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
