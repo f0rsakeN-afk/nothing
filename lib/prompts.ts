@@ -67,9 +67,63 @@ function applyResponseStyle(config: PromptConfig): PromptConfig {
   };
 }
 
-// Cache for built prompts - avoid rebuilding same config
-const promptCache = new Map<string, string>();
-const MAX_CACHE_SIZE = 50;
+// ============================================================================
+// LRU CACHE - O(1) get/put using Map + ordering
+// ============================================================================
+
+/**
+ * LRU Cache implementation using Map's insertion ordering
+ * Map maintains insertion order, so oldest = first, newest = last
+ * get() moves item to end (most recently used)
+ * set() removes oldest if at capacity
+ */
+class LRUCache<K, V> {
+  private cache: Map<K, V>;
+  private readonly capacity: number;
+
+  constructor(capacity: number) {
+    this.cache = new Map();
+    this.capacity = capacity;
+  }
+
+  get(key: K): V | undefined {
+    if (!this.cache.has(key)) return undefined;
+    // Move to end (most recently used) - Map maintains insertion order
+    const value = this.cache.get(key)!;
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    // If key exists, delete first (will re-add at end)
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.capacity) {
+      // At capacity - remove oldest (first item)
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
+
+  has(key: K): boolean {
+    return this.cache.has(key);
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Cache for built prompts - LRU with 50 entry capacity
+const promptCache = new LRUCache<string, string>(50);
 
 function getCacheKey(config: PromptConfig): string {
   return JSON.stringify(config);
