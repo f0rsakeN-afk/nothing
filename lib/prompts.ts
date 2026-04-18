@@ -3,6 +3,8 @@
  * Optimized for performance - string concatenation order matters for V8
  */
 
+export type ResponseStyle = "normal" | "learning" | "concise" | "explanatory" | "formal";
+
 export interface PromptConfig {
   tone?: "formal" | "casual" | "friendly" | "technical" | "concise" | "detailed" | "balanced";
   detailLevel?: "CONCISE" | "BALANCED" | "DETAILED";
@@ -17,6 +19,52 @@ export interface PromptConfig {
   learningMode?: boolean;
   explanatoryMode?: boolean;
   researchMode?: boolean;
+  responseStyle?: ResponseStyle;
+}
+
+/**
+ * Map response style to prompt config overrides
+ */
+function applyResponseStyle(config: PromptConfig): PromptConfig {
+  const style = config.responseStyle || "normal";
+
+  const styleMappings: Record<ResponseStyle, Partial<PromptConfig>> = {
+    normal: {
+      tone: config.tone || "balanced",
+      detailLevel: config.detailLevel || "BALANCED",
+      learningMode: false,
+      explanatoryMode: false,
+    },
+    learning: {
+      tone: "friendly",
+      detailLevel: "DETAILED",
+      learningMode: true,
+      explanatoryMode: false,
+    },
+    concise: {
+      tone: "concise",
+      detailLevel: "CONCISE",
+      learningMode: false,
+      explanatoryMode: false,
+    },
+    explanatory: {
+      tone: "friendly",
+      detailLevel: "DETAILED",
+      learningMode: false,
+      explanatoryMode: true,
+    },
+    formal: {
+      tone: "formal",
+      detailLevel: "DETAILED",
+      learningMode: false,
+      explanatoryMode: false,
+    },
+  };
+
+  return {
+    ...config,
+    ...styleMappings[style],
+  };
 }
 
 // Cache for built prompts - avoid rebuilding same config
@@ -740,7 +788,9 @@ function buildPremiumPrinciples(): string {
  * Uses caching to avoid rebuilding identical prompts
  */
 export function buildSystemPrompt(config: PromptConfig = {}): string {
-  const cacheKey = getCacheKey(config);
+  // Apply response style overrides
+  const finalConfig = applyResponseStyle(config);
+  const cacheKey = getCacheKey(finalConfig);
 
   // Check cache first
   const cached = promptCache.get(cacheKey);

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import redis, { KEYS } from "@/lib/redis";
-import { buildSystemPrompt, type PromptConfig } from "@/lib/prompts";
+import { buildSystemPrompt, type PromptConfig, type ResponseStyle } from "@/lib/prompts";
 import { validateAuth } from "@/lib/auth";
 import { aiConfig } from "@/lib/config";
 import { getUserPreferences } from "@/services/preferences.service";
@@ -284,7 +284,8 @@ function extractRelevantSection(content: string, keywords: string[], maxLength: 
 async function buildMessages(
   chatId: string,
   incomingMessages: Array<{ role: "user" | "assistant"; content: string }>,
-  searchResults?: SearchResult[]
+  searchResults?: SearchResult[],
+  responseStyle?: ResponseStyle
 ): Promise<Array<{ role: "system" | "user" | "assistant"; content: string }>> {
   const chat = await prisma.chat.findUnique({
     where: { id: chatId },
@@ -312,6 +313,7 @@ async function buildMessages(
     userInterests: userPreferences.interests,
     projectName: chat.project?.name,
     projectInstruction: chat.project?.instruction || undefined,
+    responseStyle,
   };
 
   // Get smart context
@@ -434,7 +436,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { messages, chatId, mode, resume } = body;
+    const { messages, chatId, mode, resume, style } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Messages required" }), {
@@ -544,7 +546,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build messages
-    let fullMessages = await buildMessages(chatId, messages);
+    let fullMessages = await buildMessages(chatId, messages, undefined, style);
 
     if (fullMessages.length === 0 || (fullMessages.length === 1 && fullMessages[0].role === "system")) {
       return new Response(JSON.stringify({ error: "No messages available" }), {
@@ -644,7 +646,7 @@ export async function POST(req: NextRequest) {
         .then(async (searchResponse) => {
           searchResults = searchResponse.results;
           if (searchResults.length > 0) {
-            fullMessages = await buildMessages(chatId, messages, searchResults);
+            fullMessages = await buildMessages(chatId, messages, searchResults, style);
           }
           searchCompleted = true;
         })
