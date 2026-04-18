@@ -13,6 +13,7 @@ import { invalidateUserCreditsCache } from "@/services/credit.service";
 import { publishCreditsUpdated } from "@/services/credit-pubsub.service";
 import { queueEmail } from "@/services/queue.service";
 import { logger } from "@/lib/logger";
+import { invalidateSubscriptionCache } from "@/lib/subscription-cache";
 
 /**
  * Map Polar subscription status to our enum
@@ -224,6 +225,7 @@ async function handleSubscriptionCreated(payload: Record<string, unknown>): Prom
   // Invalidate caches
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+  await invalidateSubscriptionCache(userId);
 
   // Send subscription-activated email
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -288,6 +290,7 @@ async function handleSubscriptionUpdated(payload: Record<string, unknown>): Prom
   // Invalidate caches
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+  await invalidateSubscriptionCache(userId);
 
   logger.info(`[WebhookHandler] Subscription updated for user ${userId}`);
 }
@@ -325,6 +328,7 @@ async function handleSubscriptionCanceled(payload: Record<string, unknown>): Pro
   // They stay on current plan until credits run out
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+  await invalidateSubscriptionCache(userId);
 
   // Send subscription-canceled email
   const user = await prisma.user.findUnique({ where: { id: userId } });

@@ -68,6 +68,7 @@ export const KEYS = {
   userMemories: (userId: string) => `user:${userId}:memories`,
   userNotifications: (userId: string) => `user:${userId}:notifications`,
   userProjects: (userId: string) => `user:${userId}:projects`,
+  userSubscription: (userId: string) => `user:${userId}:subscription`,
   searchResults: (query: string) => `search:${Buffer.from(query).toString("base64").slice(0, 32)}`,
   chatSummary: (chatId: string) => `chat:${chatId}:summary`,
   summarizing: (chatId: string) => `chat:${chatId}:summarizing`,
@@ -91,6 +92,7 @@ export const TTL = {
   userMemories: 5 * 60, // 5 minutes for memories list
   userNotifications: 30, // 30 seconds for notifications (real-time sensitive)
   userProjects: 5 * 60, // 5 minutes for project list
+  userSubscription: 2 * 60, // 2 minutes for user subscription/plan cache
   searchResults: 60 * 60, // 1 hour for web search results
   chatSummary: 7 * 24 * 60 * 60, // 7 days for chat summaries
 } as const;

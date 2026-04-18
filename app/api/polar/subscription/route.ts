@@ -11,6 +11,7 @@ import { polarConfig, polar } from "@/lib/polar-config";
 import { validateAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
+import { invalidateSubscriptionCache } from "@/lib/subscription-cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +40,9 @@ export async function POST(request: NextRequest) {
       where: { id: subscription.id },
       data: { cancelAtPeriodEnd: true },
     });
+
+    // Invalidate subscription cache so next plans API call fetches fresh data
+    await invalidateSubscriptionCache(user.id);
 
     return NextResponse.json({
       success: true,
@@ -88,6 +92,7 @@ export async function DELETE(request: NextRequest) {
       });
 
       await invalidateUserLimitsCache(user.id);
+      await invalidateSubscriptionCache(user.id);
     }
 
     return NextResponse.json({ success: true, message: "Subscription reactivated" });
