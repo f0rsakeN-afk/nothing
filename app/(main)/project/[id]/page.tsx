@@ -1,14 +1,16 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ProjectHeader } from "@/components/main/project/project-header";
 import { ProjectInstructions } from "@/components/main/project/project-instructions";
 import { ProjectFilesDropzone } from "@/components/main/project/project-files-dropzone";
 import { ProjectChatList } from "@/components/main/project/project-chat-list";
+import { ChatInput } from "@/components/main/home/chat-input";
 import { useProject } from "@/hooks/use-projects";
 import { useProjectChats } from "@/hooks/use-project-chats";
+import { useCreateChat } from "@/hooks/use-create-chat";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProjectWorkspacePage({
@@ -19,6 +21,17 @@ export default function ProjectWorkspacePage({
   const { id: projectId } = use(params);
   const { data: project, isLoading: isProjectLoading, error } = useProject(projectId);
   const { data: chatsData, isLoading: isChatsLoading } = useProjectChats(projectId);
+  const [input, setInput] = useState("");
+
+  const { createChat, isCreating } = useCreateChat({ projectId });
+
+  const handleSubmit = useCallback(
+    async (value: string) => {
+      if (isCreating) return;
+      await createChat(value);
+    },
+    [createChat, isCreating]
+  );
 
   if (error) {
     return (
@@ -77,6 +90,15 @@ export default function ProjectWorkspacePage({
           {/* Left Column: Header, Chat Input, Chat List */}
           <div className="flex-1 w-full space-y-10">
             <ProjectHeader project={project} />
+
+            {/* Chat Input */}
+            <ChatInput
+              value={input}
+              onChange={setInput}
+              onSubmit={handleSubmit}
+              isLoading={isCreating}
+              placeholder="Ask about this project..."
+            />
 
             {/* Chat List */}
             {isChatsLoading ? (

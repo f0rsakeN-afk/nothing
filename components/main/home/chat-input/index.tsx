@@ -10,7 +10,7 @@ import { MemoryPopover } from "./memory-popover";
 import { ChatActionsMenu, ActiveConnectorsPill } from "./actions-menu";
 import { useServers } from "@/hooks/use-mcp-servers";
 import { useUser } from "@stackframe/stack";
-import { useChatSuggestions, prefetchSuggestions } from "@/hooks/use-chat-suggestions";
+import { useChatSuggestions } from "@/hooks/use-chat-suggestions";
 import { useSound } from "@/hooks/use-sound";
 import {
   Tooltip,
@@ -168,7 +168,7 @@ export function ChatInput({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => { setFocused(true); setShowSuggestions(true); prefetchSuggestions(); }}
+          onFocus={() => { setFocused(true); setShowSuggestions(true); }}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           rows={1}
           placeholder={placeholder}
@@ -226,7 +226,7 @@ export function ChatInput({
                 )}
 
                 {/* Suggestions */}
-                {showDropdown && !isLoading && suggestions.length > 0 && (
+                {showDropdown && !isSuggestionsLoading && suggestions.length > 0 && (
                   <>
                     {showRecent && (
                       <div className="px-4 py-1.5 border-b border-border/40">
@@ -254,7 +254,7 @@ export function ChatInput({
                   </>
                 )}
 
-                {isSuggestionsLoading && (
+                {isSuggestionsLoading && value.trim().length > 0 && (
                   <div className="flex items-center justify-center py-3 px-4">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>

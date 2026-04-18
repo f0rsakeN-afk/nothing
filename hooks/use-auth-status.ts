@@ -24,8 +24,9 @@ export function useAuthStatus() {
   return useQuery({
     queryKey: ["auth-status"],
     queryFn: fetchAuthStatus,
-    staleTime: 60_000, // 1 minute - cache auth status for in-app navigations
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
+    retry: 1,
     placeholderData: (prev: AuthStatus | undefined) => prev,
   });
 }

@@ -12,25 +12,12 @@ interface UseChatSuggestionsProps {
 const RECENT_SEARCHES_KEY = "recent-searches";
 const MAX_RECENT = 5;
 
-// Pre-fetch on focus with common queries
-const PREFETCH_ON_FOCUS = [
-  "how to", "what is", "why do", "best way", "tips for",
-  "how can i", "should i", "is it normal", "help me",
-];
-
 async function fetchSuggestions(query: string): Promise<string[]> {
   if (!query.trim()) return [];
   const res = await fetch(`/api/suggest?q=${encodeURIComponent(query)}`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.suggestions || [];
-}
-
-async function prefetchSuggestions(): Promise<void> {
-  // Fire and forget prefetch for common queries
-  PREFETCH_ON_FOCUS.forEach((q) => {
-    fetchSuggestions(q).catch(() => {});
-  });
 }
 
 async function trackSuggestion(prompt: string): Promise<void> {
@@ -64,8 +51,6 @@ function addRecentSearch(query: string): void {
     // localStorage not available
   }
 }
-
-export { prefetchSuggestions };
 
 export function useChatSuggestions({ input, onSelect }: UseChatSuggestionsProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);

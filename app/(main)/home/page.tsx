@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { Chip } from "@/components/main/home/chip";
 import { PromptModal } from "@/components/main/home/prompt-modal";
@@ -13,82 +12,41 @@ import { NotificationsButton } from "@/components/main/header/notifications-butt
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
 import { ShortcutHandler } from "@/components/main/shortcut-handler";
 import { useAuthStatus } from "@/hooks/use-auth-status";
-import type { Chat } from "@/services/chat.service";
+import { useCreateChat } from "@/hooks/use-create-chat";
 
 export default function HomePage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [memoryDialogOpen, setMemoryDialogOpen] = useState(false);
   const [heading] = useState(() => getTimeBasedHeading());
   const [activeChip, setActiveChip] = useState<ChipData | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
   const { data: authStatus, isLoading: authLoading } = useAuthStatus();
 
+  const { createChat, isCreating } = useCreateChat({
+    getNavigatePath: (chatId, firstMessage, shouldTriggerAI) => {
+      const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
+      const webParam = webSearchEnabled ? "&web=1" : "";
+      return `/chat/${chatId}?q=${encodeURIComponent(firstMessage)}${triggerParam}${webParam}`;
+    },
+  });
+
   // Redirect based on auth status
-  if (authStatus?.authenticated && !authStatus.seenOnboarding) {
-    router.push("/onboarding");
-    return null;
-  }
-  if (authStatus?.authenticated && authStatus.isActive === false) {
-    router.push("/deactivated");
-    return null;
-  }
+  useEffect(() => {
+    if (authStatus?.authenticated && !authStatus.seenOnboarding) {
+      router.push("/onboarding");
+    } else if (authStatus?.authenticated && authStatus.isActive === false) {
+      router.push("/deactivated");
+    }
+  }, [authStatus, router]);
 
   const handleSubmit = useCallback(
     async (value: string) => {
       if (isCreating) return;
-      setIsCreating(true);
-
-      try {
-        // Create chat via API
-        const res = await fetch("/api/chats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ firstMessage: value }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to create chat");
-        }
-
-        const { id: chatId, shouldTriggerAI, title } = await res.json();
-
-        // Optimistically add chat to sidebar before navigating
-        const tempChat: Chat = {
-          id: chatId,
-          title,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          projectId: null,
-          messageCount: 0,
-          firstMessagePreview: value,
-        };
-
-        queryClient.setQueryData(
-          ["chats"],
-          (old: { chats: Chat[]; nextCursor: string | null } | undefined) => {
-            if (!old) return { chats: [tempChat], nextCursor: null };
-            // Avoid duplicates
-            if (old.chats.some((c) => c.id === chatId)) return old;
-            return { ...old, chats: [tempChat, ...old.chats] };
-          },
-        );
-
-        // Navigate to the new chat with the message as a query param
-        const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
-        const webParam = webSearchEnabled ? "&web=1" : "";
-        router.push(
-          `/chat/${chatId}?q=${encodeURIComponent(value)}${triggerParam}${webParam}`,
-        );
-      } catch (error) {
-        console.error("Error creating chat:", error);
-        setIsCreating(false);
-      }
+      await createChat(value);
     },
-    [router, isCreating, queryClient],
+    [createChat, isCreating],
   );
 
   // Closes the modal and populates the input in one go.
@@ -99,16 +57,8 @@ export default function HomePage() {
 
   const handleModalClose = useCallback(() => setActiveChip(null), []);
 
-  // Show loading while checking auth
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
