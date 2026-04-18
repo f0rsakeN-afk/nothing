@@ -25,7 +25,7 @@ interface ChatActionsMenuProps {
   onWebSearchToggle: (enabled: boolean) => void;
 }
 
-export function ChatActionsMenu({
+export const ChatActionsMenu = React.memo(function ChatActionsMenu({
   webSearchEnabled,
   onWebSearchToggle,
 }: ChatActionsMenuProps) {
@@ -114,16 +114,16 @@ export function ChatActionsMenu({
       </Popover>
 
       <Dialog open={connectorsDialogOpen} onOpenChange={setConnectorsDialogOpen}>
-        <DialogContent className="p-0 gap-0 w-fit">
+        <DialogContent className="p-0 gap-0 w-fit" showCloseButton={false}>
           <ConnectorsPanel onClose={() => setConnectorsDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </>
   );
-}
+});
 
 // Component to render in the bottom bar - shows active connectors as compact inline pills
-export function ActiveConnectorsPill({
+export const ActiveConnectorsPill = React.memo(function ActiveConnectorsPill({
   servers,
   webSearchEnabled,
 }: {
@@ -162,7 +162,7 @@ export function ActiveConnectorsPill({
       )}
     </div>
   );
-}
+});
 
 function getServiceFavicon(url: string): string {
   try {
