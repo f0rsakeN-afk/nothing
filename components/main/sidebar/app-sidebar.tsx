@@ -16,6 +16,7 @@ import CreateProjectDialog from "./dialogs/projects/create-project";
 import RenameProjectModal from "./dialogs/projects/rename-project";
 import DeleteProjectModal from "./dialogs/projects/delete-project";
 import { useUser } from "@stackframe/stack";
+import { CreateProjectDialogProvider } from "./dialogs/projects/create-project-context";
 
 export function AppSidebar() {
   const router = useRouter();
@@ -67,7 +68,7 @@ export function AppSidebar() {
   );
 
   return (
-    <>
+    <CreateProjectDialogProvider onOpenCreateProject={openCreateProject}>
       <Sidebar collapsible="icon" className="border-r border-sidebar-border">
         <AppSidebarHeader />
 
@@ -107,6 +108,6 @@ export function AppSidebar() {
         onClose={setDeleteProjectOpen}
         project={selectedProject}
       />
-    </>
+    </CreateProjectDialogProvider>
   );
 }

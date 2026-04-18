@@ -8,7 +8,6 @@ import {
   Loader2,
   Check,
   PlusCircle,
-  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/use-projects";
-import { useCreateProject } from "@/hooks/use-projects";
+import { useCreateProjectDialog } from "@/components/main/sidebar/dialogs/projects/create-project-context";
 
 export type ResponseStyle = "normal" | "learning" | "concise" | "explanatory" | "formal";
 
@@ -49,27 +48,11 @@ export function MoreOptionsPopover({
   currentProjectId,
   currentStyle = "normal",
 }: MoreOptionsPopoverProps) {
-  const [createProjectOpen, setCreateProjectOpen] = React.useState(false);
-  const [newProjectName, setNewProjectName] = React.useState("");
-
   const { data: projectsData, isLoading: projectsLoading } = useProjects();
-  const createProject = useCreateProject();
+  const { openCreateProjectDialog } = useCreateProjectDialog();
 
   const projects = projectsData?.projects || [];
   const currentProject = projects.find(p => p.id === currentProjectId);
-
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim()) return;
-
-    try {
-      const result = await createProject.mutateAsync({ name: newProjectName.trim() });
-      setNewProjectName("");
-      setCreateProjectOpen(false);
-      onProjectSelect?.(result.id);
-    } catch (error) {
-      console.error("Failed to create project:", error);
-    }
-  };
 
   const handleProjectSelect = (projectId: string | null) => {
     onProjectSelect?.(projectId);
@@ -154,45 +137,16 @@ export function MoreOptionsPopover({
 
             <DropdownMenuSeparator />
 
-            {/* Create new project */}
-            {createProjectOpen ? (
-              <div className="flex items-center gap-1 px-1 py-1">
-                <input
-                  type="text"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="Project name..."
-                  className="flex-1 h-7 px-2 text-[12px] rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreateProject();
-                    if (e.key === "Escape") {
-                      setCreateProjectOpen(false);
-                      setNewProjectName("");
-                    }
-                  }}
-                />
-                <button
-                  onClick={handleCreateProject}
-                  disabled={!newProjectName.trim() || createProject.isPending}
-                  className="h-7 px-2 text-[11px] font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {createProject.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    "Create"
-                  )}
-                </button>
-              </div>
-            ) : (
-              <DropdownMenuItem
-                onClick={() => setCreateProjectOpen(true)}
-                className="gap-2 border border-dashed border-border/50"
-              >
-                <PlusCircle className="h-[14px] w-[14px] text-muted-foreground" />
-                <span>Create new project</span>
-              </DropdownMenuItem>
-            )}
+            {/* Create new project - opens dialog */}
+            <DropdownMenuItem
+              onClick={() => {
+                openCreateProjectDialog();
+              }}
+              className="gap-2 border border-dashed border-border/50"
+            >
+              <PlusCircle className="h-[14px] w-[14px] text-muted-foreground" />
+              <span>Create new project</span>
+            </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 

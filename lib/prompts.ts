@@ -123,7 +123,8 @@ class LRUCache<K, V> {
 }
 
 // Cache for built prompts - LRU with 50 entry capacity
-const promptCache = new LRUCache<string, string>(50);
+const MAX_CACHE_SIZE = 50;
+const promptCache = new LRUCache<string, string>(MAX_CACHE_SIZE);
 
 function getCacheKey(config: PromptConfig): string {
   return JSON.stringify(config);
@@ -883,12 +884,7 @@ export function buildSystemPrompt(config: PromptConfig = {}): string {
 
   const result = parts.filter(p => p !== "").join("\n\n");
 
-  // Cache management
-  if (promptCache.size >= MAX_CACHE_SIZE) {
-    // Clear half the cache when full
-    const keysToDelete = Array.from(promptCache.keys()).slice(0, Math.floor(MAX_CACHE_SIZE / 2));
-    keysToDelete.forEach(k => promptCache.delete(k));
-  }
+  // LRUCache handles eviction automatically when at capacity
   promptCache.set(cacheKey, result);
 
   return result;
