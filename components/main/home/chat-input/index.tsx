@@ -9,6 +9,7 @@ import { FilePreviews } from "./file-previews";
 import { MemoryPopover } from "./memory-popover";
 import { MoreOptionsPopover } from "./more-options-popover";
 import { ChatActionsMenu, ActiveConnectorsPill } from "./actions-menu";
+import { ModelSelector } from "./model-selector";
 import { useServers } from "@/hooks/use-mcp-servers";
 import { useUser } from "@stackframe/stack";
 import { useChatSuggestions } from "@/hooks/use-chat-suggestions";
@@ -32,6 +33,8 @@ export function ChatInput({
   onProjectIdChange,
   style = "normal",
   onStyleChange,
+  currentModel,
+  onModelChange,
 }: ChatInputProps & {
   style?: ResponseStyle;
 }) {
@@ -296,6 +299,7 @@ export function ChatInput({
 
           {/* Right: send button + active connectors */}
           <div className="flex items-center gap-2">
+            <ModelSelector currentModel={currentModel} onModelChange={onModelChange} />
             <ActiveConnectorsPill
               servers={servers}
               webSearchEnabled={webSearchEnabled ?? false}
