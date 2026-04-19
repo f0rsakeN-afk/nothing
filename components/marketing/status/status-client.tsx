@@ -30,10 +30,30 @@ interface LatencyMetrics {
 interface Component {
   id: string;
   name: string;
+  category: "core" | "external" | "ai";
   status: "operational" | "degraded" | "down";
   latencyMs?: number;
   uptimePercent: number;
   incidents: number;
+  circuitState?: string;
+}
+
+interface CircuitBreaker {
+  state: string;
+  failures: number;
+  successes: number;
+  lastFailure: string | null;
+  nextAttempt: string | null;
+  failureRate: number;
+  totalCalls: number;
+  uptimePercent: number;
+}
+
+interface SLAData {
+  uptimePercent: number;
+  totalIncidents: number;
+  mttrMinutes: number;
+  lastIncidentAt: string | null;
 }
 
 interface DetailedMetrics {
@@ -51,18 +71,13 @@ interface HealthCheck {
 }
 
 interface StatusData {
-  overall: {
-    status: "operational" | "degraded" | "down";
-    uptimePercent: number;
-    components: Component[];
-  };
-  metrics: {
-    database: DetailedMetrics;
-    redis: DetailedMetrics;
-    api: DetailedMetrics;
-    search: DetailedMetrics;
-  };
-  incidents: Array<{
+  timestamp: string;
+  status: "operational" | "degraded" | "down";
+  uptimePercent: number;
+  components: Component[];
+  circuitBreakers: Record<string, CircuitBreaker>;
+  sla: SLAData;
+  activeIncidents: Array<{
     id: string;
     title: string;
     status: string;
@@ -70,6 +85,13 @@ interface StatusData {
     affectedComponents: string[];
     startedAt: string;
   }>;
+  metrics?: {
+    database: DetailedMetrics;
+    redis: DetailedMetrics;
+    api: DetailedMetrics;
+    search: DetailedMetrics;
+    groq: DetailedMetrics;
+  };
 }
 
 interface RawData {
@@ -77,6 +99,8 @@ interface RawData {
   redis: HealthCheck[];
   api: HealthCheck[];
   search: HealthCheck[];
+  groq: HealthCheck[];
+  searxng: HealthCheck[];
 }
 
 // Chart configs
@@ -104,6 +128,26 @@ function StatusDot({ status, size = "md" }: { status: string; size?: "sm" | "md"
 
   return (
     <span className={`inline-block rounded-full ${sizes[size]} ${colors[status as keyof typeof colors] || colors.operational}`} />
+  );
+}
+
+function CircuitBadge({ state }: { state: string }) {
+  const styles = {
+    CLOSED: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    OPEN: "bg-red-500/10 text-red-600 dark:text-red-400",
+    HALF_OPEN: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  };
+
+  const labels = {
+    CLOSED: "Ok",
+    OPEN: "Open",
+    HALF_OPEN: "Testing",
+  };
+
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${styles[state as keyof typeof styles] || styles.CLOSED}`}>
+      {labels[state as keyof typeof labels] || state}
+    </span>
   );
 }
 
@@ -147,13 +191,14 @@ function ComponentCard({ component }: { component: Component }) {
           <StatusDot status={component.status} />
           <span className="text-sm font-medium text-foreground">{component.name}</span>
         </div>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-          component.status === "operational" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
-          component.status === "degraded" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
-          "bg-red-500/10 text-red-600 dark:text-red-400"
-        }`}>
-          {component.status}
-        </span>
+        <div className="flex items-center gap-2">
+          {component.circuitState && <CircuitBadge state={component.circuitState} />}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            component.status === "operational" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-red-500/10 text-red-600 dark:text-red-400"
+          }`}>
+            {component.status === "operational" ? "Up" : "Down"}
+          </span>
+        </div>
       </div>
 
       <UptimeBar percent={component.uptimePercent} />
@@ -168,12 +213,34 @@ function ComponentCard({ component }: { component: Component }) {
   );
 }
 
+function SLACard({ sla }: { sla: SLAData }) {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4">
+      <div className="text-xs text-muted-foreground mb-3">30-Day SLA</div>
+      <div className="flex items-end gap-4">
+        <div>
+          <div className="text-2xl font-bold font-mono text-foreground">{sla.uptimePercent.toFixed(3)}%</div>
+          <div className="text-[10px] text-muted-foreground uppercase">Uptime</div>
+        </div>
+        <div className="flex-1" />
+        <div className="text-right">
+          <div className="text-sm font-mono text-foreground">{sla.totalIncidents}</div>
+          <div className="text-[10px] text-muted-foreground">Incidents</div>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-mono text-foreground">{sla.mttrMinutes}m</div>
+          <div className="text-[10px] text-muted-foreground">MTTR</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UptimeChart({ data }: { data: HealthCheck[] }) {
   if (!data || data.length === 0) {
     return <div className="h-[100px] flex items-center justify-center text-xs text-muted-foreground">No data available</div>;
   }
 
-  // Group by hour and get average uptime per hour
   const hourlyData = data.reduce((acc, d) => {
     const hour = d.timestamp.substring(0, 13) + ":00";
     if (!acc[hour]) {
@@ -246,7 +313,6 @@ function LatencyChart({ data }: { data: HealthCheck[] }) {
     return <div className="h-[80px] flex items-center justify-center text-xs text-muted-foreground">No data available</div>;
   }
 
-  // Group by hour and get average latency per hour
   const hourlyData = data.reduce((acc, d) => {
     const hour = d.timestamp.substring(0, 13) + ":00";
     if (!acc[hour]) {
@@ -339,7 +405,7 @@ function LatencyDistribution({ metrics }: { metrics: DetailedMetrics }) {
   );
 }
 
-function IncidentBanner({ incident }: { incident: StatusData["incidents"][0] }) {
+function IncidentBanner({ incident }: { incident: StatusData["activeIncidents"][0] }) {
   const severityColors = {
     critical: "border-red-500/50 bg-red-500/10",
     major: "border-amber-500/50 bg-amber-500/10",
@@ -526,23 +592,34 @@ export function StatusContent() {
     );
   }
 
-  const { overall, metrics, incidents } = data;
+  const isDetailedFormat = data && "overall" in data;
+
+  const { status: overallStatus, components, sla, activeIncidents, circuitBreakers } = isDetailedFormat
+    ? (data as any).overall || {}
+    : {};
+  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as any) || {};
+  const actualStatus = overallStatus || dataStatus || "operational";
+  const actualSla = sla || dataSla || { uptimePercent: 100, totalIncidents: 0, mttrMinutes: 0, lastIncidentAt: null };
+  const safeActiveIncidents = activeIncidents || [];
+
   const dbData = rawData?.database || [];
   const redisData = rawData?.redis || [];
+  const groqData = rawData?.groq || [];
+
+  const coreComponents = (components || []).filter((c: Component) => c.category === "core");
+  const aiComponents = (components || []).filter((c: Component) => c.category === "ai");
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center gap-3">
-          <StatusDot status={overall.status} size="lg" />
+          <StatusDot status={actualStatus} size="lg" />
           <h2 className={`text-2xl font-bold ${
-            overall.status === "operational" ? "text-emerald-600 dark:text-emerald-400" :
-            overall.status === "degraded" ? "text-amber-600 dark:text-amber-400" :
-            "text-red-600 dark:text-red-400"
+            actualStatus === "operational" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
           }`}>
-            {overall.status === "operational" ? "All Systems Operational" :
-             overall.status === "degraded" ? "Partial Degradation" : "Service Disruption"}
+            {actualStatus === "operational" ? "All Systems Operational" :
+             "Service Disruption"}
           </h2>
         </div>
 
@@ -555,50 +632,45 @@ export function StatusContent() {
       </div>
 
       {/* Active Incidents */}
-      {incidents.length > 0 && (
+      {safeActiveIncidents.length > 0 && (
         <div className="space-y-3">
-          {incidents.map(incident => (
+          {safeActiveIncidents.map((incident: { id: string; title: string; status: string; severity: string; affectedComponents: string[]; startedAt: string; message?: string }) => (
             <IncidentBanner key={incident.id} incident={incident} />
           ))}
         </div>
       )}
 
-      {/* Uptime Overview */}
-      <div className="grid grid-cols-4 gap-4">
-        {overall.components.map(component => (
-          <ComponentCard key={component.id} component={component} />
-        ))}
+      {/* SLA Card */}
+      <SLACard sla={actualSla} />
+
+      {/* Core Services */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Core Services</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {coreComponents.map((component: Component) => (
+            <ComponentCard key={component.id} component={component} />
+          ))}
+        </div>
       </div>
 
-      {/* Detailed Charts */}
-      <div className="space-y-8">
-        <ServiceSection
-          name="Database"
-          uptimeData={dbData}
-          latencyData={dbData}
-          metrics={metrics.database}
-        />
-
-        <ServiceSection
-          name="Redis Cache"
-          uptimeData={redisData}
-          latencyData={redisData}
-          metrics={metrics.redis}
-        />
-      </div>
-
-      {/* Latency Distributions */}
-      <div className="grid grid-cols-2 gap-6">
-        <LatencyDistribution metrics={metrics.database} />
-        <LatencyDistribution metrics={metrics.redis} />
-      </div>
+      {/* AI Services */}
+      {aiComponents.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">AI Services</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {aiComponents.map((component: Component) => (
+              <ComponentCard key={component.id} component={component} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="text-center space-y-2 pt-4 border-t border-border">
         <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
           <span>30-day uptime SLA</span>
           <span className="font-mono">•</span>
-          <span>{overall.uptimePercent.toFixed(2)}% achieved</span>
+          <span>{actualSla.uptimePercent.toFixed(2)}% achieved</span>
           <span className="font-mono">•</span>
           <Link href="/status/history" className="text-primary hover:underline">View history →</Link>
         </div>

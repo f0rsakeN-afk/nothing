@@ -16,6 +16,12 @@ CREATE TYPE "FileStatus" AS ENUM ('PENDING_UPLOAD', 'PROCESSING', 'READY', 'FAIL
 -- CreateEnum
 CREATE TYPE "KnowledgeDetail" AS ENUM ('CONCISE', 'BALANCED', 'DETAILED');
 
+-- CreateEnum
+CREATE TYPE "IncidentStatus" AS ENUM ('INVESTIGATING', 'IDENTIFIED', 'MONITORING', 'RESOLVED');
+
+-- CreateEnum
+CREATE TYPE "IncidentSeverity" AS ENUM ('CRITICAL', 'MAJOR', 'MINOR');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -70,6 +76,25 @@ CREATE TABLE "Message" (
     "parentId" TEXT,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ChatSummary" (
+    "id" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "summary" TEXT NOT NULL,
+    "topics" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "keyFacts" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "startMessageId" TEXT NOT NULL,
+    "endMessageId" TEXT NOT NULL,
+    "messageCount" INTEGER NOT NULL,
+    "parentSummaryId" TEXT,
+    "tokenCount" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ChatSummary_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -302,8 +327,8 @@ CREATE TABLE "Plan" (
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "price" INTEGER NOT NULL DEFAULT 0,
-    "stripePriceId" TEXT,
-    "stripeProductId" TEXT,
+    "polarPriceId" TEXT,
+    "polarProductId" TEXT,
     "credits" INTEGER NOT NULL DEFAULT 25,
     "maxChats" INTEGER NOT NULL DEFAULT 100,
     "maxProjects" INTEGER NOT NULL DEFAULT 2,
@@ -332,8 +357,8 @@ CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
-    "stripeSubId" TEXT,
-    "stripeCustomerId" TEXT,
+    "polarSubscriptionId" TEXT,
+    "polarCustomerId" TEXT,
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',
     "currentPeriodStart" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "currentPeriodEnd" TIMESTAMP(3) NOT NULL,
@@ -345,6 +370,82 @@ CREATE TABLE "Subscription" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PushSubscription" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "endpoint" TEXT NOT NULL,
+    "p256dh" TEXT NOT NULL,
+    "auth" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PushSubscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Incident" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "status" "IncidentStatus" NOT NULL DEFAULT 'INVESTIGATING',
+    "severity" "IncidentSeverity" NOT NULL DEFAULT 'MINOR',
+    "message" TEXT,
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP(3),
+    "affectedComponents" TEXT[] DEFAULT ARRAY[]::TEXT[],
+
+    CONSTRAINT "Incident_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "McpCatalogItem" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "authType" TEXT NOT NULL DEFAULT 'open',
+    "maintainer" TEXT NOT NULL,
+    "maintainerUrl" TEXT NOT NULL,
+    "customIcon" TEXT,
+    "isFeatured" BOOLEAN NOT NULL DEFAULT false,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "McpCatalogItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "McpUserServer" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "transportType" TEXT NOT NULL DEFAULT 'http',
+    "url" TEXT NOT NULL,
+    "authType" TEXT NOT NULL DEFAULT 'none',
+    "encryptedCredentials" TEXT,
+    "oauthIssuerUrl" TEXT,
+    "oauthAuthorizationUrl" TEXT,
+    "oauthTokenUrl" TEXT,
+    "oauthScopes" TEXT,
+    "oauthClientId" TEXT,
+    "oauthClientSecretEncrypted" TEXT,
+    "oauthAccessTokenEncrypted" TEXT,
+    "oauthRefreshTokenEncrypted" TEXT,
+    "oauthAccessTokenExpiresAt" TIMESTAMP(3),
+    "oauthConnectedAt" TIMESTAMP(3),
+    "oauthError" TEXT,
+    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "disabledTools" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "lastTestedAt" TIMESTAMP(3),
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "McpUserServer_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -387,10 +488,25 @@ CREATE INDEX "Chat_shareToken_idx" ON "Chat"("shareToken");
 CREATE INDEX "Chat_parentChatId_idx" ON "Chat"("parentChatId");
 
 -- CreateIndex
+CREATE INDEX "Chat_userId_archivedAt_idx" ON "Chat"("userId", "archivedAt");
+
+-- CreateIndex
 CREATE INDEX "Message_chatId_idx" ON "Message"("chatId");
 
 -- CreateIndex
 CREATE INDEX "Message_parentId_idx" ON "Message"("parentId");
+
+-- CreateIndex
+CREATE INDEX "Message_chatId_createdAt_idx" ON "Message"("chatId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ChatSummary_chatId_key" ON "ChatSummary"("chatId");
+
+-- CreateIndex
+CREATE INDEX "ChatSummary_chatId_idx" ON "ChatSummary"("chatId");
+
+-- CreateIndex
+CREATE INDEX "ChatSummary_parentSummaryId_idx" ON "ChatSummary"("parentSummaryId");
 
 -- CreateIndex
 CREATE INDEX "File_type_idx" ON "File"("type");
@@ -400,6 +516,9 @@ CREATE INDEX "File_projectId_idx" ON "File"("projectId");
 
 -- CreateIndex
 CREATE INDEX "File_status_idx" ON "File"("status");
+
+-- CreateIndex
+CREATE INDEX "File_projectId_status_idx" ON "File"("projectId", "status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Project_name_key" ON "Project"("name");
@@ -489,7 +608,7 @@ CREATE INDEX "NotificationPrefs_userId_idx" ON "NotificationPrefs"("userId");
 CREATE UNIQUE INDEX "Plan_tier_key" ON "Plan"("tier");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Plan_stripePriceId_key" ON "Plan"("stripePriceId");
+CREATE UNIQUE INDEX "Plan_polarPriceId_key" ON "Plan"("polarPriceId");
 
 -- CreateIndex
 CREATE INDEX "Plan_tier_idx" ON "Plan"("tier");
@@ -501,7 +620,7 @@ CREATE INDEX "Plan_isActive_isVisible_idx" ON "Plan"("isActive", "isVisible");
 CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Subscription_stripeSubId_key" ON "Subscription"("stripeSubId");
+CREATE UNIQUE INDEX "Subscription_polarSubscriptionId_key" ON "Subscription"("polarSubscriptionId");
 
 -- CreateIndex
 CREATE INDEX "Subscription_userId_idx" ON "Subscription"("userId");
@@ -510,10 +629,43 @@ CREATE INDEX "Subscription_userId_idx" ON "Subscription"("userId");
 CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
 
 -- CreateIndex
-CREATE INDEX "Subscription_stripeCustomerId_idx" ON "Subscription"("stripeCustomerId");
+CREATE INDEX "Subscription_polarCustomerId_idx" ON "Subscription"("polarCustomerId");
 
 -- CreateIndex
 CREATE INDEX "Subscription_currentPeriodEnd_idx" ON "Subscription"("currentPeriodEnd");
+
+-- CreateIndex
+CREATE INDEX "PushSubscription_userId_idx" ON "PushSubscription"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PushSubscription_userId_endpoint_key" ON "PushSubscription"("userId", "endpoint");
+
+-- CreateIndex
+CREATE INDEX "Incident_status_idx" ON "Incident"("status");
+
+-- CreateIndex
+CREATE INDEX "Incident_severity_idx" ON "Incident"("severity");
+
+-- CreateIndex
+CREATE INDEX "Incident_startedAt_idx" ON "Incident"("startedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "McpCatalogItem_url_key" ON "McpCatalogItem"("url");
+
+-- CreateIndex
+CREATE INDEX "McpCatalogItem_category_idx" ON "McpCatalogItem"("category");
+
+-- CreateIndex
+CREATE INDEX "McpCatalogItem_isFeatured_idx" ON "McpCatalogItem"("isFeatured");
+
+-- CreateIndex
+CREATE INDEX "McpCatalogItem_isActive_idx" ON "McpCatalogItem"("isActive");
+
+-- CreateIndex
+CREATE INDEX "McpUserServer_userId_idx" ON "McpUserServer"("userId");
+
+-- CreateIndex
+CREATE INDEX "McpUserServer_userId_isEnabled_idx" ON "McpUserServer"("userId", "isEnabled");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -532,6 +684,12 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_chatId_fkey" FOREIGN KEY ("chatId"
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Message"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ChatSummary" ADD CONSTRAINT "ChatSummary_chatId_fkey" FOREIGN KEY ("chatId") REFERENCES "Chat"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ChatSummary" ADD CONSTRAINT "ChatSummary_parentSummaryId_fkey" FOREIGN KEY ("parentSummaryId") REFERENCES "ChatSummary"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "File" ADD CONSTRAINT "File_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -580,3 +738,6 @@ ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_planId_fkey" FOREIGN KEY ("planId") REFERENCES "Plan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "McpUserServer" ADD CONSTRAINT "McpUserServer_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

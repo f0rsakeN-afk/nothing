@@ -57,6 +57,7 @@ export const KEYS = {
   userChatCreation: (userId: string) => `user:${userId}:chat_creation`,
   imageCache: (url: string) => `img:${Buffer.from(url).toString("base64").slice(0, 64)}`,
   statusCheck: (service: string) => `status:${service}:checks`,
+  statusSLA: () => `status:sla`,
   userCache: (stackId: string) => `user:cache:${stackId}`,
   bruteForce: (identifier: string) => `bruteforce:${identifier}`,
   projectContext: (projectId: string) => `project:${projectId}:context`,

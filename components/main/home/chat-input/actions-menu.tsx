@@ -7,16 +7,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ConnectorsPanel } from "./connectors-panel";
 import { useServers } from "@/hooks/use-mcp-servers";
 import { useUser } from "@stackframe/stack";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { AppsDialog } from "./apps-dialog";
 import type { ServerItem } from "@/components/apps";
 
 interface ChatActionsMenuProps {
@@ -113,11 +108,7 @@ export const ChatActionsMenu = React.memo(function ChatActionsMenu({
         </PopoverContent>
       </Popover>
 
-      <Dialog open={connectorsDialogOpen} onOpenChange={setConnectorsDialogOpen}>
-        <DialogContent className="p-0 gap-0 w-fit" showCloseButton={false}>
-          <ConnectorsPanel onClose={() => setConnectorsDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      <AppsDialog isOpen={connectorsDialogOpen} onOpenChange={setConnectorsDialogOpen} />
     </>
   );
 });

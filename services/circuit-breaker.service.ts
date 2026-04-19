@@ -1,5 +1,5 @@
 /**
- * Circuit Breaker Service
+ * Circuit Breaker Service - Distributed Version with Redis
  * Prevents cascading failures when external services go down
  *
  * States:
@@ -7,9 +7,7 @@
  * - OPEN: Service is down, requests fail fast without calling the service
  * - HALF_OPEN: Testing if service recovered, limited requests pass through
  *
- * Usage:
- *   const breaker = circuitBreaker('groq');
- *   const result = await breaker.execute(() => groq.chat());
+ * Uses Redis for distributed state across multiple instances
  */
 
 import redis from "@/lib/redis";
@@ -25,16 +23,19 @@ export enum CircuitState {
 interface CircuitBreakerConfig {
   failureThreshold: number;    // Failures before opening circuit (default: 5)
   successThreshold: number;    // Successes in half-open before closing (default: 3)
-  openTimeoutMs: number;       // Time before trying half-open (default: 30s)
-  halfOpenMaxCalls: number;    // Max calls allowed in half-open state (default: 3)
+  openTimeoutMs: number;        // Time before trying half-open (default: 30s)
+  halfOpenMaxCalls: number;     // Max calls allowed in half-open (default: 3)
 }
 
-interface CircuitBreakerStats {
+interface DistributedState {
   state: CircuitState;
   failures: number;
   successes: number;
-  lastFailure: string | null;
-  nextAttempt: string | null;
+  lastFailureTime: number;
+  nextAttemptTime: number;
+  halfOpenCalls: number;
+  totalCalls: number;
+  totalFailures: number;
 }
 
 const DEFAULT_CONFIG: CircuitBreakerConfig = {
@@ -56,7 +57,7 @@ const SERVICE_CONFIGS: Record<string, Partial<CircuitBreakerConfig>> = {
     failureThreshold: 5,
     successThreshold: 2,
     openTimeoutMs: 30000,
-    halfOpenMaxCalls: 1,        // Payments - be conservative
+    halfOpenMaxCalls: 1,       // Payments - be conservative
   },
   searxng: {
     failureThreshold: 5,
@@ -66,154 +67,219 @@ const SERVICE_CONFIGS: Record<string, Partial<CircuitBreakerConfig>> = {
   },
 };
 
-class CircuitBreaker {
-  private service: string;
-  private config: CircuitBreakerConfig;
-  private state: CircuitState = CircuitState.CLOSED;
-  private failures: number = 0;
-  private successes: number = 0;
-  private nextAttempt: number = 0;
-  private halfOpenCalls: number = 0;
+/**
+ * Get Redis key for circuit breaker
+ */
+function getBreakerKey(service: string): string {
+  return `circuit_breaker:${service}`;
+}
 
-  constructor(service: string, config?: Partial<CircuitBreakerConfig>) {
-    this.service = service;
-    this.config = { ...DEFAULT_CONFIG, ...SERVICE_CONFIGS[service], ...config };
-  }
+/**
+ * Get or initialize distributed circuit breaker state from Redis
+ */
+async function getDistributedState(service: string): Promise<DistributedState> {
+  const key = getBreakerKey(service);
+  const data = await redis.hgetall(key);
 
-  /**
-   * Execute a function with circuit breaker protection
-   */
-  async execute<T>(fn: () => Promise<T>): Promise<T> {
-    // Check if circuit allows request
-    if (!this.canExecute()) {
-      throw new CircuitBreakerOpenError(
-        `Circuit breaker is OPEN for ${this.service}. Service unavailable.`,
-        this.service,
-        this.state,
-        this.nextAttempt
-      );
-    }
-
-    try {
-      const result = await fn();
-      this.onSuccess();
-      return result;
-    } catch (error) {
-      this.onFailure();
-      throw error;
-    }
-  }
-
-  /**
-   * Check if request can proceed
-   */
-  private canExecute(): boolean {
-    const now = Date.now();
-
-    switch (this.state) {
-      case CircuitState.CLOSED:
-        return true;
-
-      case CircuitState.OPEN:
-        // Check if timeout has passed
-        if (now >= this.nextAttempt) {
-          this.state = CircuitState.HALF_OPEN;
-          this.halfOpenCalls = 0;
-          this.successes = 0;
-          return true;
-        }
-        return false;
-
-      case CircuitState.HALF_OPEN:
-        // Limit concurrent calls in half-open
-        if (this.halfOpenCalls >= this.config.halfOpenMaxCalls) {
-          return false;
-        }
-        this.halfOpenCalls++;
-        return true;
-
-      default:
-        return true;
-    }
-  }
-
-  /**
-   * Record a successful call
-   */
-  private onSuccess(): void {
-    this.failures = 0;
-
-    if (this.state === CircuitState.HALF_OPEN) {
-      this.successes++;
-      if (this.successes >= this.config.successThreshold) {
-        this.state = CircuitState.CLOSED;
-        this.successes = 0;
-      }
-    }
-  }
-
-  /**
-   * Record a failed call
-   */
-  private onFailure(): void {
-    this.failures++;
-
-    if (this.state === CircuitState.HALF_OPEN) {
-      // Any failure in half-open opens the circuit again
-      this.state = CircuitState.OPEN;
-      this.nextAttempt = Date.now() + this.config.openTimeoutMs;
-      this.successes = 0;
-    } else if (this.state === CircuitState.CLOSED) {
-      if (this.failures >= this.config.failureThreshold) {
-        this.state = CircuitState.OPEN;
-        this.nextAttempt = Date.now() + this.config.openTimeoutMs;
-      }
-    }
-  }
-
-  /**
-   * Get current circuit state
-   */
-  getState(): CircuitBreakerStats {
+  if (!data || Object.keys(data).length === 0) {
     return {
-      state: this.state,
-      failures: this.failures,
-      successes: this.successes,
-      lastFailure: this.failures > 0 ? this.service : null,
-      nextAttempt: this.state === CircuitState.OPEN
-        ? new Date(this.nextAttempt).toISOString()
-        : null,
+      state: CircuitState.CLOSED,
+      failures: 0,
+      successes: 0,
+      lastFailureTime: 0,
+      nextAttemptTime: 0,
+      halfOpenCalls: 0,
+      totalCalls: 0,
+      totalFailures: 0,
     };
   }
 
-  /**
-   * Force state change (for testing/admin)
-   */
-  forceState(state: CircuitState): void {
-    this.state = state;
-    this.failures = 0;
-    this.successes = 0;
-    this.halfOpenCalls = 0;
-  }
+  return {
+    state: (data.state as CircuitState) || CircuitState.CLOSED,
+    failures: parseInt(data.failures) || 0,
+    successes: parseInt(data.successes) || 0,
+    lastFailureTime: parseInt(data.lastFailureTime) || 0,
+    nextAttemptTime: parseInt(data.nextAttemptTime) || 0,
+    halfOpenCalls: parseInt(data.halfOpenCalls) || 0,
+    totalCalls: parseInt(data.totalCalls) || 0,
+    totalFailures: parseInt(data.totalFailures) || 0,
+  };
 }
 
-// In-memory store for circuit breakers (per-process)
-// In production with multiple instances, this won't sync across instances
-// For true distributed circuit breakers, use Redis
-const breakers = new Map<string, CircuitBreaker>();
-
 /**
- * Get or create a circuit breaker for a service
+ * Save distributed circuit breaker state to Redis
  */
-export function getCircuitBreaker(service: string, config?: Partial<CircuitBreakerConfig>): CircuitBreaker {
-  if (!breakers.has(service)) {
-    breakers.set(service, new CircuitBreaker(service, config));
-  }
-  return breakers.get(service)!;
+async function saveDistributedState(
+  service: string,
+  state: DistributedState
+): Promise<void> {
+  const key = getBreakerKey(service);
+  await redis.hset(key, {
+    state: state.state,
+    failures: String(state.failures),
+    successes: String(state.successes),
+    lastFailureTime: String(state.lastFailureTime),
+    nextAttemptTime: String(state.nextAttemptTime),
+    halfOpenCalls: String(state.halfOpenCalls),
+    totalCalls: String(state.totalCalls),
+    totalFailures: String(state.totalFailures),
+  });
+  // 1 hour TTL for stale breakers
+  await redis.expire(key, 3600);
 }
 
 /**
- * Circuit breaker is open - service unavailable
+ * Check if circuit breaker allows request (distributed version)
+ */
+async function canExecuteDistributed(
+  service: string,
+  config: CircuitBreakerConfig
+): Promise<{ allowed: boolean; currentState: DistributedState }> {
+  const state = await getDistributedState(service);
+  const now = Date.now();
+
+  switch (state.state) {
+    case CircuitState.CLOSED:
+      return { allowed: true, currentState: state };
+
+    case CircuitState.OPEN:
+      if (now >= state.nextAttemptTime) {
+        // Time to try again
+        const newState: DistributedState = {
+          ...state,
+          state: CircuitState.HALF_OPEN,
+          halfOpenCalls: 0,
+          successes: 0,
+        };
+        await saveDistributedState(service, newState);
+        return { allowed: true, currentState: newState };
+      }
+      return { allowed: false, currentState: state };
+
+    case CircuitState.HALF_OPEN:
+      if (state.halfOpenCalls >= config.halfOpenMaxCalls) {
+        return { allowed: false, currentState: state };
+      }
+      const newState: DistributedState = {
+        ...state,
+        halfOpenCalls: state.halfOpenCalls + 1,
+        totalCalls: state.totalCalls + 1,
+      };
+      await saveDistributedState(service, newState);
+      return { allowed: true, currentState: newState };
+
+    default:
+      return { allowed: true, currentState: state };
+  }
+}
+
+/**
+ * Record success in distributed circuit breaker
+ */
+async function recordSuccessDistributed(
+  service: string,
+  config: CircuitBreakerConfig
+): Promise<void> {
+  const state = await getDistributedState(service);
+  const now = Date.now();
+
+  const newState: DistributedState = {
+    ...state,
+    failures: 0, // Reset failure count on success
+    totalCalls: state.totalCalls + 1,
+  };
+
+  if (state.state === CircuitState.HALF_OPEN) {
+    newState.successes = state.successes + 1;
+    if (newState.successes >= config.successThreshold) {
+      newState.state = CircuitState.CLOSED;
+      newState.successes = 0;
+      newState.halfOpenCalls = 0;
+    }
+  }
+
+  await saveDistributedState(service, newState);
+}
+
+/**
+ * Record failure in distributed circuit breaker
+ */
+async function recordFailureDistributed(
+  service: string,
+  config: CircuitBreakerConfig
+): Promise<void> {
+  const state = await getDistributedState(service);
+  const now = Date.now();
+
+  const newState: DistributedState = {
+    ...state,
+    failures: state.failures + 1,
+    lastFailureTime: now,
+    totalCalls: state.totalCalls + 1,
+    totalFailures: state.totalFailures + 1,
+  };
+
+  if (state.state === CircuitState.HALF_OPEN) {
+    // Any failure in half-open immediately opens the circuit
+    newState.state = CircuitState.OPEN;
+    newState.nextAttemptTime = now + config.openTimeoutMs;
+    newState.successes = 0;
+    newState.halfOpenCalls = 0;
+  } else if (state.state === CircuitState.CLOSED) {
+    if (newState.failures >= config.failureThreshold) {
+      newState.state = CircuitState.OPEN;
+      newState.nextAttemptTime = now + config.openTimeoutMs;
+    }
+  }
+
+  await saveDistributedState(service, newState);
+}
+
+export interface CircuitBreakerStats {
+  state: CircuitState;
+  failures: number;
+  successes: number;
+  lastFailure: string | null;
+  nextAttempt: string | null;
+  failureRate: number;
+  totalCalls: number;
+  totalFailures: number;
+  uptimePercent: number;
+}
+
+/**
+ * Get circuit breaker stats for a service
+ */
+export async function getCircuitBreakerStats(service: string): Promise<CircuitBreakerStats> {
+  const state = await getDistributedState(service);
+
+  const failureRate = state.totalCalls > 0
+    ? (state.totalFailures / state.totalCalls) * 100
+    : 0;
+
+  const uptimePercent = state.totalCalls > 0
+    ? ((state.totalCalls - state.totalFailures) / state.totalCalls) * 100
+    : 100;
+
+  return {
+    state: state.state,
+    failures: state.failures,
+    successes: state.successes,
+    lastFailure: state.lastFailureTime > 0
+      ? new Date(state.lastFailureTime).toISOString()
+      : null,
+    nextAttempt: state.state === CircuitState.OPEN && state.nextAttemptTime > 0
+      ? new Date(state.nextAttemptTime).toISOString()
+      : null,
+    failureRate: Math.round(failureRate * 100) / 100,
+    totalCalls: state.totalCalls,
+    totalFailures: state.totalFailures,
+    uptimePercent: Math.round(uptimePercent * 1000) / 1000,
+  };
+}
+
+/**
+ * Circuit Breaker Open Error
  */
 export class CircuitBreakerOpenError extends Error {
   constructor(
@@ -228,67 +294,70 @@ export class CircuitBreakerOpenError extends Error {
 }
 
 /**
- * Redis-backed circuit breaker state for distributed systems
- * Use this when running multiple instances
+ * Execute with circuit breaker protection (distributed version)
  */
-export async function getCircuitBreakerStateRedis(service: string): Promise<CircuitBreakerStats> {
-  const key = `circuit_breaker:${service}`;
-  const data = await redis.hgetall(key);
-
-  if (!data || Object.keys(data).length === 0) {
-    return {
-      state: CircuitState.CLOSED,
-      failures: 0,
-      successes: 0,
-      lastFailure: null,
-      nextAttempt: null,
-    };
-  }
-
-  return {
-    state: data.state as CircuitState,
-    failures: parseInt(data.failures) || 0,
-    successes: parseInt(data.successes) || 0,
-    lastFailure: data.lastFailure || null,
-    nextAttempt: data.nextAttempt ? new Date(parseInt(data.nextAttempt)).toISOString() : null,
-  };
-}
-
-/**
- * Update circuit breaker state in Redis (for distributed systems)
- */
-export async function updateCircuitBreakerStateRedis(
+export async function executeWithCircuitBreaker<T>(
   service: string,
-  state: CircuitState,
-  failures: number,
-  successes: number,
-  nextAttempt: number | null
-): Promise<void> {
-  const key = `circuit_breaker:${service}`;
-  const data: Record<string, string> = {
-    state,
-    failures: String(failures),
-    successes: String(successes),
-    lastFailure: nextAttempt ? String(nextAttempt) : "",
-  };
+  fn: () => Promise<T>
+): Promise<T> {
+  const config = { ...DEFAULT_CONFIG, ...SERVICE_CONFIGS[service] };
+  const { allowed, currentState } = await canExecuteDistributed(service, config);
 
-  if (nextAttempt) {
-    data.nextAttempt = String(nextAttempt);
+  if (!allowed) {
+    throw new CircuitBreakerOpenError(
+      `Circuit breaker is OPEN for ${service}. Try again later.`,
+      service,
+      currentState.state,
+      currentState.nextAttemptTime
+    );
   }
 
-  await redis.hset(key, data);
-  await redis.expire(key, 3600); // 1 hour TTL
+  try {
+    const result = await fn();
+    await recordSuccessDistributed(service, config);
+    return result;
+  } catch (error) {
+    await recordFailureDistributed(service, config);
+    throw error;
+  }
 }
 
 /**
- * Health check - returns status of all circuit breakers
+ * Get health status of all circuit breakers
  */
 export async function getCircuitBreakerHealth(): Promise<Record<string, CircuitBreakerStats>> {
+  const services = Object.keys(SERVICE_CONFIGS);
   const health: Record<string, CircuitBreakerStats> = {};
 
-  for (const [service, breaker] of breakers) {
-    health[service] = breaker.getState();
-  }
+  await Promise.all(
+    services.map(async (service) => {
+      health[service] = await getCircuitBreakerStats(service);
+    })
+  );
 
   return health;
+}
+
+/**
+ * Force reset a circuit breaker (admin function)
+ */
+export async function resetCircuitBreaker(service: string): Promise<void> {
+  const key = getBreakerKey(service);
+  await redis.del(key);
+}
+
+/**
+ * Get circuit breaker for a service (factory pattern)
+ */
+export function getCircuitBreaker(service: string) {
+  return {
+    execute: <T>(fn: () => Promise<T>) => executeWithCircuitBreaker(service, fn),
+  };
+}
+
+/**
+ * Get all registered services
+ */
+export function getRegisteredServices(): string[] {
+  return Object.keys(SERVICE_CONFIGS);
 }

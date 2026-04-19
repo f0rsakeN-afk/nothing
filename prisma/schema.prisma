@@ -576,6 +576,40 @@ model PushSubscription {
 }
 
 // ---------------------------------------------------------------------------
+// Incidents
+// ---------------------------------------------------------------------------
+
+enum IncidentStatus {
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+}
+
+enum IncidentSeverity {
+  CRITICAL
+  MAJOR
+  MINOR
+}
+
+model Incident {
+  id        String   @id @default(cuid())
+  title     String
+  status    IncidentStatus @default(INVESTIGATING)
+  severity  IncidentSeverity @default(MINOR)
+  message   String?
+  startedAt DateTime @default(now())
+  resolvedAt DateTime?
+
+  // Components affected (stored as JSON array)
+  affectedComponents String[] @default([])
+
+  @@index([status])
+  @@index([severity])
+  @@index([startedAt])
+}
+
+// ---------------------------------------------------------------------------
 // MCP Catalog (Pre-configured connectors marketplace)
 // ---------------------------------------------------------------------------
 

@@ -21,4 +21,6 @@ export interface ChatInputProps {
   onProjectIdChange?: (projectId: string | null) => void;
   style?: ResponseStyle;
   onStyleChange?: (style: ResponseStyle) => void;
+  currentModel?: string;
+  onModelChange?: (model: string) => void;
 }
