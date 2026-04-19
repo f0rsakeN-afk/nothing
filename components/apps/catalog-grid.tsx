@@ -3,19 +3,7 @@
 import { cn } from "@/lib/utils";
 import { memo, useMemo } from "react";
 import { CatalogCard } from "./catalog-card";
-import { FEATURED_NAMES, CategoryId } from "./catalog-data";
-
-export interface CatalogItem {
-  id: string;
-  name: string;
-  category: string;
-  url: string;
-  authType: string;
-  maintainer: string;
-  maintainerUrl: string;
-  customIcon?: string | null;
-  isFeatured: boolean;
-}
+import { FEATURED_NAMES, CategoryId, CatalogItem } from "./catalog-data";
 
 interface CatalogGridProps {
   search: string;

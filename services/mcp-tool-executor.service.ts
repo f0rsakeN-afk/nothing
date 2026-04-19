@@ -66,12 +66,16 @@ export async function executeMCPToolCall(
   // Get auth headers
   const authHeaders = await getMcpAuthHeaders(
     {
+      id: server.id,
       authType: server.authType as 'none' | 'bearer' | 'header' | 'oauth',
       encryptedCredentials: server.encryptedCredentials,
       oauthAccessTokenEncrypted: server.oauthAccessTokenEncrypted,
       oauthRefreshTokenEncrypted: server.oauthRefreshTokenEncrypted,
       oauthAccessTokenExpiresAt: server.oauthAccessTokenExpiresAt,
       oauthIssuerUrl: server.oauthIssuerUrl,
+      oauthTokenUrl: server.oauthTokenUrl,
+      oauthClientId: server.oauthClientId,
+      oauthClientSecretEncrypted: server.oauthClientSecretEncrypted,
     },
     userId
   );

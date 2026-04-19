@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getOrCreateUser } from '@/lib/auth';
-import { createMCPClient } from '@ai-sdk/mcp';
 import prisma from '@/lib/prisma';
+import { createMCPClient } from '@ai-sdk/mcp';
 import { getMcpAuthHeaders } from '@/lib/mcp/auth-headers';
+import { validateMcpServerUrl } from '@/lib/mcp/server-config';
+import { injectManagedOAuthCredentials } from '@/lib/mcp/managed-credentials';
 
 function isProUser(_planTier: string | null | undefined) {
   return true;
@@ -34,13 +36,20 @@ export async function GET(
       return NextResponse.json({ error: 'Server not found' }, { status: 404 });
     }
 
+    validateMcpServerUrl(server.url);
+
+    const serverWithManaged = injectManagedOAuthCredentials(server);
     const headers = await getMcpAuthHeaders({
-      authType: server.authType as 'none' | 'bearer' | 'header' | 'oauth',
-      encryptedCredentials: server.encryptedCredentials,
-      oauthAccessTokenEncrypted: server.oauthAccessTokenEncrypted,
-      oauthRefreshTokenEncrypted: server.oauthRefreshTokenEncrypted,
-      oauthAccessTokenExpiresAt: server.oauthAccessTokenExpiresAt,
-      oauthIssuerUrl: server.oauthIssuerUrl,
+      id: serverWithManaged.id,
+      authType: serverWithManaged.authType as 'none' | 'bearer' | 'header' | 'oauth',
+      encryptedCredentials: serverWithManaged.encryptedCredentials,
+      oauthAccessTokenEncrypted: serverWithManaged.oauthAccessTokenEncrypted,
+      oauthRefreshTokenEncrypted: serverWithManaged.oauthRefreshTokenEncrypted,
+      oauthAccessTokenExpiresAt: serverWithManaged.oauthAccessTokenExpiresAt,
+      oauthIssuerUrl: serverWithManaged.oauthIssuerUrl,
+      oauthTokenUrl: serverWithManaged.oauthTokenUrl,
+      oauthClientId: serverWithManaged.oauthClientId,
+      oauthClientSecretEncrypted: serverWithManaged.oauthClientSecretEncrypted,
     }, user.id);
 
     const client = await createMCPClient({
@@ -52,14 +61,13 @@ export async function GET(
     });
 
     try {
-      const tools = await client.tools();
-      const toolList = Object.entries(tools).map(([name, def]) => ({
-        name,
-        title: (def as { name?: string }).name || name,
-        description: (def as { description?: string }).description || null,
+      const toolsResult = await client.listTools();
+      const tools = toolsResult.tools.map((t) => ({
+        name: t.name,
+        title: t.title ?? null,
+        description: t.description ?? null,
       }));
-
-      return Response.json({ ok: true, tools: toolList });
+      return Response.json({ ok: true, tools });
     } finally {
       await client.close();
     }
@@ -68,6 +76,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     console.error('Failed to fetch MCP tools:', error);
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Failed to fetch tools' }, { status: 500 });
   }
 }
@@ -104,7 +115,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.mcpUserServer.update({
-      where: { id },
+      where: { id, userId: user.id },
       data: {
         disabledTools: body.disabledTools,
       },

@@ -95,7 +95,7 @@ export function useAddServer() {
         isEnabled: true,
         transportType: getTransportType(item.url),
         authType:
-          AUTH_TO_API_AUTH[item.authType as CatalogAuth] ?? "none",
+          AUTH_TO_API_AUTH[item.auth as CatalogAuth] ?? "none",
       };
       const res = await fetch("/api/mcp/servers", {
         method: "POST",
@@ -212,6 +212,53 @@ export function useOAuthDisconnect() {
         const data = await res.json().catch(() => ({ error: "Failed to disconnect OAuth" }));
         throw new Error(data.error || "Failed to disconnect OAuth");
       }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mcp-servers"] });
+    },
+  });
+}
+
+interface ToolInfo {
+  name: string;
+  title: string | null;
+  description: string | null;
+}
+
+/**
+ * Fetch tools from an MCP server
+ */
+export function useFetchServerTools() {
+  return useMutation({
+    mutationFn: async (serverId: string): Promise<ToolInfo[]> => {
+      const res = await fetch(`/api/mcp/servers/${serverId}/tools`);
+      const data = await res.json() as { ok?: boolean; tools?: ToolInfo[]; error?: string };
+      if (!res.ok || !data.ok || !data.tools) {
+        throw new Error(data.error || "Failed to fetch tools");
+      }
+      return data.tools;
+    },
+  });
+}
+
+/**
+ * Save disabled tools for an MCP server
+ */
+export function useSaveDisabledTools() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ serverId, disabledTools }: { serverId: string; disabledTools: string[] }): Promise<string[]> => {
+      const res = await fetch(`/api/mcp/servers/${serverId}/tools`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disabledTools }),
+      });
+      const data = await res.json() as { ok?: boolean; disabledTools?: string[]; error?: string };
+      if (!res.ok || !data.ok || data.disabledTools === undefined) {
+        throw new Error(data.error || "Failed to save disabled tools");
+      }
+      return data.disabledTools;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mcp-servers"] });

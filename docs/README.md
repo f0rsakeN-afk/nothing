@@ -14,6 +14,10 @@ Welcome to the Eryx AI Assistant codebase documentation. This folder contains de
 8. [Services](./08-services.md) - Business logic layer
 9. [API Routes](./09-api-routes.md) - HTTP endpoints
 10. [Optimizations](./10-optimizations.md) - Performance optimizations
+11. [Realtime Sync](./11-realtime-sync.md) - WebSocket architecture
+12. [i18n](./12-i18n.md) - Internationalization
+13. [Resumable Stream](./13-resumable-stream.md) - Stream interruption handling
+14. [MCP Apps](./14-mcp-apps.md) - MCP apps & connections
 
 ## Architecture Overview
 
@@ -92,6 +96,10 @@ SEARXNG_BASE_URL=http://localhost:8888
 AI_MODEL=llama-3.1-8b-instant
 AI_MAX_TOKENS=1024
 AI_TEMPERATURE=0.7
+
+# MCP Apps
+MCP_CREDENTIALS_ENCRYPTION_KEY=your-32-byte-secret-key
+MCP_OAUTH_CALLBACK_ORIGIN=http://localhost:3000
 ```
 
 ## Project Structure

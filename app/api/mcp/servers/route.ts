@@ -46,6 +46,7 @@ function serializeMcpServer(server: {
   url: string;
   authType: string;
   isEnabled: boolean;
+  disabledTools: string[] | null;
   lastTestedAt: Date | null;
   lastError: string | null;
   oauthConnectedAt: Date | null;
@@ -68,6 +69,7 @@ function serializeMcpServer(server: {
     url: server.url,
     authType: server.authType,
     isEnabled: server.isEnabled,
+    disabledTools: server.disabledTools ?? [],
     hasCredentials: Boolean(server.encryptedCredentials),
     isOAuthConnected: Boolean(
       server.oauthAccessTokenEncrypted ||

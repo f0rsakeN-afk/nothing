@@ -26,6 +26,8 @@ import {
   CATEGORIES,
   CategoryId,
   ServerItem,
+  CatalogItem,
+  ToolInfo,
 } from "@/components/apps";
 import {
   useCatalog,
@@ -99,7 +101,7 @@ function BrowseContent({
   onAdd,
 }: {
   connectedUrls: Set<string>;
-  onAdd: (item: { name: string; url: string; authType: string }) => void;
+  onAdd: (item: CatalogItem) => void;
 }) {
   const [search, setSearch] = React.useState("");
   const [category, setCategory] = React.useState<CategoryId>("all");
@@ -248,6 +250,9 @@ function MyAppsContent({ servers }: { servers: ServerItem[] }) {
       togglingId={togglingId}
       connectingId={connectingId}
       confirmDeleteId={confirmDeleteId}
+      expandedToolsId={null}
+      serverToolsCache={{}}
+      toolsLoading={{}}
       onToggle={handleToggle}
       onDelete={(id) => setConfirmDeleteId(id)}
       onTest={handleTest}
@@ -255,6 +260,9 @@ function MyAppsContent({ servers }: { servers: ServerItem[] }) {
       onOAuthDisconnect={handleOAuthDisconnect}
       onConfirmDelete={() => confirmDeleteId && handleDelete(confirmDeleteId)}
       onCancelDelete={() => setConfirmDeleteId(null)}
+      onToolsToggle={() => {}}
+      onToolToggle={() => {}}
+      onEnableAllTools={() => {}}
     />
   );
 }
@@ -291,16 +299,12 @@ function MobileAppsDrawer({ isOpen, onOpenChange }: AppsDialogProps) {
   );
   const connectedUrls = new Set(servers.map((s) => s.url.replace(/\/$/, "")));
 
-  const handleAdd = async (item: {
-    name: string;
-    url: string;
-    authType: string;
-  }) => {
+  const handleAdd = async (item: CatalogItem) => {
     setAddingUrl(item.url);
     try {
-      const result = await addServer.mutateAsync(item as any);
+      const result = await addServer.mutateAsync(item);
 
-      if (item.authType === "oauth") {
+      if (item.auth === "oauth") {
         setConnectingId(result.server.id);
         try {
           const oauthResult = await oauthStart.mutateAsync(result.server.id);
@@ -425,16 +429,12 @@ function DesktopAppsDialog({ isOpen, onOpenChange }: AppsDialogProps) {
 
   const connectedUrls = new Set(servers.map((s) => s.url.replace(/\/$/, "")));
 
-  const handleAdd = async (item: {
-    name: string;
-    url: string;
-    authType: string;
-  }) => {
+  const handleAdd = async (item: CatalogItem) => {
     setAddingUrl(item.url);
     try {
-      const result = await addServer.mutateAsync(item as any);
+      const result = await addServer.mutateAsync(item);
 
-      if (item.authType === "oauth") {
+      if (item.auth === "oauth") {
         setConnectingId(result.server.id);
         try {
           const oauthResult = await oauthStart.mutateAsync(result.server.id);
@@ -633,6 +633,9 @@ function DesktopAppsDialog({ isOpen, onOpenChange }: AppsDialogProps) {
                   togglingId={togglingId}
                   connectingId={connectingId}
                   confirmDeleteId={confirmDeleteId}
+                  expandedToolsId={null}
+                  serverToolsCache={{}}
+                  toolsLoading={{}}
                   onToggle={handleToggle}
                   onDelete={(id) => setConfirmDeleteId(id)}
                   onTest={handleTest}
@@ -642,6 +645,9 @@ function DesktopAppsDialog({ isOpen, onOpenChange }: AppsDialogProps) {
                     confirmDeleteId && handleDelete(confirmDeleteId)
                   }
                   onCancelDelete={() => setConfirmDeleteId(null)}
+                  onToolsToggle={() => {}}
+                  onToolToggle={() => {}}
+                  onEnableAllTools={() => {}}
                 />
               )}
             </div>

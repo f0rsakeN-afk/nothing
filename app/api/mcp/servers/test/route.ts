@@ -56,12 +56,16 @@ export async function POST(request: Request) {
         transportType: stored.transportType as 'http' | 'sse',
         url: stored.url,
         headers: await getMcpAuthHeaders({
+          id: stored.id,
           authType: stored.authType as 'none' | 'bearer' | 'header' | 'oauth',
           encryptedCredentials: stored.encryptedCredentials,
           oauthAccessTokenEncrypted: stored.oauthAccessTokenEncrypted,
           oauthRefreshTokenEncrypted: stored.oauthRefreshTokenEncrypted,
           oauthAccessTokenExpiresAt: stored.oauthAccessTokenExpiresAt,
           oauthIssuerUrl: stored.oauthIssuerUrl,
+          oauthTokenUrl: stored.oauthTokenUrl,
+          oauthClientId: stored.oauthClientId,
+          oauthClientSecretEncrypted: stored.oauthClientSecretEncrypted,
         }, user.id),
       };
     } else {
@@ -101,7 +105,7 @@ export async function POST(request: Request) {
       // Update last tested info if testing stored server
       if (input.serverId) {
         await prisma.mcpUserServer.update({
-          where: { id: input.serverId },
+          where: { id: input.serverId, userId: user.id },
           data: {
             lastTestedAt: new Date(),
             lastError: null,

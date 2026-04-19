@@ -1,111 +1,69 @@
 import { NextResponse } from 'next/server';
 import { getOrCreateUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { getEncryptedOAuthValue } from '@/lib/mcp/server-config';
+import { exchangeMcpOAuthCode, verifyMcpOAuthState } from '@/lib/mcp/oauth';
+import { injectManagedOAuthCredentials } from '@/lib/mcp/managed-credentials';
+
+function redirectToApps(request: Request, status: 'success' | 'error', message?: string) {
+  const origin = new URL(request.url).origin;
+  const url = new URL('/apps', origin);
+  url.searchParams.set('tab', 'my-servers');
+  url.searchParams.set('mcpOauth', status);
+  if (message) url.searchParams.set('message', message.slice(0, 120));
+  return Response.redirect(url.toString(), 302);
+}
 
 export async function GET(request: Request) {
+  let resolvedServerId: string | null = null;
+  let userId: string | null = null;
+
   try {
     const user = await getOrCreateUser(request);
+    userId = user.id;
+    const requestUrl = new URL(request.url);
+    const code = requestUrl.searchParams.get('code');
+    const state = requestUrl.searchParams.get('state');
+    const oauthError = requestUrl.searchParams.get('error');
+    const oauthErrorDesc = requestUrl.searchParams.get('error_description');
 
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const error = searchParams.get('error');
-
-    if (error) {
-      return NextResponse.redirect(new URL(`/apps?mcpOauth=failed&message=${encodeURIComponent(error)}`, request.url));
+    if (oauthError) {
+      return redirectToApps(request, 'error', oauthErrorDesc ?? oauthError);
     }
+    if (!code || !state) return redirectToApps(request, 'error', 'Missing OAuth callback params');
 
-    if (!code || !state) {
-      return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=missing_params', request.url));
-    }
+    const payload = verifyMcpOAuthState({ state, expectedUserId: user.id });
+    resolvedServerId = payload.serverId;
 
-    // Decode state to get server ID and verifier
-    let stateData: { serverId: string; userId: string; verifier: string; exp: number };
-    try {
-      stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
-    } catch {
-      return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=invalid_state', request.url));
-    }
+    const rawServer = await prisma.mcpUserServer.findFirst({
+      where: { id: payload.serverId, userId: user.id },
+    });
+    if (!rawServer) return redirectToApps(request, 'error', 'MCP server not found');
+    if (rawServer.authType !== 'oauth') return redirectToApps(request, 'error', 'Server is not OAuth');
 
-    if (stateData.exp < Date.now()) {
-      return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=state_expired', request.url));
-    }
+    // Inject env-var credentials for managed OAuth apps
+    const server = injectManagedOAuthCredentials(rawServer);
 
-    if (stateData.userId !== user.id) {
-      return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=user_mismatch', request.url));
-    }
-
-    const server = await prisma.mcpUserServer.findFirst({
-      where: { id: stateData.serverId, userId: user.id },
+    await exchangeMcpOAuthCode({
+      server,
+      userId: user.id,
+      code,
+      verifier: payload.verifier,
+      requestOrigin: requestUrl.origin,
     });
 
-    if (!server) {
-      return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=server_not_found', request.url));
-    }
+    await prisma.mcpUserServer.update({
+      where: { id: payload.serverId, userId: user.id },
+      data: { oauthError: null },
+    });
 
-    // Exchange code for tokens
-    // Note: This is a simplified implementation. Real implementations would
-    // need to handle different OAuth providers properly.
-    const tokenUrl = server.oauthTokenUrl || `${server.oauthIssuerUrl}/oauth/token`;
-    const clientId = server.oauthClientId;
-    const clientSecret = server.oauthClientSecretEncrypted;
-
-    // Get redirect URI
-    const requestOrigin = new URL(request.url).origin;
-    const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-    const origin = configured || requestOrigin;
-    const redirectUri = `${origin.replace(/\/+$/, '')}/api/mcp/oauth/callback`;
-
-    // For now, we'll do a basic token exchange
-    // Real implementation would need provider-specific token exchange
-    try {
-      const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: redirectUri,
-          client_id: clientId || '',
-          ...(clientSecret ? { client_secret: clientSecret } : {}),
-        }).toString(),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OAuth token exchange failed:', errorText);
-        return NextResponse.redirect(new URL(`/apps?mcpOauth=failed&message=${encodeURIComponent('Token exchange failed')}`, request.url));
-      }
-
-      const tokenData = await response.json() as {
-        access_token: string;
-        refresh_token?: string;
-        expires_in?: number;
-      };
-
-      // Store tokens
-      await prisma.mcpUserServer.update({
-        where: { id: stateData.serverId },
-        data: {
-          oauthAccessTokenEncrypted: getEncryptedOAuthValue(tokenData.access_token),
-          oauthRefreshTokenEncrypted: tokenData.refresh_token ? getEncryptedOAuthValue(tokenData.refresh_token) : null,
-          oauthAccessTokenExpiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
-          oauthConnectedAt: new Date(),
-          oauthError: null,
-        },
-      });
-
-      return NextResponse.redirect(new URL('/apps?mcpOauth=success', request.url));
-    } catch (err) {
-      console.error('OAuth callback error:', err);
-      return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=exchange_error', request.url));
-    }
+    return redirectToApps(request, 'success');
   } catch (error) {
-    console.error('OAuth callback error:', error);
-    return NextResponse.redirect(new URL('/apps?mcpOauth=failed&message=callback_error', request.url));
+    if (userId && resolvedServerId) {
+      await prisma.mcpUserServer.update({
+        where: { id: resolvedServerId, userId },
+        data: { oauthError: error instanceof Error ? error.message.slice(0, 1000) : 'OAuth callback failed' },
+      }).catch(() => null);
+    }
+    return redirectToApps(request, 'error', error instanceof Error ? error.message : 'OAuth callback failed');
   }
 }

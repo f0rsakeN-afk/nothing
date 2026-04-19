@@ -3,21 +3,11 @@
 import { memo } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowUpRight } from "lucide-react";
 import { ServiceIcon } from "./service-icon";
-import { CATEGORIES } from "./catalog-data";
-
-export interface CatalogItem {
-  id: string;
-  name: string;
-  category: string;
-  url: string;
-  authType: string;
-  maintainer: string;
-  maintainerUrl: string;
-  customIcon?: string | null;
-  isFeatured: boolean;
-}
+import { CATEGORIES, AUTH_LABELS, isOauthWithClientSetup } from "./catalog-data";
+import { getMcpCatalogIcon } from "@/lib/mcp/catalog-icons";
+import type { CatalogItem } from "./catalog-data";
 
 interface CatalogCardProps {
   item: CatalogItem;
@@ -33,7 +23,7 @@ export const CatalogCard = memo(function CatalogCard({
   onAdd,
 }: CatalogCardProps) {
   const catLabel = CATEGORIES.find((c) => c.id === item.category)?.label ?? item.category;
-  const authLabel = item.authType === "oauth" ? "OAuth" : item.authType === "apikey" ? "API Key" : "Free";
+  const needsClientSetup = isOauthWithClientSetup(item);
 
   return (
     <Card className="shadow-none bg-card/50 border border-border/60 hover:border-primary/30 hover:shadow-sm transition-all duration-200 h-full flex flex-col rounded-xl group">
@@ -44,7 +34,7 @@ export const CatalogCard = memo(function CatalogCard({
               url={item.maintainerUrl}
               name={item.name}
               size={24}
-              customIcon={item.customIcon ?? null}
+              customIcon={item.customIcon ?? getMcpCatalogIcon(item.url)}
             />
           </div>
           {isConnected ? (
@@ -73,11 +63,28 @@ export const CatalogCard = memo(function CatalogCard({
           {catLabel}
         </Badge>
         <Badge
-          variant={item.authType === "open" ? "secondary" : "outline"}
+          variant="secondary"
           className="text-[10px] px-1.5 py-0"
         >
-          {authLabel}
+          {AUTH_LABELS[item.auth]}
         </Badge>
+        {needsClientSetup && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 dark:text-amber-400 border-amber-500/30">
+            Client setup
+          </Badge>
+        )}
+      </div>
+      <div className="px-4 pb-3">
+        <a
+          href={item.maintainerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 w-fit"
+        >
+          {item.maintainer}
+          <ArrowUpRight className="size-3" />
+        </a>
       </div>
     </Card>
   );

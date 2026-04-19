@@ -8,16 +8,25 @@ type McpAuthType = 'none' | 'bearer' | 'header' | 'oauth';
 
 export async function getMcpAuthHeaders(
   server: {
+    id: string;
     authType: McpAuthType;
     encryptedCredentials: string | null;
     oauthAccessTokenEncrypted: string | null;
     oauthRefreshTokenEncrypted: string | null;
     oauthAccessTokenExpiresAt: Date | null;
     oauthIssuerUrl: string | null;
+    oauthTokenUrl: string | null;
+    oauthClientId: string | null;
+    oauthClientSecretEncrypted: string | null;
   },
-  _userId: string
+  userId: string
 ) {
-  if (server.authType === 'none' || server.authType === 'oauth') return {};
+  if (server.authType === 'none') return {};
+
+  if (server.authType === 'oauth') {
+    const token = await resolveMcpOAuthAccessToken(server, userId);
+    return { Authorization: `Bearer ${token}` };
+  }
 
   const payload = getMcpCredentialPayload(server);
   if (server.authType === 'bearer') {
@@ -43,7 +52,7 @@ function getMcpCredentialPayload(server: {
 function decryptCredential(ciphertext: string): string {
   const crypto = require('node:crypto');
   const ALGORITHM = 'aes-256-gcm';
-  const ENCRYPTION_KEY = process.env.MCP_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
+  const ENCRYPTION_KEY = process.env.MCP_CREDENTIALS_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
   const key = Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32);
 
   const combined = Buffer.from(ciphertext, 'base64');
@@ -71,7 +80,7 @@ async function resolveMcpOAuthAccessToken(
     oauthRefreshTokenEncrypted: string | null;
     oauthAccessTokenExpiresAt: Date | null;
   },
-  _userId: string
+  userId: string
 ) {
   if (server.authType !== 'oauth') {
     throw new Error('resolveMcpOAuthAccessToken called on non-OAuth server');
@@ -104,7 +113,7 @@ async function resolveMcpOAuthAccessToken(
 
         // Store new tokens in database
         await prisma.mcpUserServer.update({
-          where: { id: server.id },
+          where: { id: server.id, userId },
           data: {
             oauthAccessTokenEncrypted: encryptValue(newTokens.accessToken),
             oauthRefreshTokenEncrypted: encryptValue(newTokens.refreshToken),
@@ -131,7 +140,7 @@ async function resolveMcpOAuthAccessToken(
 function encryptValue(value: string): string {
   const crypto = require('node:crypto');
   const ALGORITHM = 'aes-256-gcm';
-  const ENCRYPTION_KEY = process.env.MCP_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
+  const ENCRYPTION_KEY = process.env.MCP_CREDENTIALS_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
   const key = Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32);
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);

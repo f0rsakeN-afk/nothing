@@ -155,7 +155,7 @@ const ALGORITHM = 'aes-256-gcm';
 
 function getKey(): Buffer {
   const crypto = require('node:crypto');
-  const ENCRYPTION_KEY = process.env.MCP_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
+  const ENCRYPTION_KEY = process.env.MCP_CREDENTIALS_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
   return Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32);
 }
 
