@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { memo, useMemo } from "react";
 import { CatalogCard } from "./catalog-card";
 import { FEATURED_NAMES, CategoryId } from "./catalog-data";
@@ -23,6 +24,7 @@ interface CatalogGridProps {
   addingUrl: string | null;
   items: CatalogItem[];
   onAdd: (item: CatalogItem) => void;
+  columns?: number;
 }
 
 export const CatalogGrid = memo(function CatalogGrid({
@@ -32,6 +34,7 @@ export const CatalogGrid = memo(function CatalogGrid({
   addingUrl,
   items,
   onAdd,
+  columns,
 }: CatalogGridProps) {
   const filtered = useMemo(() => {
     let result = items;
@@ -71,7 +74,7 @@ export const CatalogGrid = memo(function CatalogGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+    <div className={cn("grid gap-3", columns === 4 ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5")}>
       {filtered.map((item) => (
         <CatalogCard
           key={item.url}
