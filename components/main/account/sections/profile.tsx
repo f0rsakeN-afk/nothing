@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Field = React.memo(function Field({
   label,
@@ -28,6 +29,7 @@ interface AccountData {
     email: string;
     name: string;
     createdAt: string;
+    isActive: boolean;
   };
   plan: {
     name: string;
@@ -40,31 +42,74 @@ interface AccountData {
     };
     features: string[];
   };
+  subscription: {
+    active: boolean;
+    status?: string;
+    periodEnd?: string;
+    cancelAtPeriodEnd?: boolean;
+  };
   usage: {
     chats: number;
     projects: number;
+    messages: number;
+    files: number;
+  };
+  monthlyUsage: {
+    chats: number;
     messages: number;
   };
 }
 
 async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account");
+  const res = await fetch("/api/account", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch account");
   return res.json();
 }
 
-export const ProfileSection = React.memo(function ProfileSection() {
-  const { data, isLoading } = useQuery({
+interface ProfileSectionProps {
+  accountData?: AccountData;
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div>
+        <Skeleton className="h-4 w-24 mb-1" />
+        <Skeleton className="h-3 w-48" />
+      </div>
+      <div className="flex flex-col items-center gap-2 py-2">
+        <Skeleton className="h-16 w-16 rounded-full" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-20 mb-1" />
+          <Skeleton className="h-9 w-full rounded-lg" />
+        </div>
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-16 mb-1" />
+          <Skeleton className="h-9 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const ProfileSection = React.memo(function ProfileSection({
+  accountData,
+}: ProfileSectionProps) {
+  const { data: localData, isLoading } = useQuery({
     queryKey: ["account"],
     queryFn: fetchAccount,
+    enabled: !accountData,
+    staleTime: 30000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-5">
-        <div className="h-32 rounded-lg bg-muted/20 animate-pulse" />
-      </div>
-    );
+  const data = accountData || localData;
+  const isFetching = !accountData && isLoading;
+
+  if (isFetching || !data) {
+    return <ProfileSkeleton />;
   }
 
   const profile = data?.profile;

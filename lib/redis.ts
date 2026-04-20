@@ -66,6 +66,7 @@ export const KEYS = {
   userLimits: (userId: string) => `user:limits:${userId}`,
   userSettings: (userId: string) => `user:${userId}:settings`,
   userCredits: (userId: string) => `user:${userId}:credits`,
+  userAccount: (userId: string) => `user:${userId}:account`,
   userMemories: (userId: string) => `user:${userId}:memories`,
   userNotifications: (userId: string) => `user:${userId}:notifications`,
   userProjects: (userId: string) => `user:${userId}:projects`,
@@ -73,6 +74,7 @@ export const KEYS = {
   searchResults: (query: string) => `search:${Buffer.from(query).toString("base64").slice(0, 32)}`,
   chatSummary: (chatId: string) => `chat:${chatId}:summary`,
   summarizing: (chatId: string) => `chat:${chatId}:summarizing`,
+  mcpCatalog: "mcp:catalog",
 } as const;
 
 // TTL constants (in seconds)
@@ -90,12 +92,14 @@ export const TTL = {
   userLimits: 5 * 60, // 5 minutes for user limits
   userSettings: 30 * 60, // 30 minutes for user settings
   userCredits: 5 * 60, // 5 minutes for credits
+  userAccount: 5 * 60, // 5 minutes for account data
   userMemories: 5 * 60, // 5 minutes for memories list
   userNotifications: 30, // 30 seconds for notifications (real-time sensitive)
   userProjects: 5 * 60, // 5 minutes for project list
   userSubscription: 2 * 60, // 2 minutes for user subscription/plan cache
   searchResults: 60 * 60, // 1 hour for web search results
   chatSummary: 7 * 24 * 60 * 60, // 7 days for chat summaries
+  mcpCatalog: 10 * 60, // 10 minutes for MCP catalog (rarely changes)
 } as const;
 
 // Pub/Sub channel helpers

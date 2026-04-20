@@ -153,7 +153,7 @@ function DeleteConfirmDialog({
           </DialogTitle>
           <DialogDescription className="space-y-2">
             <p>
-              Are you sure you want to delete "{file.name}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{file.name}&rdquo;? This action cannot be undone.
             </p>
             {contextWarning && (
               <p className="text-amber-600 dark:text-amber-400 text-sm font-medium">
@@ -354,12 +354,12 @@ export default function FilesPage() {
             </DialogTitle>
             <DialogDescription className="space-y-2">
               <p>
-                Are you sure you want to delete "{fileToDelete?.name}"? This action
+                Are you sure you want to delete &ldquo;{fileToDelete?.name}&rdquo;? This action
                 cannot be undone.
               </p>
               {fileToDelete?.project && (
                 <p className="text-amber-600 dark:text-amber-400 text-sm font-medium">
-                  Warning: This file is used in project "{fileToDelete.project.name}".
+                  Warning: This file is used in project &ldquo;{fileToDelete.project.name}&rdquo;.
                   Removing it will clear its context from the project.
                 </p>
               )}

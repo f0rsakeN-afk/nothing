@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function SettingRow({
   label,
@@ -52,13 +53,19 @@ async function updateSetting(key: string, value: boolean): Promise<Settings> {
   return res.json();
 }
 
-export function PrivacySection() {
+interface PrivacySectionProps {
+  settings?: Settings;
+}
+
+export function PrivacySection({ settings: propSettings }: PrivacySectionProps) {
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = React.useState<Settings | null>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+    enabled: !propSettings,
+    staleTime: 30000,
   });
 
   const mutation = useMutation({
@@ -75,12 +82,61 @@ export function PrivacySection() {
     mutation.mutate({ key, value });
   }, [mutation]);
 
-  const displaySettings = localSettings || settings;
+  const displaySettings = localSettings || propSettings || settings;
 
-  if (isLoading || !displaySettings) {
+  if ((!propSettings && isLoading) || !displaySettings) {
     return (
       <div className="space-y-5">
-        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+        <div>
+          <Skeleton className="h-4 w-24 mb-1" />
+          <Skeleton className="h-3 w-40" />
+        </div>
+        <div>
+          <Skeleton className="h-3 w-28 mb-1" />
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-3 space-y-3">
+            <div className="flex items-center justify-between py-3.5 border-b border-border/40">
+              <div>
+                <Skeleton className="h-3.5 w-20 mb-1" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between py-3.5 border-b border-border/40">
+              <div>
+                <Skeleton className="h-3.5 w-28 mb-1" />
+                <Skeleton className="h-3 w-64" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between py-3.5">
+              <div>
+                <Skeleton className="h-3.5 w-24 mb-1" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <Skeleton className="h-3 w-32 mb-1" />
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-3 space-y-3">
+            <div className="flex items-center justify-between py-3.5 border-b border-border/40">
+              <div>
+                <Skeleton className="h-3.5 w-24 mb-1" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+              <Skeleton className="h-7 w-16 rounded-md" />
+            </div>
+            <div className="flex items-center justify-between py-3.5">
+              <div>
+                <Skeleton className="h-3.5 w-40 mb-1" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-7 w-16 rounded-md" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-24 w-full rounded-lg" />
       </div>
     );
   }

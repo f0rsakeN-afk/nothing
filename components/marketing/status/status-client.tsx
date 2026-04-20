@@ -595,9 +595,9 @@ export function StatusContent() {
   const isDetailedFormat = data && "overall" in data;
 
   const { status: overallStatus, components, sla, activeIncidents, circuitBreakers } = isDetailedFormat
-    ? (data as any).overall || {}
+    ? (data as unknown).overall || {}
     : {};
-  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as any) || {};
+  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as unknown) || {};
   const actualStatus = overallStatus || dataStatus || "operational";
   const actualSla = sla || dataSla || { uptimePercent: 100, totalIncidents: 0, mttrMinutes: 0, lastIncidentAt: null };
   const safeActiveIncidents = activeIncidents || [];

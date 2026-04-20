@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+
 const ENCRYPTION_KEY = process.env.MCP_ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
   throw new Error('MCP_ENCRYPTION_KEY environment variable is not set');
@@ -14,10 +16,9 @@ function getKey(): Buffer {
 }
 
 export function encryptMcpCredentials(plaintext: string): string {
-  const crypto = require('node:crypto');
   const key = getKey();
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const iv = randomBytes(16);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
 
   let encrypted = cipher.update(plaintext, 'utf8', 'base64');
   encrypted += cipher.final('base64');
@@ -30,7 +31,6 @@ export function encryptMcpCredentials(plaintext: string): string {
 }
 
 export function decryptMcpCredentials(ciphertext: string): string {
-  const crypto = require('node:crypto');
   const key = getKey();
   const combined = Buffer.from(ciphertext, 'base64');
 
@@ -38,7 +38,7 @@ export function decryptMcpCredentials(ciphertext: string): string {
   const authTag = combined.subarray(16, 32);
   const encrypted = combined.subarray(32);
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
 
   let decrypted = decipher.update(encrypted, undefined, 'utf8');

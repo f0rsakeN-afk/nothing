@@ -122,7 +122,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
           </form>
           {query.trim() ? (
             <p className="text-xs text-muted-foreground">
-              {chats.length} result{chats.length !== 1 ? "s" : ""} for "{query.trim()}"
+              {chats.length} result{chats.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">

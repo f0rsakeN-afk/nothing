@@ -6,7 +6,6 @@ import {
   Palette,
   Bot,
   Bell,
-  CreditCard,
   ShieldCheck,
   ChevronRight,
   ChevronLeft,
@@ -25,14 +24,14 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { GeneralSection } from "./sections/general";
 import { AppearanceSection } from "./sections/appearance";
 import { AiPreferencesSection } from "./sections/ai-preferences";
 import { NotificationsSection } from "./sections/notifications";
-import { BillingSection } from "./sections/billing";
 import { PrivacySection } from "./sections/privacy";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -65,12 +64,6 @@ const TABS = [
     icon: Bell,
   },
   {
-    id: "billing",
-    label: "Billing",
-    description: "Plans, usage & subscription",
-    icon: CreditCard,
-  },
-  {
     id: "privacy",
     label: "Privacy",
     description: "Data, exports & account",
@@ -81,7 +74,45 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 // ---------------------------------------------------------------------------
-// Section renderer — shared between desktop and mobile detail view
+// Skeletons
+// ---------------------------------------------------------------------------
+
+function SettingsDialogSkeleton() {
+  return (
+    <div className="h-full flex">
+      <div className="w-44 shrink-0 border-r border-border/50 p-2 space-y-1">
+        <Skeleton className="h-3 w-16 mx-2 mb-3" />
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-8 w-full rounded-md" />
+        ))}
+      </div>
+      <div className="flex-1 p-5 space-y-4">
+        <div>
+          <Skeleton className="h-4 w-32 mb-2" />
+          <Skeleton className="h-3 w-48 mb-4" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+function MobileSettingsSkeleton() {
+  return (
+    <div className="px-5 py-4 space-y-4">
+      <div>
+        <Skeleton className="h-4 w-32 mb-2" />
+        <Skeleton className="h-3 w-48 mb-4" />
+      </div>
+      <Skeleton className="h-32 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section renderer
 // ---------------------------------------------------------------------------
 
 function SectionContent({ id }: { id: TabId }) {
@@ -94,15 +125,13 @@ function SectionContent({ id }: { id: TabId }) {
       return <AiPreferencesSection />;
     case "notifications":
       return <NotificationsSection />;
-    case "billing":
-      return <BillingSection />;
     case "privacy":
       return <PrivacySection />;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Mobile: list row — memoised
+// Mobile drawer
 // ---------------------------------------------------------------------------
 
 interface MobileSettingRowProps {
@@ -128,7 +157,7 @@ const MobileSettingRow = React.memo(function MobileSettingRow({
     <button
       onClick={handleClick}
       className={cn(
-        "flex w-full items-center gap-4 px-5 py-4 text-left   hover:bg-muted/40 active:bg-muted/60",
+        "flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-muted/40 active:bg-muted/60",
         !isLast && "border-b border-border/40",
       )}
     >
@@ -148,10 +177,6 @@ const MobileSettingRow = React.memo(function MobileSettingRow({
   );
 });
 
-// ---------------------------------------------------------------------------
-// Mobile drawer — list → detail two-level navigation
-// ---------------------------------------------------------------------------
-
 interface MobileSettingsDrawerProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -163,7 +188,6 @@ function MobileSettingsDrawer({
 }: MobileSettingsDrawerProps) {
   const [activeSection, setActiveSection] = React.useState<TabId | null>(null);
 
-  // Reset to list view whenever the drawer closes
   React.useEffect(() => {
     if (!isOpen) setActiveSection(null);
   }, [isOpen]);
@@ -182,19 +206,13 @@ function MobileSettingsDrawer({
 
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
-      {/*
-       * Fixed h-[78dvh]: gives the flex layout a definite height so
-       * flex-1 min-h-0 on the ScrollArea always works. With h-auto (vaul's
-       * default) the drawer is too short for long sections and content gets
-       * cropped instead of scrolled.
-       */}
       <DrawerContent className="h-[78dvh] flex flex-col">
         <DrawerHeader className="shrink-0 pb-1">
           {activeSection ? (
             <div className="flex items-center gap-2">
               <button
                 onClick={handleBack}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60   -ml-1"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 -ml-1"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -207,12 +225,6 @@ function MobileSettingsDrawer({
           )}
         </DrawerHeader>
 
-        {/*
-         * flex-1 min-h-0: takes all remaining height after the header.
-         * min-h-0 is required — without it, a flex child's min-height
-         * defaults to auto (content size), which prevents shrinking and
-         * breaks overflow/scroll.
-         */}
         {activeSection ? (
           <ScrollArea className="flex-1 min-h-0">
             <div className="px-5 py-4 pb-6">
@@ -239,7 +251,7 @@ function MobileSettingsDrawer({
 }
 
 // ---------------------------------------------------------------------------
-// Desktop: vertical tabs dialog
+// Desktop dialog
 // ---------------------------------------------------------------------------
 
 interface DesktopSettingsDialogProps {
@@ -273,7 +285,6 @@ function DesktopSettingsDialog({
           onValueChange={handleTabChange}
           className="h-[540px]"
         >
-          {/* Sidebar nav */}
           <TabsList
             variant="line"
             className="w-44 shrink-0 border-r border-border/50 rounded-none h-full! flex flex-col justify-start p-2 gap-0.5"
@@ -281,7 +292,7 @@ function DesktopSettingsDialog({
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 px-2 py-2 mb-2.5">
               Settings
             </p>
-            <div className=" flex flex-col space-y-2">
+            <div className="flex flex-col space-y-2">
               {TABS.map(({ id, label, icon: Icon }) => (
                 <TabsTrigger
                   key={id}
@@ -295,7 +306,6 @@ function DesktopSettingsDialog({
             </div>
           </TabsList>
 
-          {/* Content panel */}
           <ScrollArea className="flex-1 hide-scrollbar">
             <div className="p-5">
               {TABS.map(({ id }) => (
@@ -312,7 +322,7 @@ function DesktopSettingsDialog({
 }
 
 // ---------------------------------------------------------------------------
-// SettingsDialog — entry point, switches between mobile / desktop
+// Export
 // ---------------------------------------------------------------------------
 
 export function SettingsDialog({ isOpen, onOpenChange }: SettingsDialogProps) {

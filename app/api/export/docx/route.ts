@@ -215,7 +215,7 @@ function processInlineText(
 ): (TextRun | ExternalHyperlink)[] {
   const runs: (TextRun | ExternalHyperlink)[] = [];
 
-  let processed = text
+  const processed = text
     .replace(/\\\[([\s\S]*?)\\\]/g, (_m, latex) => simplifyLatex(latex))
     .replace(/\$\$([\s\S]*?)\$\$/g, (_m, latex) => simplifyLatex(latex))
     .replace(/\$([^$]+)\$/g, (_m, latex) => simplifyLatex(latex))
@@ -266,7 +266,7 @@ function processInlineText(
 
 // Flatten inline tokens to TextRun children
 function flattenInlineTokens(
-  tokens: any[] | undefined,
+  tokens: Token[] | undefined,
   bold = false,
   italic = false,
 ): (TextRun | ExternalHyperlink)[] {
@@ -281,12 +281,12 @@ function flattenInlineTokens(
         break;
       }
       case 'strong': {
-        const inner = t.tokens ?? [{ type: 'text', text: t.text }];
+        const inner = (t.tokens ?? [{ type: 'text', text: t.text }]) as unknown as Token[];
         runs.push(...flattenInlineTokens(inner, true, italic));
         break;
       }
       case 'em': {
-        const inner = t.tokens ?? [{ type: 'text', text: t.text }];
+        const inner = (t.tokens ?? [{ type: 'text', text: t.text }]) as unknown as Token[];
         runs.push(...flattenInlineTokens(inner, bold, true));
         break;
       }
@@ -335,12 +335,12 @@ function flattenInlineTokens(
         break;
       }
       case 'paragraph': {
-        const inner = t.tokens ?? [{ type: 'text', text: t.text }];
+        const inner = (t.tokens ?? [{ type: 'text', text: t.text }]) as unknown as Token[];
         runs.push(...flattenInlineTokens(inner, bold, italic));
         break;
       }
       case 'list_item': {
-        const inner = t.tokens ?? [{ type: 'text', text: t.text }];
+        const inner = (t.tokens ?? [{ type: 'text', text: t.text }]) as unknown as Token[];
         runs.push(...flattenInlineTokens(inner, bold, italic));
         break;
       }
@@ -371,7 +371,7 @@ export async function POST(req: NextRequest) {
     const citationText = new Map<string, string>();
 
     // Parse markdown into tokens
-    const tokens: any[] = Lexer.lex(rawContent);
+    const tokens: Token[] = Lexer.lex(rawContent);
     const children: (Paragraph | Table)[] = [];
 
     // Add title
@@ -510,7 +510,7 @@ export async function POST(req: NextRequest) {
           for (const item of tk.items || []) {
             const bulletText = isOrdered ? `${counter}.` : '•';
 
-            let inlineRuns: (TextRun | ExternalHyperlink)[] = [];
+            const inlineRuns: (TextRun | ExternalHyperlink)[] = [];
 
             if (item.tokens && item.tokens.length > 0) {
               for (const itemToken of item.tokens) {
@@ -566,7 +566,7 @@ export async function POST(req: NextRequest) {
           if (headers.length) {
             tableRows.push(
               new TableRow({
-                children: headers.map((cell: any, i: number) => {
+                children: headers.map((cell: unknown, i: number) => {
                   const cellText = typeof cell === 'string' ? cell : String(cell?.text ?? cell?.raw ?? '');
                   return new TableCell({
                     borders,
@@ -587,7 +587,7 @@ export async function POST(req: NextRequest) {
           for (const row of rows) {
             tableRows.push(
               new TableRow({
-                children: (row as any[]).map((cell: any, i: number) => {
+                children: (row as unknown[]).map((cell: unknown, i: number) => {
                   const cellTokens = cell?.tokens;
                   const inlineRuns = cellTokens
                     ? flattenInlineTokens(cellTokens)
@@ -779,8 +779,8 @@ export async function POST(req: NextRequest) {
         Pragma: 'no-cache',
       },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('DOCX export error:', e);
-    return NextResponse.json({ error: e?.message || 'Failed to generate DOCX' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to generate DOCX' }, { status: 500 });
   }
 }

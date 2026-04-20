@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import redis, { KEYS, TTL } from '@/lib/redis';
 import type { CategoryId, CatalogAuth } from '@/components/apps/catalog-data';
 
 function serializeCatalogItem(item: {
@@ -28,12 +29,31 @@ function serializeCatalogItem(item: {
 
 export async function GET() {
   try {
+    // Try cache first
+    try {
+      const cached = await redis.get(KEYS.mcpCatalog);
+      if (cached) {
+        return Response.json({ items: JSON.parse(cached) });
+      }
+    } catch {
+      // Redis error, continue to DB
+    }
+
     const items = await prisma.mcpCatalogItem.findMany({
       where: { isActive: true },
       orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }],
     });
 
-    return Response.json({ items: items.map(serializeCatalogItem) });
+    const serialized = items.map(serializeCatalogItem);
+
+    // Cache the result
+    try {
+      await redis.setex(KEYS.mcpCatalog, TTL.mcpCatalog, JSON.stringify(serialized));
+    } catch {
+      // Redis error, ignore
+    }
+
+    return Response.json({ items: serialized });
   } catch (error) {
     console.error('Failed to fetch catalog:', error);
     return NextResponse.json({ error: 'Failed to fetch catalog' }, { status: 500 });

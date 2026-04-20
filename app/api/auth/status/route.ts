@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
       authenticated: true,
       email: user.primaryEmail,
       seenOnboarding: dbUser?.seenOnboarding ?? false,
-      isActive: dbUser?.isActive ?? true,
     });
   } catch (error) {
     console.error("Auth status error:", error);

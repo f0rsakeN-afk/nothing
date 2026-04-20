@@ -17,6 +17,16 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get prisma user by stackId to get internal UUID
+    const prismaUser = await prisma.user.findUnique({
+      where: { stackId: user.id },
+      select: { id: true },
+    });
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const { id: messageId } = await params;
     const body = await request.json();
     const { reaction, chatId } = body as { reaction: "like" | "dislike"; chatId: string };
@@ -25,12 +35,12 @@ export async function POST(
       return NextResponse.json({ error: "Invalid reaction" }, { status: 400 });
     }
 
-    // Verify message belongs to user's chat
+    // Verify message belongs to user's chat (using prisma UUID)
     const message = await prisma.message.findFirst({
       where: {
         id: messageId,
         chat: {
-          userId: user.id,
+          userId: prismaUser.id,
         },
       },
       select: { id: true },
@@ -42,7 +52,7 @@ export async function POST(
 
     // Upsert feedback (toggle on/off)
     const existing = await prisma.messageFeedback.findFirst({
-      where: { messageId, userId: user.id },
+      where: { messageId, userId: prismaUser.id },
     });
 
     if (existing) {
@@ -63,13 +73,13 @@ export async function POST(
     }
 
     // Create new feedback
-    const newFeedback = await prisma.messageFeedback.create({
-      data: { messageId, chatId, userId: user.id, reaction },
+    const _newFeedback = await prisma.messageFeedback.create({
+      data: { messageId, chatId, userId: prismaUser.id, reaction },
     });
 
     // Update user preferences based on feedback
     try {
-      await updateUserPreferencesFromFeedback(user.id);
+      await updateUserPreferencesFromFeedback(prismaUser.id);
     } catch (e) {
       console.error("Failed to update preferences:", e);
     }

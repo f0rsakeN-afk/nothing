@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -71,13 +72,19 @@ async function updateSetting(key: string, value: boolean | string): Promise<Sett
   return res.json();
 }
 
-export function GeneralSection() {
+interface GeneralSectionProps {
+  settings?: Settings;
+}
+
+export function GeneralSection({ settings: propSettings }: GeneralSectionProps) {
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+    enabled: !propSettings,
+    staleTime: 30000,
   });
 
   const mutation = useMutation({
@@ -94,12 +101,34 @@ export function GeneralSection() {
     mutation.mutate({ key, value });
   }, [mutation]);
 
-  const displaySettings = localSettings || settings;
+  const displaySettings = localSettings || propSettings || settings;
 
-  if (isLoading || !displaySettings) {
+  if ((!propSettings && isLoading) || !displaySettings) {
     return (
       <div className="space-y-5">
-        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+        <div>
+          <Skeleton className="h-4 w-24 mb-1" />
+          <Skeleton className="h-3 w-40" />
+        </div>
+        <div>
+          <Skeleton className="h-3 w-28 mb-2" />
+          <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton className="h-3.5 w-36 mb-1" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton className="h-3.5 w-40 mb-1" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

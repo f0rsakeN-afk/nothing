@@ -105,6 +105,7 @@ export function useChatStream({ chatId, onNewMessage }: UseChatStreamOptions) {
     });
   }, [chatId, queryClient, onNewMessage]);
 
+  
   useEffect(() => {
     if (!chatId) return;
 

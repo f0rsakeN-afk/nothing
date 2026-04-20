@@ -399,7 +399,7 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
                 Remove File
               </DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove "{fileToDelete.name}" from this project?
+                Are you sure you want to remove &ldquo;{fileToDelete.name}&rdquo; from this project?
                 The file will be unlinked but not deleted. You can still access it from your Files page.
               </DialogDescription>
             </DialogHeader>

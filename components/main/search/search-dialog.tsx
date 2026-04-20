@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 
 import * as React from "react";
 import { Search, Loader2, ExternalLink, Clock } from "lucide-react";

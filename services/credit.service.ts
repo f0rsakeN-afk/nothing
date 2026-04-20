@@ -7,6 +7,7 @@
 import prisma from "@/lib/prisma";
 import { polarConfig } from "@/lib/polar-config";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
+import { invalidateAccountCache } from "@/services/account.service";
 import redis, { KEYS } from "@/lib/redis";
 import { publishCreditsUpdated } from "@/services/credit-pubsub.service";
 
@@ -90,6 +91,7 @@ export async function deductCredits(
 
     // Invalidate credits cache after deduction
     await invalidateUserCreditsCache(userId);
+    await invalidateAccountCache(userId);
 
     // Publish real-time update to subscribers (fire and forget)
     publishCreditsUpdated(userId, "deduction").catch((err) => {
@@ -151,6 +153,7 @@ export async function addCredits(
 
     // Invalidate credits cache after addition
     await invalidateUserCreditsCache(userId);
+    await invalidateAccountCache(userId);
 
     // Publish real-time update to subscribers (fire and forget)
     publishCreditsUpdated(userId, "purchase").catch((err) => {

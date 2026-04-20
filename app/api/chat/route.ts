@@ -905,7 +905,7 @@ async function saveAIResponse(
   chatId: string,
   userId: string,
   content: string
-): Promise<any> {
+): Promise<unknown> {
   if (!content || content.trim().length === 0) {
     return null;
   }

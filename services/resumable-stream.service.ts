@@ -190,11 +190,11 @@ export async function startResumableStream(
   const model = tools?.length ? aiConfig.modelWithTools : aiConfig.model;
 
   // Create the AI stream with proper error handling
-  let aiStream: Stream<any>;
+  let aiStream: Stream<unknown>;
   try {
     const chatOptions: Record<string, unknown> = {
       model,
-      messages: messages as any,
+      messages: messages as unknown,
       stream: true,
       temperature: aiConfig.temperature,
       max_tokens: aiConfig.maxTokens,
@@ -207,8 +207,8 @@ export async function startResumableStream(
     }
 
     aiStream = await groqBreaker.execute(() =>
-      groq.chat.completions.create(chatOptions as any)
-    ) as unknown as Stream<any>;
+      groq.chat.completions.create(chatOptions as unknown)
+    ) as unknown as Stream<unknown>;
   } catch (error) {
     cleanupStream(chatId);
     throw error;
@@ -315,8 +315,8 @@ export async function startResumableStream(
                 });
 
                 // Add tool result message
-                messages.push(...toolResultMessages as any);
-                messages.push({ role: "user", content: JSON.stringify(toolResultContent) } as any);
+                messages.push(...(toolResultMessages as unknown) as typeof messages[number]);
+                messages.push({ role: "user", content: JSON.stringify(toolResultContent) } as typeof messages[number]);
 
                 // Build a lookup for toolName by id
                 const toolNameById = new Map(allToolCalls.map(tc => [tc.id, tc.name]));
@@ -335,12 +335,12 @@ export async function startResumableStream(
                 const secondStream = await groqBreaker.execute(() =>
                   groq.chat.completions.create({
                     model: model2,
-                    messages: messages as any,
+                    messages: messages as unknown,
                     stream: true,
                     temperature: aiConfig.temperature,
                     max_tokens: aiConfig.maxTokens,
-                  } as any)
-                ) as unknown as Stream<any>;
+                  } as unknown)
+                ) as unknown as Stream<unknown>;
 
                 // Stream the second response
                 for await (const chunk2 of secondStream) {

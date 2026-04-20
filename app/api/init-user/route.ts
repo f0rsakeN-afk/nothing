@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (err) {
     // Unique constraint — another request already created it
-    if ((err as any)?.code === "P2002") {
+    if (err instanceof Error && (err as { code?: string }).code === "P2002") {
       // silently ignore, user already exists
     } else {
       throw err;

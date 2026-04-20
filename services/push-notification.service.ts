@@ -9,7 +9,7 @@
  * 4. Server can then send push notifications via sendPushNotification()
  */
 
-import webpush from "web-push";
+import webpush, { type PushSubscription } from "web-push";
 import prisma from "@/lib/prisma";
 
 // VAPID keys - generate with: npx web-push generate-vapid-keys
@@ -147,7 +147,7 @@ export async function sendPushNotification(
 
   const results = await Promise.allSettled(
     subscriptions.map((sub) =>
-      webpush.sendNotification(sub as any, payload).catch((err: unknown) => {
+      webpush.sendNotification(sub as PushSubscription, payload).catch((err: unknown) => {
         console.error("[Push] Failed to send:", err);
         return err;
       })

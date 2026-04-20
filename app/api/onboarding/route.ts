@@ -14,21 +14,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get prisma user by stackId to get internal UUID
+    const prismaUser = await prisma.user.findUnique({
+      where: { stackId: user.id },
+      select: { id: true },
+    });
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const { profession, source } = body;
 
     // Update user's seenOnboarding flag
     await prisma.user.update({
-      where: { stackId: user.id },
+      where: { id: prismaUser.id },
       data: { seenOnboarding: true },
     });
 
     // Store onboarding data
     try {
       await prisma.onboardingData.upsert({
-        where: { userId: user.id },
+        where: { userId: prismaUser.id },
         create: {
-          userId: user.id,
+          userId: prismaUser.id,
           profession: profession || "",
           source: source || "",
         },

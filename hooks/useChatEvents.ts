@@ -113,6 +113,7 @@ export function useChatEvents() {
     };
   }, [handleMessage]);
 
+  
   useEffect(() => {
     isUnmounted.current = false;
     connect();

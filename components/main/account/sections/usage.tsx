@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface AccountData {
@@ -9,6 +10,7 @@ interface AccountData {
     chats: number;
     projects: number;
     messages: number;
+    files: number;
   };
   monthlyUsage: {
     chats: number;
@@ -17,23 +19,50 @@ interface AccountData {
 }
 
 async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account");
+  const res = await fetch("/api/account", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch account");
   return res.json();
 }
 
-export const UsageSection = React.memo(function UsageSection() {
-  const { data, isLoading } = useQuery({
+interface UsageSectionProps {
+  accountData?: AccountData;
+}
+
+function UsageSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div>
+        <Skeleton className="h-4 w-20 mb-1" />
+        <Skeleton className="h-3 w-52" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-3 w-32 mb-1" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+export const UsageSection = React.memo(function UsageSection({
+  accountData,
+}: UsageSectionProps) {
+  const { data: localData, isLoading } = useQuery({
     queryKey: ["account"],
     queryFn: fetchAccount,
+    enabled: !accountData,
+    staleTime: 30000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-5">
-        <div className="h-32 rounded-lg bg-muted/20 animate-pulse" />
-      </div>
-    );
+  const data = accountData || localData;
+  const isFetching = !accountData && isLoading;
+
+  if (isFetching || !data) {
+    return <UsageSkeleton />;
   }
 
   const stats = [

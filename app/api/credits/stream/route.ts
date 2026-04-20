@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   // Create a readable stream for SSE
   const stream = new ReadableStream({
     start(controller) {
-      let encoder = new TextEncoder();
+      const encoder = new TextEncoder();
 
       // Send initial connection message
       const sendEvent = (data: unknown, event = "message") => {

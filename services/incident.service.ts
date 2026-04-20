@@ -126,7 +126,7 @@ export async function getRecentChecks(
  * Get detailed metrics with percentiles
  */
 export async function getDetailedMetrics(service: string, hours = 24) {
-  const checks = await getRecentChecks(service as any, hours);
+  const checks = await getRecentChecks(service, hours);
 
   const latencies = checks
     .filter((c) => c.latencyMs !== undefined && c.latencyMs > 0)
@@ -227,9 +227,9 @@ export async function getActiveIncidents(): Promise<Incident[]> {
       resolvedAt: i.resolvedAt?.toISOString(),
       message: i.message || undefined,
     }));
-  } catch (error: any) {
+  } catch (error) {
     // Table doesn't exist yet
-    if (error?.code === 'P2021') return [];
+    if (error instanceof Error && error?.code === 'P2021') return [];
     console.error("Failed to get active incidents:", error);
     return [];
   }

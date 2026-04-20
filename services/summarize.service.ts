@@ -136,7 +136,7 @@ export async function summarizeChat(chatId: string): Promise<boolean> {
 
   try {
     // Get existing summary to know where to start
-    let existingSummary = await prisma.chatSummary.findUnique({
+    const existingSummary = await prisma.chatSummary.findUnique({
       where: { chatId },
     });
 

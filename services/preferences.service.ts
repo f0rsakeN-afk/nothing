@@ -105,7 +105,7 @@ export async function updateUserPreferences(
       lastName: data.lastName || "",
       name: data.name || "",
       responseTone: data.responseTone || "balanced",
-      knowledgeDetail: (data.knowledgeDetail as any) || "BALANCED",
+      knowledgeDetail: (data.knowledgeDetail as string) || "BALANCED",
       interest: data.interest || [],
     },
     update: {
@@ -113,7 +113,7 @@ export async function updateUserPreferences(
       ...(data.lastName !== undefined && { lastName: data.lastName }),
       ...(data.name !== undefined && { name: data.name }),
       ...(data.responseTone !== undefined && { responseTone: data.responseTone }),
-      ...(data.knowledgeDetail !== undefined && { knowledgeDetail: data.knowledgeDetail as any }),
+      ...(data.knowledgeDetail !== undefined && { knowledgeDetail: data.knowledgeDetail as string }),
       ...(data.interest !== undefined && { interest: data.interest }),
     },
   });
