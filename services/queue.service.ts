@@ -239,7 +239,7 @@ export async function getQueueMetrics(): Promise<
     }
   >
 > {
-  const metrics: Record<string, unknown> = {};
+  const metrics: Record<string, { waiting: number; active: number; completed: number; failed: number; delayed: number }> = {};
 
   for (const name of queues.keys()) {
     const queue = getQueue(name);

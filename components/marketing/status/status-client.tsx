@@ -594,20 +594,21 @@ export function StatusContent() {
 
   const isDetailedFormat = data && "overall" in data;
 
-  const { status: overallStatus, components, sla, activeIncidents, circuitBreakers } = isDetailedFormat
-    ? (data as unknown).overall || {}
-    : {};
-  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as unknown) || {};
+  const overallData = isDetailedFormat ? (data as { overall?: { status?: string; components?: unknown; sla?: unknown; activeIncidents?: unknown; circuitBreakers?: unknown } }).overall || {} : {};
+
+  const { status: overallStatus, components, sla, activeIncidents, circuitBreakers } = overallData;
+  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as { status?: string; sla?: unknown }) || {};
   const actualStatus = overallStatus || dataStatus || "operational";
-  const actualSla = sla || dataSla || { uptimePercent: 100, totalIncidents: 0, mttrMinutes: 0, lastIncidentAt: null };
-  const safeActiveIncidents = activeIncidents || [];
+  const actualSla = (sla || dataSla || { uptimePercent: 100, totalIncidents: 0, mttrMinutes: 0, lastIncidentAt: null }) as { uptimePercent: number; totalIncidents: number; mttrMinutes: number; lastIncidentAt: string | null };
+  const safeActiveIncidents = (activeIncidents || []) as Array<{ id: string; title: string; status: string; severity?: string; affectedComponents?: string[]; startedAt?: string; message?: string; [key: string]: unknown }>;
 
   const dbData = rawData?.database || [];
   const redisData = rawData?.redis || [];
   const openaiData = rawData?.openai || [];
 
-  const coreComponents = (components || []).filter((c: Component) => c.category === "core");
-  const aiComponents = (components || []).filter((c: Component) => c.category === "ai");
+  const safeComponents = (components || []) as Array<{ id?: string; name?: string; status?: string; uptimePercent?: number; incidents?: number; category?: string; [key: string]: unknown }>;
+  const coreComponents = safeComponents.filter((c) => c.category === "core");
+  const aiComponents = safeComponents.filter((c) => c.category === "ai");
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -634,8 +635,8 @@ export function StatusContent() {
       {/* Active Incidents */}
       {safeActiveIncidents.length > 0 && (
         <div className="space-y-3">
-          {safeActiveIncidents.map((incident: { id: string; title: string; status: string; severity: string; affectedComponents: string[]; startedAt: string; message?: string }) => (
-            <IncidentBanner key={incident.id} incident={incident} />
+          {safeActiveIncidents.map((incident) => (
+            <IncidentBanner key={incident.id} incident={incident as { id: string; title: string; status: string; severity: string; affectedComponents: string[]; startedAt: string; message?: string }} />
           ))}
         </div>
       )}
@@ -647,8 +648,8 @@ export function StatusContent() {
       <div>
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Core Services</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {coreComponents.map((component: Component) => (
-            <ComponentCard key={component.id} component={component} />
+          {coreComponents.map((component) => (
+            <ComponentCard key={component.id || String(Math.random())} component={component as Component} />
           ))}
         </div>
       </div>
@@ -658,8 +659,8 @@ export function StatusContent() {
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">AI Services</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {aiComponents.map((component: Component) => (
-              <ComponentCard key={component.id} component={component} />
+            {aiComponents.map((component) => (
+              <ComponentCard key={component.id || String(Math.random())} component={component as Component} />
             ))}
           </div>
         </div>

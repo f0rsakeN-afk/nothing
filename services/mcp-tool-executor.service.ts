@@ -61,7 +61,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
  */
 type DataStreamWriter = (event: { type: string; data: unknown }) => void;
 
-interface ResolvedMcpClients {
+export interface ResolvedMcpClients {
   clients: MCPClient[];
   tools: Record<string, unknown>;
   closeAll: () => Promise<void>;
@@ -245,7 +245,7 @@ export async function executeMCPToolCall(
       return { id: toolCall.id, result: null, error: `Tool not found: ${toolCall.name}` };
     }
 
-    if (typeof (toolDef as ToolDefinition).execute !== "function") {
+    if (typeof (toolDef as unknown as { execute?: unknown }).execute !== "function") {
       return { id: toolCall.id, result: null, error: `Tool ${toolCall.name} is not executable` };
     }
 
@@ -310,12 +310,12 @@ export async function executeMCPToolCall(
       return { id: toolCall.id, result: null, error: `Tool not found: ${originalName}` };
     }
 
-    if (typeof (toolDef as ToolDefinition).execute !== "function") {
+    if (typeof (toolDef as unknown as { execute?: unknown }).execute !== "function") {
       return { id: toolCall.id, result: null, error: `Tool ${originalName} is not executable` };
     }
 
     const result = await withTimeout(
-      (toolDef as ToolDefinition).execute!(toolCall.arguments, {}),
+      (toolDef as unknown as { execute: (args: Record<string, unknown>, context: Record<string, unknown>) => Promise<unknown> }).execute(toolCall.arguments, {}),
       MCP_TOOL_CALL_TIMEOUT_MS,
       `Tool call timed out after ${MCP_TOOL_CALL_TIMEOUT_MS}ms`
     );

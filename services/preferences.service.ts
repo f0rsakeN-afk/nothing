@@ -5,6 +5,7 @@
 
 import prisma from "@/lib/prisma";
 import redis, { KEYS, TTL } from "@/lib/redis";
+import { KnowledgeDetail } from "@/src/generated/prisma/client";
 
 export interface UserPreferences {
   tone: string;
@@ -105,7 +106,7 @@ export async function updateUserPreferences(
       lastName: data.lastName || "",
       name: data.name || "",
       responseTone: data.responseTone || "balanced",
-      knowledgeDetail: (data.knowledgeDetail as string) || "BALANCED",
+      knowledgeDetail: (data.knowledgeDetail as KnowledgeDetail) || "BALANCED",
       interest: data.interest || [],
     },
     update: {
@@ -113,7 +114,7 @@ export async function updateUserPreferences(
       ...(data.lastName !== undefined && { lastName: data.lastName }),
       ...(data.name !== undefined && { name: data.name }),
       ...(data.responseTone !== undefined && { responseTone: data.responseTone }),
-      ...(data.knowledgeDetail !== undefined && { knowledgeDetail: data.knowledgeDetail as string }),
+      ...(data.knowledgeDetail !== undefined && { knowledgeDetail: data.knowledgeDetail as KnowledgeDetail }),
       ...(data.interest !== undefined && { interest: data.interest }),
     },
   });

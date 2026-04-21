@@ -229,7 +229,8 @@ export async function getActiveIncidents(): Promise<Incident[]> {
     }));
   } catch (error) {
     // Table doesn't exist yet
-    if (error instanceof Error && error?.code === 'P2021') return [];
+    const prismaError = error as { code?: string };
+    if (error instanceof Error && prismaError?.code === 'P2021') return [];
     console.error("Failed to get active incidents:", error);
     return [];
   }

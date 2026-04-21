@@ -358,13 +358,14 @@ export async function POST(req: NextRequest) {
     for (const tk of tokens) {
       switch (tk.type) {
         case 'heading': {
-          const depth = tk.depth ?? tk.level ?? 1;
+          const headingToken = tk as { depth?: number; text?: string; tokens?: Token[] };
+          const depth = headingToken.depth ?? 1;
           const size = depth === 1 ? headingFontSize : depth === 2 ? subheadingFontSize : fontSize;
           const font = depth <= 2 ? timesRomanBold : timesRoman;
 
           checkNewPage(size * 2);
 
-          const text = tk.text || '';
+          const text = headingToken.text || '';
           drawWrappedText(text, font, size, rgb(0.1, 0.1, 0.1), contentWidth, lineHeight);
           yPosition -= lineHeight * 0.5;
           break;

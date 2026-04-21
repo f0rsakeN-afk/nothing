@@ -182,10 +182,9 @@ export function formatMCPToolsForOpenAI(tools: MCPTool[]): Array<{
       // Filter out tools with invalid schemas
       const schema = tool.inputSchema;
       if (!schema) return false;
+      const schemaType = String(schema.type);
       // Must be object type
-      if (schema.type !== 'object') return false;
-      // Cannot have "None" type which some MCP servers return
-      if (schema.type === 'None' || schema.type === 'none') return false;
+      if (schemaType !== 'object') return false;
       // Properties must be an object if present
       if (schema.properties && typeof schema.properties !== 'object') return false;
       return true;

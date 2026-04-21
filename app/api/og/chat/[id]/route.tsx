@@ -2,8 +2,6 @@ import { ImageResponse } from 'next/og';
 import { getOrCreateUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-export const runtime = 'edge';
-
 const colors = {
   background: '#0a0a0f',
   foreground: '#ffffff',

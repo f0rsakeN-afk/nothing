@@ -52,7 +52,7 @@ export function waitForElicitation(elicitationId: string): Promise<ElicitResult>
 
     const pollRedis = async () => {
       try {
-        const persisted = await redis.get<string>(responseKey);
+        const persisted = await redis.get(responseKey) as string | null;
         if (!persisted) return;
         const result = JSON.parse(persisted) as ElicitResult;
         await redis.del(responseKey);

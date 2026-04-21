@@ -9,7 +9,7 @@
  * 4. Server can then send push notifications via sendPushNotification()
  */
 
-import webpush, { type PushSubscription } from "web-push";
+import webpush, { type PushSubscription as WebPushSubscription } from "web-push";
 import prisma from "@/lib/prisma";
 
 // VAPID keys - generate with: npx web-push generate-vapid-keys

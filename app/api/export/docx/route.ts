@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Lexer } from 'marked';
+import { Lexer, type Token } from 'marked';
 import {
   Document,
   Packer,
@@ -345,7 +345,7 @@ function flattenInlineTokens(
         break;
       }
       default: {
-        const txt = String(t.text ?? t.raw ?? '').replace(/\r?\n/g, ' ');
+        const txt = String('text' in t ? t.text : 'raw' in t ? t.raw : '').replace(/\r?\n/g, ' ');
         if (txt) runs.push(...processInlineText(txt, bold, italic));
         break;
       }
@@ -411,7 +411,8 @@ export async function POST(req: NextRequest) {
     for (const tk of tokens) {
       switch (tk.type) {
         case 'heading': {
-          const depth = tk.depth ?? tk.level ?? 1;
+          const headingToken = tk as { depth?: number; text?: string; tokens?: Token[] };
+          const depth = headingToken.depth ?? 1;
           const headingLevels: Record<number, typeof HeadingLevel[keyof typeof HeadingLevel]> = {
             1: HeadingLevel.HEADING_1,
             2: HeadingLevel.HEADING_2,
@@ -422,9 +423,9 @@ export async function POST(req: NextRequest) {
           };
           const level = headingLevels[Math.max(1, Math.min(6, depth))] || HeadingLevel.HEADING_1;
 
-          const inlineRuns = tk.tokens
-            ? flattenInlineTokens(tk.tokens, true)
-            : [new TextRun({ text: tk.text || '', bold: true })];
+          const inlineRuns = headingToken.tokens
+            ? flattenInlineTokens(headingToken.tokens, true)
+            : [new TextRun({ text: headingToken.text || '', bold: true })];
 
           children.push(
             new Paragraph({
@@ -567,7 +568,7 @@ export async function POST(req: NextRequest) {
             tableRows.push(
               new TableRow({
                 children: headers.map((cell: unknown, i: number) => {
-                  const cellText = typeof cell === 'string' ? cell : String(cell?.text ?? cell?.raw ?? '');
+                  const cellText = typeof cell === 'string' ? cell : String((cell as { text?: string; raw?: string })?.text ?? (cell as { raw?: string })?.raw ?? '');
                   return new TableCell({
                     borders,
                     width: { size: columnWidths[i], type: WidthType.DXA },
@@ -588,10 +589,11 @@ export async function POST(req: NextRequest) {
             tableRows.push(
               new TableRow({
                 children: (row as unknown[]).map((cell: unknown, i: number) => {
-                  const cellTokens = cell?.tokens;
+                  const cellData = cell as { tokens?: Token[]; text?: string; raw?: string };
+                  const cellTokens = cellData?.tokens;
                   const inlineRuns = cellTokens
                     ? flattenInlineTokens(cellTokens)
-                    : processInlineText(typeof cell === 'string' ? cell : String(cell?.text ?? cell?.raw ?? ''));
+                    : processInlineText(typeof cell === 'string' ? cell : String(cellData?.text ?? cellData?.raw ?? ''));
 
                   return new TableCell({
                     borders,

@@ -267,11 +267,12 @@ export function useChatMessages({
                           const toolResults = m.toolResults || [];
                           return {
                             ...m,
-                            toolResults: toolResults.map((r: unknown) =>
-                              r.toolCallId === toolCallId
-                                ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
-                                : r
-                            ),
+                            toolResults: toolResults.map((r) => {
+                              const result = r as { toolCallId?: string; status?: string; result?: unknown; error?: string };
+                              return result.toolCallId === toolCallId
+                                ? { ...result, status: error ? ("error" as const) : ("completed" as const), result, error }
+                                : result;
+                            }),
                           };
                         }),
                       })),
@@ -456,11 +457,12 @@ export function useChatMessages({
                           const toolResults = m.toolResults || [];
                           return {
                             ...m,
-                            toolResults: toolResults.map((r: unknown) =>
-                              r.toolCallId === toolCallId
-                                ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
-                                : r
-                            ),
+                            toolResults: toolResults.map((r) => {
+                              const result = r as { toolCallId?: string; status?: string; result?: unknown; error?: string };
+                              return result.toolCallId === toolCallId
+                                ? { ...result, status: error ? ("error" as const) : ("completed" as const), result, error }
+                                : result;
+                            }),
                           };
                         }),
                       })),
@@ -660,11 +662,12 @@ export function useChatMessages({
                           const toolResults = m.toolResults || [];
                           return {
                             ...m,
-                            toolResults: toolResults.map((r: unknown) =>
-                              r.toolCallId === toolCallId
-                                ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
-                                : r
-                            ),
+                            toolResults: toolResults.map((r) => {
+                              const result = r as { toolCallId?: string; status?: string; result?: unknown; error?: string };
+                              return result.toolCallId === toolCallId
+                                ? { ...result, status: error ? ("error" as const) : ("completed" as const), result, error }
+                                : result;
+                            }),
                           };
                         }),
                       })),
