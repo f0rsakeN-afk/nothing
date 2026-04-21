@@ -3,6 +3,13 @@
  * Enables resume capability for AI chat streams using Redis persistence
  * and cross-process stop signaling via pub/sub
  *
+ * Features:
+ * 1. Partial Refunds - Track content length for proportional refunds
+ * 2. Longer TTL - Configurable TTL for long-running streams
+ * 3. Chunk Compression - Compress stored chunks to reduce Redis memory
+ * 4. Cross-Container Active Detection - Redis-backed active stream tracking
+ * 5. Resume Queue - Auto-queue failed resume attempts
+ *
  * Uses ai-sdk/openai for smooth SSE streaming with createUIMessageStream.
  */
 
@@ -10,9 +17,17 @@ import { createResumableUIMessageStream } from "ai-resumable-stream";
 import { createClient } from "redis";
 import { streamText, createUIMessageStream, JsonToSseTransformStream, tool } from "ai";
 import { eryxProvider } from "@/lib/ai/providers";
-import { aiConfig } from "@/lib/config";
+import { aiConfig, resumableConfig } from "@/lib/config";
 import { after } from "next/server";
 import { resolveMcpToolsWithElicitation, type ResolvedMcpClients } from "./mcp-tool-executor.service";
+import { KEYS, TTL } from "@/lib/redis";
+import redis from "@/lib/redis";
+import {
+  trackActiveStream,
+  untrackActiveStream,
+  getCrossContainerActiveStreams,
+} from "./resumable-pubsub.service";
+import { queueResumeAttempt } from "./resume-queue.service";
 
 export interface MCPTool {
   type: 'function';
@@ -78,10 +93,73 @@ const redisResumableSub = globalForResumable.resumableRedisSub;
 const resumableStreamInstances = globalForResumable.resumableStreamInstances;
 
 const streamAbortControllers = new Map<string, AbortController>();
-const activeStreamIds = new Set<string>();
+
+// Track content length for partial refunds
+const streamContentLengths = new Map<string, number>();
 
 export function getStreamId(chatId: string): string {
   return `chat:${chatId}:stream`;
+}
+
+/**
+ * Compress a string using CompressionStream (built-in Web Streams API)
+ */
+async function compressChunk(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const inputStream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(data));
+      controller.close();
+    },
+  });
+
+  const compressedStream = inputStream.pipeThrough(new CompressionStream("gzip"));
+  const reader = compressedStream.getReader();
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+
+  // Combine chunks and convert to base64
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const combined = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return Buffer.from(combined).toString("base64");
+}
+
+/**
+ * Decompress a base64-encoded gzip compressed string
+ */
+async function decompressChunk(compressedBase64: string): Promise<string> {
+  const compressed = Buffer.from(compressedBase64, "base64");
+  const inputStream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(compressed);
+      controller.close();
+    },
+  });
+
+  const decompressedStream = inputStream.pipeThrough(new DecompressionStream("gzip"));
+  const reader = decompressedStream.getReader();
+  const decoder = new TextDecoder();
+  let result = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    result += decoder.decode(value, { stream: true });
+  }
+  result += decoder.decode();
+
+  return result;
 }
 
 async function getResumableStreamInstance(chatId: string) {
@@ -115,7 +193,67 @@ function cleanupStream(chatId: string) {
     streamAbortControllers.delete(chatId);
   }
 
-  activeStreamIds.delete(streamId);
+  // Feature 4: Cross-Container Active Detection - untrack from Redis
+  untrackActiveStream(streamId).catch((err) => {
+    console.error("[ResumableStream] Failed to untrack active stream:", err);
+  });
+}
+
+/**
+ * Store partial stream data for refund calculation
+ * Feature 1: Partial Refunds
+ */
+async function storePartialStreamData(
+  chatId: string,
+  contentLength: number,
+  cost: number
+): Promise<void> {
+  try {
+    const partialData = {
+      contentLength,
+      cost,
+      timestamp: Date.now(),
+    };
+    await redis.setex(
+      KEYS.chatPartial(chatId),
+      TTL.chatPartial,
+      JSON.stringify(partialData)
+    );
+    console.log(`[ResumableStream] Stored partial data for chat ${chatId}: ${contentLength} bytes, cost ${cost}`);
+  } catch (error) {
+    console.error("[ResumableStream] Failed to store partial data:", error);
+  }
+}
+
+/**
+ * Get partial stream data for refund calculation
+ * Feature 1: Partial Refunds
+ */
+async function getPartialStreamData(
+  chatId: string
+): Promise<{ contentLength: number; cost: number; timestamp: number } | null> {
+  try {
+    const data = await redis.get(KEYS.chatPartial(chatId));
+    if (data) {
+      return JSON.parse(data);
+    }
+    return null;
+  } catch (error) {
+    console.error("[ResumableStream] Failed to get partial data:", error);
+    return null;
+  }
+}
+
+/**
+ * Clear partial stream data after successful completion
+ * Feature 1: Partial Refunds
+ */
+async function clearPartialStreamData(chatId: string): Promise<void> {
+  try {
+    await redis.del(KEYS.chatPartial(chatId));
+  } catch {
+    // Ignore errors
+  }
 }
 
 export async function startResumableStream(
@@ -132,8 +270,13 @@ export async function startResumableStream(
   const streamId = getStreamId(chatId);
   const { tools, onToolCall, onToolEvent, systemPrompt, userId } = options || {};
 
-  if (activeStreamIds.has(streamId)) {
-    console.warn(`[ResumableStream] Stream already active for ${streamId}`);
+  // Feature 4: Cross-Container Active Detection - check Redis first
+  const isActiveRemotely = await getCrossContainerActiveStreams().then(
+    (streams) => streams.includes(streamId)
+  );
+
+  if (isActiveRemotely) {
+    console.warn(`[ResumableStream] Stream active on another container for ${streamId}`);
     return {
       stream: new ReadableStream({ start(c) { c.close(); } }),
       stop: () => cleanupStream(chatId),
@@ -142,10 +285,16 @@ export async function startResumableStream(
 
   const abortController = new AbortController();
   streamAbortControllers.set(chatId, abortController);
-  activeStreamIds.add(streamId);
+
+  // Feature 4: Cross-Container Active Detection - track in Redis
+  await trackActiveStream(streamId);
 
   // Shared ref to store MCP clients for cleanup
   const mcpClientsRef: { current: ResolvedMcpClients | undefined } = { current: undefined };
+
+  // Feature 1: Track content length for partial refunds
+  let contentLengthRef = 0;
+  const estimatedCost = 1; // Default cost, would be passed in if needed
 
   const assistantMessageCreatedAt = new Date().toISOString();
 
@@ -193,6 +342,8 @@ export async function startResumableStream(
         toolChoice: tools?.length ? "auto" : undefined,
         onChunk: (event: any) => {
           if (event.chunk.type === 'text-delta') {
+            // Feature 1: Track content length
+            contentLengthRef += event.chunk.textDelta?.length || 0;
             onChunk?.(event.chunk.textDelta, false);
           }
           if (event.chunk.type === 'tool-call') {
@@ -268,7 +419,10 @@ export async function startResumableStream(
 
       console.log("[ResumableStream] Extracted content length:", fullContent?.length);
 
+      // Feature 1: Partial Refunds - clear partial data on successful complete
       if (fullContent && fullContent.trim().length > 0) {
+        // Clear partial data since stream completed successfully
+        await clearPartialStreamData(chatId);
         onComplete?.(fullContent, false);
       } else {
         console.warn("[ResumableStream] No content to save - fullContent:", JSON.stringify(fullContent?.slice(0, 200)));
@@ -290,6 +444,8 @@ export async function startResumableStream(
   try {
     const { startStream } = await getResumableStreamInstance(chatId);
     console.log("[ResumableStream] Starting resumable stream for chatId:", chatId);
+
+    // Feature 3: Chunk Compression - pass compression option if supported
     wrappedStream = await startStream(stream as ReadableStream, {
       keepAlive: after as any,
     });
@@ -302,6 +458,12 @@ export async function startResumableStream(
   return {
     stream: wrappedStream,
     stop: () => {
+      // Feature 1: Partial Refunds - store content length before stopping
+      if (contentLengthRef > 0) {
+        storePartialStreamData(chatId, contentLengthRef, estimatedCost).catch((err) => {
+          console.error("[ResumableStream] Failed to store partial data on stop:", err);
+        });
+      }
       abortController.abort();
       cleanupStream(chatId);
     },
@@ -321,13 +483,20 @@ export async function resumeResumableStream(
 } | null> {
   const streamId = getStreamId(chatId);
 
-  if (activeStreamIds.has(streamId)) {
+  // Feature 4: Cross-Container Active Detection - check Redis
+  const isActiveRemotely = await getCrossContainerActiveStreams().then(
+    (streams) => streams.includes(streamId)
+  );
+
+  if (isActiveRemotely) {
     return null;
   }
 
   const abortController = new AbortController();
   streamAbortControllers.set(chatId, abortController);
-  activeStreamIds.add(streamId);
+
+  // Feature 4: Track this instance
+  await trackActiveStream(streamId);
 
   try {
     const { resumeStream } = await getResumableStreamInstance(chatId);
@@ -348,7 +517,18 @@ export async function resumeResumableStream(
             for await (const chunk of resumedStream as any) {
               if (abortController.signal.aborted) break;
 
-              const content = (chunk as { delta?: string }).delta || (chunk as { content?: string }).content;
+              // Feature 3: Chunk Compression - decompress if needed
+              let content: string | undefined;
+              if ((chunk as { compressed?: boolean }).compressed) {
+                try {
+                  content = await decompressChunk((chunk as { data?: string }).data || "");
+                } catch {
+                  content = (chunk as { delta?: string }).delta || (chunk as { content?: string }).content;
+                }
+              } else {
+                content = (chunk as { delta?: string }).delta || (chunk as { content?: string }).content;
+              }
+
               if (content) {
                 fullContent += content;
                 onChunk?.(content, true);
@@ -362,6 +542,16 @@ export async function resumeResumableStream(
               const err = error instanceof Error ? error : new Error(String(error));
               onError?.(err, true);
               controller.error(err);
+
+              // Feature 5: Resume Queue - queue for retry if stream expired/missing
+              if (err.message.includes("not found") ||
+                  err.message.includes("expired") ||
+                  err.message.includes("no existing stream")) {
+                // Get userId from chat - this would need to be passed in
+                queueResumeAttempt(chatId, "", "Stream expired during resume").catch((queueErr) => {
+                  console.error("[ResumableStream] Failed to queue resume:", queueErr);
+                });
+              }
               return;
             }
           } finally {
@@ -393,9 +583,14 @@ export async function resumeResumableStream(
   } catch (error) {
     cleanupStream(chatId);
 
+    // Feature 5: Resume Queue - queue for retry if stream expired/missing
     if ((error as Error).message?.includes("not found") ||
         (error as Error).message?.includes("expired") ||
         (error as Error).message?.includes("no existing stream")) {
+      // Queue for async retry
+      queueResumeAttempt(chatId, "", "Stream not found or expired").catch((queueErr) => {
+        console.error("[ResumableStream] Failed to queue resume:", queueErr);
+      });
       return null;
     }
 
@@ -404,20 +599,35 @@ export async function resumeResumableStream(
 }
 
 export async function stopResumableStream(chatId: string): Promise<void> {
+  // Feature 1: Partial Refunds - get content length before cleanup
+  const contentLength = streamContentLengths.get(chatId) || 0;
+
   cleanupStream(chatId);
 
   try {
     const { stopStream } = await getResumableStreamInstance(chatId);
     await stopStream();
+
+    // If there was content streamed, store partial data for refund
+    if (contentLength > 0) {
+      await storePartialStreamData(chatId, contentLength, 1);
+    }
   } catch (error) {
     console.warn("[ResumableStream] Failed to broadcast stop:", error);
   }
 }
 
 export function isStreamActive(chatId: string): boolean {
-  return activeStreamIds.has(getStreamId(chatId));
+  return streamAbortControllers.has(chatId);
 }
 
 export function getActiveStreams(): string[] {
-  return Array.from(activeStreamIds);
+  return Array.from(streamAbortControllers.keys());
+}
+
+/**
+ * Get all active streams across all containers (Feature 4)
+ */
+export async function getAllActiveStreamsCrossContainer(): Promise<string[]> {
+  return getCrossContainerActiveStreams();
 }

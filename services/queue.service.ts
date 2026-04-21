@@ -33,6 +33,7 @@ export const QUEUE_NAMES = {
   SUMMARIZATION: "summarization",
   FILE_PROCESSING: "file-processing",
   EMAIL: "email",
+  RESUME: "resume",
 } as const;
 
 // Queue instances (singleton)
@@ -207,6 +208,8 @@ function getConcurrency(queueName: string): number {
       return 3; // File processing is moderate
     case QUEUE_NAMES.EMAIL:
       return 5; // Email sending is fast
+    case QUEUE_NAMES.RESUME:
+      return 3; // Resume attempts are moderate priority
     default:
       return 3;
   }

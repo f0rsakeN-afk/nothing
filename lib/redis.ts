@@ -75,6 +75,10 @@ export const KEYS = {
   chatSummary: (chatId: string) => `chat:${chatId}:summary`,
   summarizing: (chatId: string) => `chat:${chatId}:summarizing`,
   mcpCatalog: "mcp:catalog",
+  chatPartial: (chatId: string) => `chat:${chatId}:partial`,
+  activeStreams: () => "active:streams",
+  resumeReady: (chatId: string) => `resume:${chatId}:ready`,
+  streamVersion: (chatId: string) => `chat:${chatId}:stream:version`,
 } as const;
 
 // TTL constants (in seconds)
@@ -100,6 +104,10 @@ export const TTL = {
   searchResults: 60 * 60, // 1 hour for web search results
   chatSummary: 7 * 24 * 60 * 60, // 7 days for chat summaries
   mcpCatalog: 10 * 60, // 10 minutes for MCP catalog (rarely changes)
+  chatPartial: 24 * 60 * 60, // 24 hours for partial stream data
+  activeStreams: 60, // 1 minute for active stream tracking (short, refreshed frequently)
+  resumeReady: 5 * 60, // 5 minutes for resume ready signal
+  streamVersion: 24 * 60 * 60, // 24 hours for stream version tracking
 } as const;
 
 // Pub/Sub channel helpers
@@ -109,4 +117,5 @@ export const CHANNELS = {
   status: () => "status:updates",
   notifications: (userId: string) => `notifications:${userId}`,
   credits: (userId: string) => `credits:${userId}`,
+  chatResumeReady: (chatId: string) => `chat:resume:${chatId}`,
 } as const;

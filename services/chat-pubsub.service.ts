@@ -55,13 +55,19 @@ export interface SidebarUpdateEvent {
   action: "refresh";
 }
 
+export interface ChatResumeReadyEvent {
+  type: "chat:resume:ready";
+  chatId: string;
+}
+
 export type ChatEvent =
   | ChatMessageEvent
   | ChatRenamedEvent
   | ChatArchivedEvent
   | ChatDeletedEvent
   | ChatCreatedEvent
-  | SidebarUpdateEvent;
+  | SidebarUpdateEvent
+  | ChatResumeReadyEvent;
 
 /**
  * Publish event to a chat channel
@@ -188,4 +194,23 @@ export async function publishSidebarRefresh(userId: string): Promise<void> {
   };
 
   await publishToSidebar(userId, event);
+}
+
+/**
+ * Notify that a resume is ready for a chat (after async retry)
+ */
+export async function publishChatResumeReady(
+  chatId: string,
+  userId: string
+): Promise<void> {
+  const event: ChatResumeReadyEvent = {
+    type: "chat:resume:ready",
+    chatId,
+  };
+
+  // Publish to both the chat channel and sidebar
+  await Promise.all([
+    publishToChat(chatId, event),
+    publishToSidebar(userId, event),
+  ]);
 }

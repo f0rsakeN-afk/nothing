@@ -199,6 +199,35 @@ export async function checkCreditsForOperation(
   return balance >= cost;
 }
 
+/**
+ * Refund credits proportionally based on how much content was streamed
+ * Used when a stream is stopped early and resumed later
+ */
+export async function refundProportional(
+  userId: string,
+  streamedBytes: number,
+  totalBytes: number,
+  operation: CreditOperation
+): Promise<CreditResult> {
+  if (BYPASS_CREDITS) {
+    return { success: true, remainingCredits: 999999 };
+  }
+
+  if (streamedBytes <= 0 || totalBytes <= 0) {
+    return { success: true, remainingCredits: await getUserCredits(userId) };
+  }
+
+  const cost = polarConfig.creditCosts[operation] ?? 1;
+  // Proportional refund: (1 - streamed/total) * cost
+  const refundAmount = Math.max(0, Math.round((1 - streamedBytes / totalBytes) * cost));
+
+  if (refundAmount === 0) {
+    return { success: true, remainingCredits: await getUserCredits(userId) };
+  }
+
+  return addCredits(userId, refundAmount);
+}
+
 export async function getUserSubscription(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

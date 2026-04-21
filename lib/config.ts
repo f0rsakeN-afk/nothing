@@ -29,4 +29,15 @@ export const aiConfig = {
   minRecentTokens: parseIntOrDefault(process.env.MIN_RECENT_TOKENS, 1500),
 } as const;
 
+// Resumable stream configuration
+export const resumableConfig = {
+  // TTL for stored stream data (in seconds)
+  // Default: 1 hour, max: 24 hours for long-running streams
+  streamTTL: parseIntOrDefault(process.env.RESUMABLE_STREAM_TTL_SECONDS, 3600),
+  maxStreamTTL: 86400, // 24 hours absolute max
+  get effectiveStreamTTL() {
+    return Math.min(this.streamTTL, this.maxStreamTTL);
+  },
+} as const;
+
 export type AIConfig = typeof aiConfig;
