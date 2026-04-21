@@ -35,6 +35,7 @@ export function ChatInput({
   onStyleChange,
   currentModel,
   onModelChange,
+  suggestionsEnabled = true,
 }: ChatInputProps & {
   style?: ResponseStyle;
 }) {
@@ -63,7 +64,7 @@ export function ChatInput({
     handleSelect: handleSelectFromHook,
     recentSearches,
     clearRecentSearches,
-  } = useChatSuggestions({ input: value, onSelect: handleSuggestionSelect });
+  } = useChatSuggestions({ input: value, onSelect: handleSuggestionSelect, enabled: suggestionsEnabled });
 
   const { playSelect } = useSound();
 

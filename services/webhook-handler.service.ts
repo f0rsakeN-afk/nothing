@@ -10,10 +10,13 @@ import { SubscriptionStatus } from "@/src/generated/prisma/client";
 import prisma from "@/lib/prisma";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
 import { invalidateUserCreditsCache } from "@/services/credit.service";
+import { invalidateAccountCache } from "@/services/account.service";
 import { publishCreditsUpdated } from "@/services/credit-pubsub.service";
 import { queueEmail } from "@/services/queue.service";
 import { logger } from "@/lib/logger";
 import { invalidateSubscriptionCache } from "@/lib/subscription-cache";
+import { invalidateUserSettingsCache } from "@/services/settings.service";
+import { invalidateUserPreferencesCache } from "@/services/preferences.service";
 
 /**
  * Map Polar subscription status to our enum
@@ -121,6 +124,7 @@ async function handleOrderPaid(payload: Record<string, unknown>): Promise<void> 
   // Invalidate caches
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+  await invalidateAccountCache(userId);
 
   // Publish real-time update to subscribers
   publishCreditsUpdated(userId, "purchase").catch((err) => {
@@ -225,6 +229,7 @@ async function handleSubscriptionCreated(payload: Record<string, unknown>): Prom
   // Invalidate caches
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+  await invalidateAccountCache(userId);
   await invalidateSubscriptionCache(userId);
 
   // Send subscription-activated email
@@ -290,6 +295,7 @@ async function handleSubscriptionUpdated(payload: Record<string, unknown>): Prom
   // Invalidate caches
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
+  await invalidateAccountCache(userId);
   await invalidateSubscriptionCache(userId);
 
   logger.info(`[WebhookHandler] Subscription updated for user ${userId}`);
@@ -329,6 +335,7 @@ async function handleSubscriptionCanceled(payload: Record<string, unknown>): Pro
   await invalidateUserCreditsCache(userId);
   await invalidateUserLimitsCache(userId);
   await invalidateSubscriptionCache(userId);
+  await invalidateAccountCache(userId);
 
   // Send subscription-canceled email
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -374,6 +381,7 @@ async function handleBenefitGrantCycled(payload: Record<string, unknown>): Promi
   });
 
   await invalidateUserCreditsCache(userId);
+  await invalidateAccountCache(userId);
 
   // Publish real-time update to subscribers
   publishCreditsUpdated(userId, "subscription_cycle").catch((err) => {

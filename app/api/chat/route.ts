@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { JsonToSseTransformStream } from "ai";
 import prisma from "@/lib/prisma";
 import redis, { KEYS } from "@/lib/redis";
 import { buildSystemPrompt, type PromptConfig, type ResponseStyle } from "@/lib/prompts";
@@ -18,7 +19,7 @@ import {
   getStreamId,
   isStreamActive,
 } from "@/services/resumable-stream.service";
-import { getMCPToolsForChat, formatMCPToolsForGroq } from "@/services/mcp-tools.service";
+import { getMCPToolsForChat, formatMCPToolsForOpenAI } from "@/services/mcp-tools.service";
 import { executeMCPToolCalls } from "@/services/mcp-tool-executor.service";
 import { buildProjectContext, buildProjectContextSection, getProjectFilesForContext } from "@/services/project-context.service";
 import { retrieveContext, formatContextForPrompt } from "@/services/rag.service";
@@ -583,7 +584,7 @@ export async function POST(req: NextRequest) {
     }> = [];
     try {
       const rawTools = await getMCPToolsForChat(user.id);
-      mcpTools = formatMCPToolsForGroq(rawTools);
+      mcpTools = formatMCPToolsForOpenAI(rawTools);
     } catch (mcpError) {
       console.error("[Chat] Failed to load MCP tools:", mcpError);
       // Continue without MCP tools - graceful degradation
@@ -676,14 +677,14 @@ export async function POST(req: NextRequest) {
             console.log(`[Chat] Stream was superseded (user sent new message), not saving`);
             return;
           }
+          console.log(`[Chat] Stream complete, saving AI response of length:`, content?.length);
           // This is the final, active stream - save to DB
-          saveAIResponse(chatId, user.id, content).catch(console.error);
+          saveAIResponse(chatId, user.id, content)
+            .then((result) => console.log(`[Chat] saveAIResponse result:`, result))
+            .catch((err) => console.error(`[Chat] saveAIResponse error:`, err));
         },
         (error, isResume) => {
-          // onError - log but don't save partial content on error
           console.error("[Chat] Stream error:", error);
-          // On error, we might want to refund credits if no useful content was generated
-          // But this is complex - for now we don't refund on error
         }
       );
 
@@ -717,107 +718,9 @@ export async function POST(req: NextRequest) {
 
     const streamId = getStreamId(chatId);
 
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          // Web mode: emit step events
-          if (mode === "web") {
-            emitEvent(controller, {
-              type: "step",
-              step: "search",
-              status: "start",
-              message: "Searching the web...",
-            });
-
-            // Wait for search to complete (with max 10s timeout)
-            const timeoutPromise = new Promise<void>((resolve) =>
-              setTimeout(() => resolve(), 10000)
-            );
-
-            await Promise.race([searchPromise, timeoutPromise]);
-
-            // Wait additional 500ms after race to ensure searchPromise has set results
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            if (searchResults.length > 0) {
-              emitEvent(controller, {
-                type: "step",
-                step: "search",
-                status: "complete",
-                message: `Found ${searchResults.length} sources`,
-                results: searchResults,
-              });
-            } else {
-              emitEvent(controller, {
-                type: "step",
-                step: "search",
-                status: "skipped",
-                message: "No search results",
-              });
-            }
-          }
-
-          // Emit AI start event
-          emitEvent(controller, {
-            type: "step",
-            step: "ai",
-            status: "start",
-            message: "Generating response...",
-          });
-
-          // Read from resumable stream and forward to SSE
-          const reader = resumableStream!.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            const text = decoder.decode(value, { stream: true });
-            const lines = text.split("\n").filter((line) => line.startsWith("data: "));
-
-            for (const line of lines) {
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                // Forward tool events directly
-                if (parsed.type === 'tool_call' || parsed.type === 'tool_result') {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`)
-                  );
-                  continue;
-                }
-                const delta = parsed.content || parsed.choices?.[0]?.delta?.content;
-                if (delta) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`)
-                  );
-                }
-              } catch {
-                // Skip malformed JSON
-              }
-            }
-          }
-        } catch (streamError) {
-          console.error("[chat] Stream error:", streamError);
-        } finally {
-          // Emit completion
-          emitEvent(controller, {
-            type: "step",
-            step: "ai",
-            status: "complete",
-            message: "Response complete",
-          });
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-          stopFn?.();
-        }
-      },
-    });
-
-    return new Response(readable, {
+    // Return the stream directly - JsonToSseTransformStream handles the SSE framing
+    // This works like scira - stream completes even if client disconnects
+    return new Response(resumableStream!.pipeThrough(new JsonToSseTransformStream()), {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -905,8 +808,10 @@ async function saveAIResponse(
   chatId: string,
   userId: string,
   content: string
-): Promise<any> {
+): Promise<unknown> {
+  console.log(`[saveAIResponse] Called with chatId=${chatId}, content length=${content?.length}`);
   if (!content || content.trim().length === 0) {
+    console.log(`[saveAIResponse] Empty content, skipping save`);
     return null;
   }
 

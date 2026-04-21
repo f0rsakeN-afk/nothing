@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sileo-toast";
 
 interface AccountData {
@@ -19,9 +20,20 @@ interface AccountData {
     };
     features: string[];
   };
+  subscription: {
+    active: boolean;
+    status?: string;
+    periodEnd?: string;
+    cancelAtPeriodEnd?: boolean;
+  };
   usage: {
     chats: number;
     projects: number;
+    messages: number;
+    files: number;
+  };
+  monthlyUsage: {
+    chats: number;
     messages: number;
   };
 }
@@ -43,17 +55,48 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account");
+  const res = await fetch("/api/account", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch account");
   return res.json();
 }
 
-export const PlanSection = React.memo(function PlanSection() {
+interface PlanSectionProps {
+  accountData?: AccountData;
+}
+
+function PlanSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div>
+        <Skeleton className="h-4 w-16 mb-1" />
+        <Skeleton className="h-3 w-40" />
+      </div>
+      <Skeleton className="h-20 w-full rounded-xl" />
+      <div className="space-y-1.5">
+        <Skeleton className="h-3 w-20 mb-1" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-3 w-28 mb-1" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+export const PlanSection = React.memo(function PlanSection({
+  accountData,
+}: PlanSectionProps) {
   const router = useRouter();
-  const { data, isLoading } = useQuery({
+  const { data: localData, isLoading } = useQuery({
     queryKey: ["account"],
     queryFn: fetchAccount,
+    enabled: !accountData,
+    staleTime: 30000,
   });
+
+  const data = accountData || localData;
+  const isFetching = !accountData && isLoading;
 
   const checkoutMutation = useMutation({
     mutationFn: async (planId: string) => {
@@ -68,9 +111,9 @@ export const PlanSection = React.memo(function PlanSection() {
       }
       return res.json();
     },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
+    onSuccess: (result) => {
+      if (result.url) {
+        window.location.href = result.url;
       }
     },
     onError: (error: Error) => {
@@ -84,31 +127,24 @@ export const PlanSection = React.memo(function PlanSection() {
   });
 
   const handleUpgrade = () => {
-    // Determine next plan based on current plan
     const currentPlan = data?.plan?.name?.toLowerCase();
     let targetPlan = "basic";
     if (currentPlan === "basic") {
       targetPlan = "pro";
     } else if (currentPlan === "pro" || currentPlan === "enterprise") {
-      // Already at top, open pricing dialog instead
       router.push("/pricing");
       return;
     }
     checkoutMutation.mutate(targetPlan);
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-5">
-        <div className="h-32 rounded-lg bg-muted/20 animate-pulse" />
-      </div>
-    );
+  if (isFetching || !data) {
+    return <PlanSkeleton />;
   }
 
   const plan = data?.plan;
   const usage = data?.usage;
 
-  // Calculate credit usage (assuming credits = messages for simplicity)
   const creditsUsed = usage?.messages || 0;
   const creditsLimit = typeof plan?.limits?.messages === "number" ? plan.limits.messages : 2500;
   const creditsPct = Math.min((creditsUsed / creditsLimit) * 100, 100);

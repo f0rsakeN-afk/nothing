@@ -427,7 +427,7 @@ const AssistantMessage = memo(function AssistantMessage({
     <div className="group/assistant-msg min-w-0 sm:max-w-[97%]">
       <StreamingStatusIndicator status={status || "idle"} isSearchMode={isSearchMode} />
       {isStreaming && (
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center gap-2 py-2 ml-2">
           <AILoader />
         </div>
       )}

@@ -9,12 +9,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { routing, type Locale } from "@/routing";
+import { invalidateUserSettingsCache } from "@/services/settings.service";
 
 export async function PATCH(request: NextRequest) {
   try {
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get prisma user by stackId to get the numeric id
+    const prismaUser = await prisma.user.findUnique({
+      where: { stackId: user.id },
+      select: { id: true },
+    });
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -30,15 +41,18 @@ export async function PATCH(request: NextRequest) {
 
     // Update or create settings with language
     await prisma.settings.upsert({
-      where: { userId: user.id },
+      where: { userId: prismaUser.id },
       create: {
-        userId: user.id,
+        userId: prismaUser.id,
         language,
       },
       update: {
         language,
       },
     });
+
+    // Invalidate settings cache so next request gets fresh data
+    await invalidateUserSettingsCache(prismaUser.id);
 
     return NextResponse.json({ success: true, language });
   } catch (error) {

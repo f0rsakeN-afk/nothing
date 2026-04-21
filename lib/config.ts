@@ -14,8 +14,8 @@ function parseIntOrDefault(value: string | undefined, defaultValue: number): num
 
 export const aiConfig = {
   // Model settings
-  model: process.env.AI_MODEL || "llama-3.1-8b-instant",
-  modelWithTools: process.env.AI_MODEL_WITH_TOOLS || "mixtral-8x7b-32768",
+  model: process.env.AI_MODEL || "eryx-fast",
+  modelWithTools: process.env.AI_MODEL_WITH_TOOLS || "eryx-fast",
   maxTokens: parseIntOrDefault(process.env.AI_MAX_TOKENS, 1024), // Conservative
   temperature: parseFloat(process.env.AI_TEMPERATURE || "0.7"),
 

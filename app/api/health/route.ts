@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   const detailed = url.searchParams.get("detailed") === "true";
   const raw = url.searchParams.get("raw") === "true";
   const incident = url.searchParams.get("incident") === "true";
-  const service = url.searchParams.get("service") as "database" | "redis" | "api" | "search" | "groq" | "polar" | "searxng" | undefined;
+  const service = url.searchParams.get("service") as "database" | "redis" | "api" | "search" | "openai" | "polar" | "searxng" | undefined;
 
   try {
     // Run fresh health check
@@ -43,12 +43,12 @@ export async function GET(request: Request) {
       }
 
       // All services raw
-      const [db, redis, api, search, groq, polar, searxng] = await Promise.all([
+      const [db, redis, api, search, openai, polar, searxng] = await Promise.all([
         getRecentChecks("database", hours),
         getRecentChecks("redis", hours),
         getRecentChecks("api", hours),
         getRecentChecks("search", hours),
-        getRecentChecks("groq", hours),
+        getRecentChecks("openai", hours),
         getRecentChecks("polar", hours),
         getRecentChecks("searxng", hours),
       ]);
@@ -58,20 +58,20 @@ export async function GET(request: Request) {
         redis,
         api,
         search,
-        groq,
+        openai,
         polar,
         searxng,
       });
     }
 
     if (detailed) {
-      const [dbMetrics, redisMetrics, apiMetrics, searchMetrics, groqMetrics, overall, circuitBreakers] =
+      const [dbMetrics, redisMetrics, apiMetrics, searchMetrics, openaiMetrics, overall, circuitBreakers] =
         await Promise.all([
           getDetailedMetrics("database"),
           getDetailedMetrics("redis"),
           getDetailedMetrics("api"),
           getDetailedMetrics("search"),
-          getDetailedMetrics("groq"),
+          getDetailedMetrics("openai"),
           getOverallStatus(),
           getCircuitBreakerHealth(),
         ]);
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
           redis: redisMetrics,
           api: apiMetrics,
           search: searchMetrics,
-          groq: groqMetrics,
+          openai: openaiMetrics,
         },
         circuitBreakers,
         incidents: overall.activeIncidents,

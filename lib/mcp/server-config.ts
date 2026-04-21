@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+
 export type McpAuthType = 'none' | 'bearer' | 'header' | 'oauth';
 export type McpTransportType = 'http' | 'sse';
 
@@ -154,16 +156,14 @@ export function validateMcpOAuthConfig(input: Pick<
 const ALGORITHM = 'aes-256-gcm';
 
 function getKey(): Buffer {
-  const crypto = require('node:crypto');
   const ENCRYPTION_KEY = process.env.MCP_CREDENTIALS_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
   return Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32);
 }
 
 function encryptCredential(plaintext: string): string {
-  const crypto = require('node:crypto');
   const key = getKey();
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const iv = randomBytes(16);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
 
   let encrypted = cipher.update(plaintext, 'utf8', 'base64');
   encrypted += cipher.final('base64');
@@ -175,7 +175,6 @@ function encryptCredential(plaintext: string): string {
 }
 
 function decryptCredential(ciphertext: string): string {
-  const crypto = require('node:crypto');
   const key = getKey();
   const combined = Buffer.from(ciphertext, 'base64');
 
@@ -183,7 +182,7 @@ function decryptCredential(ciphertext: string): string {
   const authTag = combined.subarray(16, 32);
   const encrypted = combined.subarray(32);
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
 
   let decrypted = decipher.update(encrypted, undefined, 'utf8');

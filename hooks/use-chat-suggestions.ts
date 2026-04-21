@@ -7,6 +7,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 interface UseChatSuggestionsProps {
   input: string;
   onSelect: (suggestion: string) => void;
+  enabled?: boolean;
 }
 
 const RECENT_SEARCHES_KEY = "recent-searches";
@@ -52,11 +53,18 @@ function addRecentSearch(query: string): void {
   }
 }
 
-export function useChatSuggestions({ input, onSelect }: UseChatSuggestionsProps) {
+export function useChatSuggestions({ input, onSelect, enabled = true }: UseChatSuggestionsProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const debouncedInput = useDebounce(input, 200);
+
+  // Longer debounce (500ms) - only fetch after user pauses typing
+  // This reduces canceled requests significantly while still being responsive
+  const debouncedInput = useDebounce(input, 500);
+
+  // Only show suggestions after debounced input settles (user paused)
+  // and input has meaningful length (at least 2 chars)
+  const shouldFetchSuggestions = enabled && debouncedInput.trim().length >= 2;
 
   // Load recent searches on mount
   useEffect(() => {
@@ -66,10 +74,19 @@ export function useChatSuggestions({ input, onSelect }: UseChatSuggestionsProps)
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ["suggestions", debouncedInput],
     queryFn: () => fetchSuggestions(debouncedInput),
-    enabled: debouncedInput.trim().length > 1,
+    enabled: shouldFetchSuggestions,
     staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    gcTime: 60 * 1000, // 1 minute cache
   });
+
+  // Show suggestions UI only after debounce settles and input has content
+  useEffect(() => {
+    if (debouncedInput.trim().length >= 2 && enabled) {
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [debouncedInput, enabled]);
 
   // Reset selection when suggestions change
   useEffect(() => {

@@ -74,12 +74,13 @@ export function useServers(userId: string | undefined) {
       return data.servers ?? [];
     },
     enabled: !!userId,
-    staleTime: 30_000, // 30 seconds
+    staleTime: 5 * 60_000, // 5 minutes - reduce frequent hits
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch on mount if fresh data exists
   });
-}
 
-// ─── Mutations ───────────────────────────────────────────────────────────────
+}
+// ─── Mutations ────────────────────────────────────────────────────────────────
 
 /**
  * Add a new MCP server from catalog

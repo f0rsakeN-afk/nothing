@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
-import { Lexer } from 'marked';
+import { Lexer, type Token } from 'marked';
 
 type Color = Awaited<ReturnType<typeof rgb>>;
 
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid content' }, { status: 400 });
     }
 
-    const title = body.title ?? 'Scira AI';
+    const title = body.title ?? 'Eryx AI';
     const rawContent = body.content;
     const meta = body.meta ?? {};
 
@@ -347,7 +347,7 @@ export async function POST(req: NextRequest) {
     yPosition -= lineHeight;
 
     // Parse markdown
-    const tokens: any[] = Lexer.lex(rawContent);
+    const tokens: Token[] = Lexer.lex(rawContent);
 
     // Track citations for references
     const citationIndex = new Map<string, number>();
@@ -592,7 +592,7 @@ export async function POST(req: NextRequest) {
           if (tk.type === 'text' && tk.text) {
             checkNewPage();
 
-            let text = tk.text
+            const text = tk.text
               .replace(/\*\*([^*]+)\*\*/g, '$1')
               .replace(/\*([^*]+)\*/g, '$1')
               .replace(/`([^`]+)`/g, '$1')
@@ -654,8 +654,8 @@ export async function POST(req: NextRequest) {
         Pragma: 'no-cache',
       },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('PDF export error:', e);
-    return NextResponse.json({ error: e?.message || 'Failed to generate PDF' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to generate PDF' }, { status: 500 });
   }
 }

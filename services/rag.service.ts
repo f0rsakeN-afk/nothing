@@ -42,6 +42,11 @@ export async function retrieveContext(
     // Embed the query
     const queryEmbedding = await embedText(query);
 
+    // Skip if embeddings not available
+    if (!queryEmbedding || queryEmbedding.length === 0) {
+      return [];
+    }
+
     // Search vectors in parallel
     const [fileResults, memoryResults] = await Promise.all([
       fileIds && fileIds.length > 0
@@ -90,44 +95,49 @@ async function searchFileChunks(
 ): Promise<RetrievedContext[]> {
   if (fileIds.length === 0) return [];
 
-  const placeholders = fileIds.map((_, i) => `$${i + 2}`).join(", ");
-  const vectorStr = `[${queryEmbedding.join(",")}]`;
+  try {
+    const placeholders = fileIds.map((_, i) => `$${i + 2}`).join(", ");
+    const vectorStr = `[${queryEmbedding.join(",")}]`;
 
-  const results = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      fileId: string;
-      chunkIndex: number;
-      content: string;
-      tokenCount: number;
-      similarity: number;
-      fileName: string;
-    }>
-  >(
-    `SELECT
-      fc.id,
-      fc."fileId",
-      fc."chunkIndex",
-      fc.content,
-      fc."tokenCount",
-      1 - (fc.embedding <=> '${vectorStr}'::vector) as similarity,
-      f.name as "fileName"
-    FROM "FileChunk" fc
-    JOIN "File" f ON f.id = fc."fileId"
-    WHERE fc."fileId" IN (${placeholders})
-    ORDER BY fc.embedding <=> '${vectorStr}'::vector
-    LIMIT ${TOP_K}`,
-    fileIds
-  );
+    const results = await prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        fileId: string;
+        chunkIndex: number;
+        content: string;
+        tokenCount: number;
+        similarity: number;
+        fileName: string;
+      }>
+    >(
+      `SELECT
+        fc.id,
+        fc."fileId",
+        fc."chunkIndex",
+        fc.content,
+        fc."tokenCount",
+        1 - (fc.embedding <=> '${vectorStr}'::vector) as similarity,
+        f.name as "fileName"
+      FROM "FileChunk" fc
+      JOIN "File" f ON f.id = fc."fileId"
+      WHERE fc."fileId" IN (${placeholders})
+      ORDER BY fc.embedding <=> '${vectorStr}'::vector
+      LIMIT ${TOP_K}`,
+      fileIds
+    );
 
-  return results.map((row) => ({
-    content: row.content,
-    source: `File: ${row.fileName}`,
-    sourceId: row.id,
-    sourceType: "file",
-    score: Number(row.similarity),
-    tokenCount: row.tokenCount,
-  }));
+    return results.map((row) => ({
+      content: row.content,
+      source: `File: ${row.fileName}`,
+      sourceId: row.id,
+      sourceType: "file",
+      score: Number(row.similarity),
+      tokenCount: row.tokenCount,
+    }));
+  } catch (error) {
+    console.warn("[RAG] searchFileChunks failed:", error);
+    return [];
+  }
 }
 
 /**
@@ -139,42 +149,47 @@ async function searchMemoryChunks(
 ): Promise<RetrievedContext[]> {
   if (memoryIds.length === 0) return [];
 
-  const placeholders = memoryIds.map((_, i) => `$${i + 2}`).join(", ");
-  const vectorStr = `[${queryEmbedding.join(",")}]`;
+  try {
+    const placeholders = memoryIds.map((_, i) => `$${i + 2}`).join(", ");
+    const vectorStr = `[${queryEmbedding.join(",")}]`;
 
-  const results = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      memoryId: string;
-      content: string;
-      tokenCount: number;
-      similarity: number;
-      memoryTitle: string;
-    }>
-  >(
-    `SELECT
-      me.id,
-      me."memoryId",
-      me.content,
-      me."tokenCount",
-      1 - (me.embedding <=> '${vectorStr}'::vector) as similarity,
-      m.title as "memoryTitle"
-    FROM "MemoryEmbedding" me
-    JOIN "Memory" m ON m.id = me."memoryId"
-    WHERE me."memoryId" IN (${placeholders})
-    ORDER BY me.embedding <=> '${vectorStr}'::vector
-    LIMIT ${TOP_K}`,
-    memoryIds
-  );
+    const results = await prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        memoryId: string;
+        content: string;
+        tokenCount: number;
+        similarity: number;
+        memoryTitle: string;
+      }>
+    >(
+      `SELECT
+        me.id,
+        me."memoryId",
+        me.content,
+        me."tokenCount",
+        1 - (me.embedding <=> '${vectorStr}'::vector) as similarity,
+        m.title as "memoryTitle"
+      FROM "MemoryEmbedding" me
+      JOIN "Memory" m ON m.id = me."memoryId"
+      WHERE me."memoryId" IN (${placeholders})
+      ORDER BY me.embedding <=> '${vectorStr}'::vector
+      LIMIT ${TOP_K}`,
+      memoryIds
+    );
 
-  return results.map((row) => ({
-    content: row.content,
-    source: `Memory: ${row.memoryTitle}`,
-    sourceId: row.id,
-    sourceType: "memory",
-    score: Number(row.similarity),
-    tokenCount: row.tokenCount,
-  }));
+    return results.map((row) => ({
+      content: row.content,
+      source: `Memory: ${row.memoryTitle}`,
+      sourceId: row.id,
+      sourceType: "memory",
+      score: Number(row.similarity),
+      tokenCount: row.tokenCount,
+    }));
+  } catch (error) {
+    console.warn("[RAG] searchMemoryChunks failed:", error);
+    return [];
+  }
 }
 
 /**
@@ -184,41 +199,47 @@ async function searchUserMemoryChunks(
   queryEmbedding: number[],
   userId: string
 ): Promise<RetrievedContext[]> {
-  const vectorStr = `[${queryEmbedding.join(",")}]`;
+  try {
+    const vectorStr = `[${queryEmbedding.join(",")}]`;
 
-  const results = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      memoryId: string;
-      content: string;
-      tokenCount: number;
-      similarity: number;
-      memoryTitle: string;
-    }>
-  >(
-    `SELECT
-      me.id,
-      me."memoryId",
-      me.content,
-      me."tokenCount",
-      1 - (me.embedding <=> '${vectorStr}'::vector) as similarity,
-      m.title as "memoryTitle"
-    FROM "MemoryEmbedding" me
-    JOIN "Memory" m ON m.id = me."memoryId"
-    WHERE m."userId" = $1
-    ORDER BY me.embedding <=> '${vectorStr}'::vector
-    LIMIT ${TOP_K}`,
-    [userId]
-  );
+    const results = await prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        memoryId: string;
+        content: string;
+        tokenCount: number;
+        similarity: number;
+        memoryTitle: string;
+      }>
+    >(
+      `SELECT
+        me.id,
+        me."memoryId",
+        me.content,
+        me."tokenCount",
+        1 - (me.embedding <=> '${vectorStr}'::vector) as similarity,
+        m.title as "memoryTitle"
+      FROM "MemoryEmbedding" me
+      JOIN "Memory" m ON m.id = me."memoryId"
+      WHERE m."userId" = $1
+      ORDER BY me.embedding <=> '${vectorStr}'::vector
+      LIMIT ${TOP_K}`,
+      [userId]
+    );
 
-  return results.map((row) => ({
-    content: row.content,
-    source: `Memory: ${row.memoryTitle}`,
-    sourceId: row.id,
-    sourceType: "memory",
-    score: Number(row.similarity),
-    tokenCount: row.tokenCount,
-  }));
+    return results.map((row) => ({
+      content: row.content,
+      source: `Memory: ${row.memoryTitle}`,
+      sourceId: row.id,
+      sourceType: "memory",
+      score: Number(row.similarity),
+      tokenCount: row.tokenCount,
+    }));
+  } catch (error) {
+    // Table might not exist or other DB error
+    console.warn("[RAG] searchUserMemoryChunks failed:", error);
+    return [];
+  }
 }
 
 /**

@@ -9,25 +9,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
-// LineNumbers
-// ---------------------------------------------------------------------------
-
-const LineNumbers = memo(function LineNumbers({ count }: { count: number }) {
-  return (
-    <div className="hidden sm:flex select-none w-9 flex-shrink-0 border-r border-border/40 bg-muted/30 dark:bg-muted/10 py-3">
-      {Array.from({ length: count }, (_, i) => (
-        <div
-          key={i}
-          className="text-[10px] h-[21px] flex items-center justify-end text-muted-foreground/40 pr-2 font-mono leading-[21px]"
-        >
-          {i + 1}
-        </div>
-      ))}
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
 // CopyButton
 // ---------------------------------------------------------------------------
 
@@ -89,23 +70,9 @@ export const CodeBlock = memo(function CodeBlock({
   return (
     <div className="group mb-4 overflow-hidden rounded-xl border border-border bg-muted/20 dark:bg-muted/10">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between px-3 py-2 bg-muted/30 dark:bg-muted/20 border-b border-border/60 gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Language badge */}
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 dark:bg-primary/20">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-            <span className="text-[10px] font-medium font-mono text-primary/80 uppercase tracking-wide">
-              {language}
-            </span>
-          </div>
-          {title && (
-            <span className="text-xs font-medium text-foreground/80 truncate max-w-[160px] sm:max-w-xs">
-              {title}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/30 dark:bg-muted/20 border-b border-border/60 gap-2">
+        <span className="text-xs text-muted-foreground font-mono">{language}</span>
+        <div className="flex items-center gap-1">
           <CopyButton code={children} />
           {collapsible && (
             <Button
@@ -127,8 +94,7 @@ export const CodeBlock = memo(function CodeBlock({
       {/* Content */}
       {(!collapsible || isExpanded) && (
         <div className="flex bg-neutral-50 dark:bg-neutral-900/50 max-h-80 overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
-          <LineNumbers count={lines.length} />
-          <div className="overflow-x-auto flex-1">
+                    <div className="overflow-x-auto flex-1">
             <SyntaxHighlighter
               language={language}
               style={isDark ? vscDarkPlus : vs}

@@ -10,6 +10,7 @@ import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { updateCustomizeSchema } from "@/schemas/validation";
 import { getUserPreferences, invalidateUserPreferencesCache } from "@/services/preferences.service";
+import { invalidateAccountCache } from "@/services/account.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,14 +19,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user from Prisma to access email
+    // Get prisma user by stackId to get the numeric id
     const prismaUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { email: true },
+      where: { stackId: user.id },
+      select: { id: true, email: true },
     });
 
+    if (!prismaUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Use cached preferences
-    const preferences = await getUserPreferences(user.id, prismaUser?.email);
+    const preferences = await getUserPreferences(prismaUser.id, prismaUser.email);
 
     return NextResponse.json({
       firstName: preferences.firstName,
@@ -48,11 +53,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user from Prisma to access email
+    // Get prisma user by stackId to get the numeric id
     const prismaUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { email: true },
+      where: { stackId: user.id },
+      select: { id: true, email: true },
     });
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const body = await request.json();
     const parsed = updateCustomizeSchema.safeParse(body);
@@ -73,12 +82,12 @@ export async function PATCH(request: NextRequest) {
       : [];
 
     const customize = await prisma.customize.upsert({
-      where: { userId: user.id },
+      where: { userId: prismaUser.id },
       create: {
-        userId: user.id,
+        userId: prismaUser.id,
         firstName: firstName || "",
         lastName: lastName || "",
-        name: preferredName || prismaUser?.email?.split("@")[0] || "User",
+        name: preferredName || prismaUser.email?.split("@")[0] || "User",
         responseTone: responseTone || "professional",
         knowledgeDetail: (knowledgeDetail as "CONCISE" | "BALANCED" | "DETAILED") || "BALANCED",
         interest: interestArray,
@@ -94,7 +103,8 @@ export async function PATCH(request: NextRequest) {
     });
 
     // Invalidate cache so next request gets fresh data
-    await invalidateUserPreferencesCache(user.id);
+    await invalidateUserPreferencesCache(prismaUser.id);
+    await invalidateAccountCache(prismaUser.id);
 
     return NextResponse.json({
       firstName: customize.firstName || "",

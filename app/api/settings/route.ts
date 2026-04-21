@@ -36,8 +36,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Look up prisma user to get internal UUID
+    const prismaUser = await prisma.user.findUnique({
+      where: { stackId: user.id },
+      select: { id: true },
+    });
+
+    if (!prismaUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Use cached settings (falls back to defaults if no record)
-    const settings = await getUserSettings(user.id);
+    const settings = await getUserSettings(prismaUser.id);
 
     return NextResponse.json(settings);
   } catch (error) {
@@ -65,33 +75,33 @@ export async function PATCH(request: NextRequest) {
 
     const data = parsed.data;
 
-    // Check if user exists first
-    const userExists = await prisma.user.findUnique({
-      where: { id: user.id },
+    // Get prisma user by stackId to get the numeric id
+    const prismaUser = await prisma.user.findUnique({
+      where: { stackId: user.id },
       select: { id: true },
     });
 
-    if (!userExists) {
+    if (!prismaUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if settings already exist
     const existingSettings = await prisma.settings.findUnique({
-      where: { userId: user.id },
+      where: { userId: prismaUser.id },
     });
 
     let settings;
     if (existingSettings) {
       // Update only the fields provided
       settings = await prisma.settings.update({
-        where: { userId: user.id },
+        where: { userId: prismaUser.id },
         data,
       });
     } else {
       // Create with defaults + provided data
       settings = await prisma.settings.create({
         data: {
-          userId: user.id,
+          userId: prismaUser.id,
           theme: data.theme as typeof DEFAULT_SETTINGS.theme || DEFAULT_SETTINGS.theme,
           language: data.language || DEFAULT_SETTINGS.language,
           autoTitle: data.autoTitle ?? DEFAULT_SETTINGS.autoTitle,
@@ -114,7 +124,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Invalidate cache so next request gets fresh data
-    await invalidateUserSettingsCache(user.id);
+    await invalidateUserSettingsCache(prismaUser.id);
 
     return NextResponse.json({
       theme: settings.theme,

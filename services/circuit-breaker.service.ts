@@ -47,7 +47,7 @@ const DEFAULT_CONFIG: CircuitBreakerConfig = {
 
 // Per-service configs
 const SERVICE_CONFIGS: Record<string, Partial<CircuitBreakerConfig>> = {
-  groq: {
+  openai: {
     failureThreshold: 3,        // More aggressive for AI - users notice latency
     successThreshold: 2,
     openTimeoutMs: 15000,       // Faster recovery check

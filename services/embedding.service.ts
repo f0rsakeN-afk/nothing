@@ -18,29 +18,36 @@ export async function getEmbeddings(texts: string[]): Promise<number[][]> {
 
   const apiKey = process.env.COHERE_API_KEY;
   if (!apiKey) {
-    throw new Error("COHERE_API_KEY not configured");
+    console.warn("[Embedding] COHERE_API_KEY not configured, skipping batch embeddings");
+    return [];
   }
 
-  const response = await fetch(COHERE_API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: EMBED_MODEL,
-      texts,
-      input_type: "search_document",
-    }),
-  });
+  try {
+    const response = await fetch(COHERE_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: EMBED_MODEL,
+        texts,
+        input_type: "search_document",
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Cohere API error: ${response.status} - ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.warn(`[Embedding] Cohere API error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json() as { embeddings: number[][] };
+    return data.embeddings;
+  } catch (err) {
+    console.warn("[Embedding] Failed to get batch embeddings:", err);
+    return [];
   }
-
-  const data = await response.json() as { embeddings: number[][] };
-  return data.embeddings;
 }
 
 /**
@@ -53,29 +60,36 @@ export async function embedText(text: string): Promise<number[]> {
 
   const apiKey = process.env.COHERE_API_KEY;
   if (!apiKey) {
-    throw new Error("COHERE_API_KEY not configured");
+    console.warn("[Embedding] COHERE_API_KEY not configured, skipping RAG");
+    return [];
   }
 
-  const response = await fetch(COHERE_API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: EMBED_MODEL,
-      texts: [text],
-      input_type: "search_query",
-    }),
-  });
+  try {
+    const response = await fetch(COHERE_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: EMBED_MODEL,
+        texts: [text],
+        input_type: "search_query",
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Cohere API error: ${response.status} - ${error}`);
+    if (!response.ok) {
+      const error = await response.text();
+      console.warn(`[Embedding] Cohere API error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json() as { embeddings: number[][] };
+    return data.embeddings[0] || [];
+  } catch (err) {
+    console.warn("[Embedding] Failed to get embeddings:", err);
+    return [];
   }
-
-  const data = await response.json() as { embeddings: number[][] };
-  return data.embeddings[0] || [];
 }
 
 /**

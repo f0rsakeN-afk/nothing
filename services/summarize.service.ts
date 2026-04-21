@@ -7,10 +7,12 @@
 
 import prisma from "@/lib/prisma";
 import redis, { KEYS, TTL } from "@/lib/redis";
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 import { aiConfig } from "@/lib/config";
 
-const groq = new Groq();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
+});
 
 // Summarize when chat has 50+ messages
 const SUMMARY_THRESHOLD = 50;
@@ -96,7 +98,7 @@ Return valid JSON only:
 }`;
 
   try {
-    const response = await groq.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: aiConfig.model,
       messages: [
         { role: "system", content: "You are a helpful assistant that summarizes conversations accurately. Return only valid JSON." },
@@ -136,7 +138,7 @@ export async function summarizeChat(chatId: string): Promise<boolean> {
 
   try {
     // Get existing summary to know where to start
-    let existingSummary = await prisma.chatSummary.findUnique({
+    const existingSummary = await prisma.chatSummary.findUnique({
       where: { chatId },
     });
 

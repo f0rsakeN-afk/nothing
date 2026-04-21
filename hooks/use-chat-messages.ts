@@ -235,7 +235,7 @@ export function useChatMessages({
                           if (m.id !== aiMsgId) return m;
                           const existingResults = m.toolResults || [];
                           // Avoid duplicates if same toolCallId fires twice
-                          if (existingResults.some((r: any) => r.toolCallId === toolCallId)) return m;
+                          if (existingResults.some((r: unknown) => (r as { toolCallId?: string }).toolCallId === toolCallId)) return m;
                           return {
                             ...m,
                             toolResults: [
@@ -263,7 +263,7 @@ export function useChatMessages({
                           const toolResults = m.toolResults || [];
                           return {
                             ...m,
-                            toolResults: toolResults.map((r: any) =>
+                            toolResults: toolResults.map((r: unknown) =>
                               r.toolCallId === toolCallId
                                 ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
                                 : r
@@ -280,6 +280,11 @@ export function useChatMessages({
             mode
           );
         } catch (err) {
+          // Ignore AbortError - this happens when user sends new message while streaming
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.debug("[sendUserMessage] aborted previous stream");
+            return;
+          }
           console.error("[sendUserMessage] error:", err);
           isStreamingRef.current = false;
           abortControllerRef.current = null;
@@ -417,7 +422,7 @@ export function useChatMessages({
                           if (m.id !== aiMsgId) return m;
                           const existingResults = m.toolResults || [];
                           // Avoid duplicates if same toolCallId fires twice
-                          if (existingResults.some((r: any) => r.toolCallId === toolCallId)) return m;
+                          if (existingResults.some((r: unknown) => (r as { toolCallId?: string }).toolCallId === toolCallId)) return m;
                           return {
                             ...m,
                             toolResults: [
@@ -445,7 +450,7 @@ export function useChatMessages({
                           const toolResults = m.toolResults || [];
                           return {
                             ...m,
-                            toolResults: toolResults.map((r: any) =>
+                            toolResults: toolResults.map((r: unknown) =>
                               r.toolCallId === toolCallId
                                 ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
                                 : r
@@ -462,6 +467,11 @@ export function useChatMessages({
             mode
           );
         } catch (err) {
+          // Ignore AbortError - this happens when user sends new message while streaming
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.debug("[sendUserMessage] aborted previous stream");
+            return;
+          }
           console.error("[sendUserMessage] error:", err);
           isStreamingRef.current = false;
           abortControllerRef.current = null;
@@ -614,7 +624,7 @@ export function useChatMessages({
                           if (m.id !== aiMsgId) return m;
                           const existingResults = m.toolResults || [];
                           // Avoid duplicates if same toolCallId fires twice
-                          if (existingResults.some((r: any) => r.toolCallId === toolCallId)) return m;
+                          if (existingResults.some((r: unknown) => (r as { toolCallId?: string }).toolCallId === toolCallId)) return m;
                           return {
                             ...m,
                             toolResults: [
@@ -642,7 +652,7 @@ export function useChatMessages({
                           const toolResults = m.toolResults || [];
                           return {
                             ...m,
-                            toolResults: toolResults.map((r: any) =>
+                            toolResults: toolResults.map((r: unknown) =>
                               r.toolCallId === toolCallId
                                 ? { ...r, status: error ? ("error" as const) : ("completed" as const), result, error }
                                 : r

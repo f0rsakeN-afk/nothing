@@ -36,29 +36,28 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get("projectId");
     const type = searchParams.get("type"); // filter by file type
 
-    // Get all files user owns (via project or chat/message associations)
-    // We need to first get file IDs through separate queries
-    const projectFileIds = await prisma.projectFile.findMany({
-      where: { project: { userId: user.id } },
-      select: { fileId: true },
-    });
-    const chatFileIds = await prisma.chatFile.findMany({
-      where: { chat: { userId: user.id } },
-      select: { fileId: true },
-    });
-    // For message files, we need to join through message to get chat->user
-    const messageFileRecords = await prisma.messageFile.findMany({
-      where: { message: { chat: { userId: user.id } } },
-      select: { fileId: true },
-    });
-    const messageFileIds = messageFileRecords.map((f) => f.fileId);
+    // Run all three file ID queries in parallel
+    const [projectFileIds, chatFileIds, messageFileRecords] = await Promise.all([
+      prisma.projectFile.findMany({
+        where: { project: { userId: user.id } },
+        select: { fileId: true },
+      }),
+      prisma.chatFile.findMany({
+        where: { chat: { userId: user.id } },
+        select: { fileId: true },
+      }),
+      prisma.messageFile.findMany({
+        where: { message: { chat: { userId: user.id } } },
+        select: { fileId: true },
+      }),
+    ]);
 
     // Combine and dedupe file IDs
     const allFileIds = [
       ...new Set([
         ...projectFileIds.map((f) => f.fileId),
         ...chatFileIds.map((f) => f.fileId),
-        ...messageFileIds,
+        ...messageFileRecords.map((f) => f.fileId),
       ]),
     ];
 
@@ -104,34 +103,42 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     const totalCount = allFileIds.length;
 
-    // Group files by context (project, chat, message)
-    const filesWithContext = await Promise.all(
-      files.map(async (file) => {
-        // Find associated chat IDs
-        const chatFileRecords = await prisma.chatFile.findMany({
-          where: { fileId: file.id },
-          select: { chatId: true },
-        });
-        const messageFileRecords = await prisma.messageFile.findMany({
-          where: { fileId: file.id },
-          select: { messageId: true, message: { select: { chatId: true } } },
-        });
+    // Batch fetch all chat and message associations for all files at once
+    const [allChatFiles, allMessageFiles] = await Promise.all([
+      prisma.chatFile.findMany({
+        where: { fileId: { in: files.map((f) => f.id) } },
+        select: { fileId: true, chatId: true },
+      }),
+      prisma.messageFile.findMany({
+        where: { fileId: { in: files.map((f) => f.id) } },
+        select: { fileId: true, message: { select: { chatId: true } } },
+      }),
+    ]);
 
-        // Get unique chat IDs
-        const chatIds = [
-          ...new Set([
-            ...chatFileRecords.map((cf) => cf.chatId),
-            ...messageFileRecords.map((mf) => mf.message.chatId),
-          ]),
-        ];
+    // Group chat IDs by file ID
+    const chatIdsByFile = new Map<string, string[]>();
+    const chatIdsForAllFiles = new Set<string>();
 
-        return {
-          ...file,
-          chatIds,
-          contextCount: file._count.chatFiles + file._count.messageFiles + file._count.projectFiles,
-        };
-      })
-    );
+    for (const cf of allChatFiles) {
+      const existing = chatIdsByFile.get(cf.fileId) || [];
+      existing.push(cf.chatId);
+      chatIdsByFile.set(cf.fileId, existing);
+      chatIdsForAllFiles.add(cf.chatId);
+    }
+
+    for (const mf of allMessageFiles) {
+      const existing = chatIdsByFile.get(mf.fileId) || [];
+      existing.push(mf.message.chatId);
+      chatIdsByFile.set(mf.fileId, existing);
+      chatIdsForAllFiles.add(mf.message.chatId);
+    }
+
+    // Build final response with context
+    const filesWithContext = files.map((file) => ({
+      ...file,
+      chatIds: [...new Set(chatIdsByFile.get(file.id) || [])],
+      contextCount: file._count.chatFiles + file._count.messageFiles + file._count.projectFiles,
+    }));
 
     const nextCursor = files.length === limit ? files[files.length - 1].id : null;
 

@@ -3,7 +3,7 @@ import 'server-only';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import prisma from '@/lib/prisma';
 import { decryptOAuthValue, getEncryptedOAuthValue, validateMcpServerUrl } from '@/lib/mcp/server-config';
-import type { McpUserServer } from '@prisma/client';
+import type { McpUserServer } from '@/src/generated/prisma/client';
 
 async function updateMcpServer({
   id,
@@ -377,7 +377,7 @@ function resolveOAuthClientId({
 
 async function registerDynamicOAuthClient({
   registrationUrl,
-  serverId,
+  serverId: _serverId,
   requestOrigin,
 }: {
   registrationUrl: string;

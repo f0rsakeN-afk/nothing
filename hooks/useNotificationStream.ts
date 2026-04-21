@@ -182,6 +182,7 @@ export function useNotificationStream({
     });
   }, [queryClient, onNewNotification, onBulkUpdate]);
 
+  
   useEffect(() => {
     isUnmounted.current = false;
     connect();

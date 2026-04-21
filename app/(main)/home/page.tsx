@@ -65,7 +65,7 @@ export default function HomePage() {
     <div className="relative flex h-full min-h-[calc(100dvh-3rem)] flex-col bg-background md:min-h-dvh">
       <div className="absolute right-4 top-2 z-10 flex items-center gap-1.5">
         <CreditsButton />
-        <NotificationsButton />
+        {/* <NotificationsButton /> */}
       </div>
       <div className="flex flex-1 flex-col items-center px-6 pb-8 pt-12 md:justify-center">
         <div className="flex flex-1 flex-col items-center justify-center w-full md:flex-none">

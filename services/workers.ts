@@ -14,11 +14,13 @@ import { createWorker, getQueue, QUEUE_NAMES } from "@/services/queue.service";
 import { Job } from "bullmq";
 import prisma from "@/lib/prisma";
 import redis, { KEYS, TTL } from "@/lib/redis";
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 import { aiConfig } from "@/lib/config";
 import { logger } from "@/lib/logger";
 
-const groq = new Groq();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
+});
 
 // ============================================
 // SUMMARIZATION WORKER
@@ -65,7 +67,7 @@ Return valid JSON only:
   "keyFacts": ["specific fact 1"]
 }`;
 
-    const response = await groq.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: aiConfig.model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,

@@ -155,7 +155,7 @@ const config = parsePoolConfig();
 Protects against cascading failures when external services go down.
 
 ### Services Protected
-- `groq` - AI API (3 failures → open, 15s recovery)
+- `openai` - AI API (3 failures → open, 15s recovery)
 - `polar` - Payments (5 failures → open, 30s recovery)
 - `searxng` - Web Search (5 failures → open, 30s recovery)
 
@@ -168,7 +168,7 @@ GET /api/status/circuit-breakers
 ```json
 {
   "circuitBreakers": {
-    "groq": { "state": "CLOSED", "failures": 0 },
+    "openai": { "state": "CLOSED", "failures": 0 },
     "searxng": { "state": "OPEN", "nextAttempt": "2024-01-01T00:00:30Z" }
   }
 }

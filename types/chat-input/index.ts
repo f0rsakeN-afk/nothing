@@ -23,4 +23,5 @@ export interface ChatInputProps {
   onStyleChange?: (style: ResponseStyle) => void;
   currentModel?: string;
   onModelChange?: (model: string) => void;
+  suggestionsEnabled?: boolean;
 }

@@ -8,7 +8,7 @@ import prisma from "@/lib/prisma";
 import { getCircuitBreakerStats, CircuitState } from "./circuit-breaker.service";
 
 export interface HealthCheckResult {
-  service: "database" | "redis" | "api" | "search" | "groq" | "polar" | "searxng";
+  service: "database" | "redis" | "api" | "search" | "openai" | "polar" | "searxng";
   status: "up" | "degraded" | "down";
   latencyMs?: number;
   error?: string;
@@ -66,7 +66,7 @@ function getServiceDisplayName(service: string): string {
     redis: "Redis Cache",
     api: "API",
     search: "Search",
-    groq: "Eryx AI",
+    openai: "OpenAI",
     polar: "Polar Payments",
     searxng: "Web Search",
   };
@@ -79,7 +79,7 @@ function getServiceDisplayName(service: string): string {
 function getServiceCategory(service: string): "core" | "external" | "ai" {
   if (["database", "redis", "api"].includes(service)) return "core";
   if (["search", "searxng"].includes(service)) return "external";
-  if (["groq", "polar"].includes(service)) return "ai";
+  if (["openai", "polar"].includes(service)) return "ai";
   return "core";
 }
 
@@ -126,7 +126,7 @@ export async function getRecentChecks(
  * Get detailed metrics with percentiles
  */
 export async function getDetailedMetrics(service: string, hours = 24) {
-  const checks = await getRecentChecks(service as any, hours);
+  const checks = await getRecentChecks(service, hours);
 
   const latencies = checks
     .filter((c) => c.latencyMs !== undefined && c.latencyMs > 0)
@@ -159,7 +159,7 @@ export async function getDetailedMetrics(service: string, hours = 24) {
  * Get all component statuses with circuit breaker info
  */
 export async function getAllComponentStatuses(): Promise<ComponentStatus[]> {
-  const services = ["database", "redis", "api", "search", "groq", "polar", "searxng"] as const;
+  const services = ["database", "redis", "api", "search", "openai", "polar", "searxng"] as const;
 
   const results = await Promise.all(
     services.map(async (service) => {
@@ -171,7 +171,7 @@ export async function getAllComponentStatuses(): Promise<ComponentStatus[]> {
 
       // Get circuit breaker state for external/AI services
       let circuitState: string | undefined;
-      if (["groq", "polar", "searxng"].includes(service)) {
+      if (["openai", "polar", "searxng"].includes(service)) {
         try {
           const stats = await getCircuitBreakerStats(service);
           circuitState = stats.state;
@@ -227,9 +227,9 @@ export async function getActiveIncidents(): Promise<Incident[]> {
       resolvedAt: i.resolvedAt?.toISOString(),
       message: i.message || undefined,
     }));
-  } catch (error: any) {
+  } catch (error) {
     // Table doesn't exist yet
-    if (error?.code === 'P2021') return [];
+    if (error instanceof Error && error?.code === 'P2021') return [];
     console.error("Failed to get active incidents:", error);
     return [];
   }
@@ -344,15 +344,14 @@ async function checkExternalService(
 }
 
 /**
- * Health check for Groq API
+ * Health check for OpenAI API
  */
-async function checkGroq(): Promise<{ latencyMs: number; success: boolean; error?: string }> {
+async function checkOpenAI(): Promise<{ latencyMs: number; success: boolean; error?: string }> {
   const start = Date.now();
-  // Lightweight models.list request
-  const response = await fetch("https://api.groq.com/openai/v1/models", {
+  const response = await fetch("https://api.openai.com/v1/models", {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${process.env.GROQ_API_KEY || ""}`,
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
     },
   });
 
@@ -453,9 +452,9 @@ export async function performHealthCheck(): Promise<HealthCheckResult[]> {
   const searchResult = await checkExternalService("searxng", checkSearxng);
   results.push(searchResult);
 
-  // Groq check (real)
-  const groqResult = await checkExternalService("groq", checkGroq);
-  results.push(groqResult);
+  // OpenAI check (real)
+  const openaiResult = await checkExternalService("openai", checkOpenAI);
+  results.push(openaiResult);
 
   // Polar check (placeholder - would need actual API endpoint)
   results.push({

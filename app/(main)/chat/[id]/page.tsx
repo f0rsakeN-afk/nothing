@@ -7,7 +7,6 @@ import { toast } from "@/components/ui/sileo-toast";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatStream } from "@/hooks/useChatStream";
 import { ChatInput } from "@/components/main/home/chat-input";
-import { ChatHeader } from "@/components/main/chat/chat-header";
 import type { Message } from "@/services/chat.service";
 import { SplitViewContext } from "@/components/main/chat/split-view-context";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
@@ -338,13 +337,11 @@ function ChatPageInner() {
   const chatId = params.id as string;
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
-  const shouldTriggerAI = searchParams.get("trigger") === "1";
   const initialWebSearch = searchParams.get("web") === "1";
 
   const [input, setInput] = React.useState("");
   const [webSearch, setWebSearch] = React.useState(initialWebSearch);
   const [memoryDialogOpen, setMemoryDialogOpen] = React.useState(false);
-  const hasTriggeredAI = React.useRef(false);
 
   const {
     messages,
@@ -358,8 +355,31 @@ function ChatPageInner() {
   } = useChatMessages({
     chatId,
     initialQuery,
-    skipFirstMessage: shouldTriggerAI,
+    skipFirstMessage: searchParams.get("trigger") === "1" && initialQuery.length > 0,
   });
+
+  // Auto-trigger AI response when arriving from home with a prompt
+  React.useEffect(() => {
+    const shouldTrigger = searchParams.get("trigger") === "1" && initialQuery.length > 0;
+    const hasUserMessage = messages.some((m) => m.role === "user");
+    const hasAssistantMessage = messages.some((m) => m.role === "assistant");
+
+    if (shouldTrigger && hasUserMessage && !hasAssistantMessage) {
+      // User message exists but no AI response yet - trigger AI
+      sendUserMessage(initialQuery);
+    }
+  }, [messages, initialQuery, searchParams, sendUserMessage]);
+
+  // Clear trigger and q params once AI starts streaming to prevent re-trigger on refresh
+  React.useEffect(() => {
+    if (messages.some((m) => m.role === "assistant" && m.isStreaming)) {
+      // AI started streaming - clean URL params
+      const url = new URL(window.location.href);
+      url.searchParams.delete("trigger");
+      url.searchParams.delete("q");
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [messages]);
 
   // Subscribe to real-time message updates from other devices
   useChatStream({
@@ -373,22 +393,6 @@ function ChatPageInner() {
       }
     },
   });
-
-  // Auto-trigger AI response for first message when navigating from home
-  React.useEffect(() => {
-    if (
-      shouldTriggerAI &&
-      !isLoading &&
-      !hasTriggeredAI.current &&
-      initialQuery
-    ) {
-      hasTriggeredAI.current = true;
-      // Always send the initialQuery directly - don't look for existing messages
-      // because the seed message and any saved messages are the same content
-      // and searching for non-seed messages causes duplicate sends
-      sendUserMessage(initialQuery);
-    }
-  }, [shouldTriggerAI, isLoading, initialQuery, sendUserMessage]);
 
   const handleSubmit = React.useCallback(
     async (value: string) => {
@@ -417,7 +421,6 @@ function ChatPageInner() {
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
-        <ChatHeader chatId={chatId} />
         <VirtualizedMessageList
           messages={messages}
           chatId={chatId}
@@ -437,6 +440,7 @@ function ChatPageInner() {
               onOpenMemory={() => setMemoryDialogOpen(true)}
               webSearchEnabled={webSearch}
               onWebSearchToggle={(enabled) => setWebSearch(enabled)}
+              suggestionsEnabled={false}
             />
           </div>
         </div>

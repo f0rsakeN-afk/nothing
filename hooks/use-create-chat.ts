@@ -52,7 +52,7 @@ async function createChatAPI(params: CreateChatParams): Promise<CreateChatResult
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      projectId: params.projectId ?? null,
+      ...(params.projectId && { projectId: params.projectId }),
       firstMessage: params.firstMessage,
     }),
   });

@@ -312,14 +312,15 @@ export async function streamChat(
       const decoder = new TextDecoder();
       let accumulated = "";
 
-      // Throttle chunk updates for smooth rendering (~60fps)
+      // Throttle chunk updates for smooth rendering - 100ms like scira
       let pendingDeltas: string[] = [];
       let throttleTimeout: ReturnType<typeof setTimeout> | null = null;
-      const THROTTLE_MS = 16; // ~60fps
+      const THROTTLE_MS = 100;
 
       const flushDeltas = () => {
         if (pendingDeltas.length > 0) {
           const combined = pendingDeltas.join("");
+          accumulated += combined;  // CRITICAL: also update accumulated for DB save
           onChunk(combined);
           pendingDeltas = [];
         }
@@ -342,9 +343,10 @@ export async function streamChat(
           try {
             const parsed = JSON.parse(data);
 
-            if (parsed.type === "step") {
+            // Handle step events from ai-sdk format
+            if (parsed.type === "step" || parsed.type === "data-step") {
               onStep?.({
-                step: parsed.step,
+                step: parsed.step || parsed.stepType,
                 status: parsed.status,
                 message: parsed.message,
                 results: parsed.results,
@@ -355,16 +357,32 @@ export async function streamChat(
               continue;
             }
 
-            if (parsed.type === "tool_call") {
+            if (parsed.type === "tool_call" || parsed.type === "tool-call") {
               onToolStart?.(parsed.toolName, parsed.toolCallId);
               continue;
             }
 
-            if (parsed.type === "tool_result") {
+            if (parsed.type === "tool_result" || parsed.type === "tool-result") {
               onToolComplete?.(parsed.toolName, parsed.toolCallId, parsed.result, parsed.error);
               continue;
             }
 
+            // ai-sdk UIMessage stream format
+            if (parsed.type === "text-delta" && parsed.delta !== undefined) {
+              accumulated += parsed.delta;
+              pendingDeltas.push(parsed.delta);
+              if (!throttleTimeout) {
+                throttleTimeout = setTimeout(flushDeltas, THROTTLE_MS);
+              }
+              continue;
+            }
+
+            // Handle finish event - stream is complete
+            if (parsed.type === "finish") {
+              continue;
+            }
+
+            // Legacy OpenAI format (for resume/backward compatibility)
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               accumulated += delta;
@@ -384,6 +402,16 @@ export async function streamChat(
         flushDeltas();
       }
 
+      // Final flush - ensure any remaining deltas are included
+      if (pendingDeltas.length > 0) {
+        console.log("[streamChat] Final flush of pending deltas:", pendingDeltas.length);
+        const combined = pendingDeltas.join("");
+        accumulated += combined;
+        onChunk(combined);
+        pendingDeltas = [];
+      }
+
+      console.log("[streamChat] onComplete called with accumulated length:", accumulated.length, "content:", accumulated.slice(0, 100));
       onComplete?.(accumulated);
       return accumulated;
     } catch (error) {

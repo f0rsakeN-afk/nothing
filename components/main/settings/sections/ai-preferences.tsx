@@ -1,8 +1,10 @@
 "use client";
+/* eslint-disable */
 
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -79,7 +81,11 @@ async function updateDetailLevel(detailLevel: string): Promise<CustomizeData> {
   return res.json();
 }
 
-export function AiPreferencesSection() {
+interface AiPreferencesSectionProps {
+  settings?: Settings;
+}
+
+export function AiPreferencesSection({ settings: propSettings }: AiPreferencesSectionProps) {
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
   const [detailLevel, setDetailLevel] = useState<string>("balanced");
@@ -87,6 +93,8 @@ export function AiPreferencesSection() {
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+    enabled: !propSettings,
+    staleTime: 30000,
   });
 
   const { data: customizeData, isLoading: customizeLoading } = useQuery({
@@ -133,12 +141,65 @@ export function AiPreferencesSection() {
     detailLevelMutation.mutate(value);
   }, [detailLevelMutation]);
 
-  const displaySettings = localSettings || settings;
+  const displaySettings = localSettings || propSettings || settings;
 
-  if (settingsLoading || customizeLoading || !displaySettings) {
+  if ((!propSettings && (settingsLoading || customizeLoading)) || !displaySettings) {
     return (
       <div className="space-y-5">
-        <div className="h-20 rounded-lg bg-muted/20 animate-pulse" />
+        <div>
+          <Skeleton className="h-4 w-32 mb-1" />
+          <Skeleton className="h-3 w-52" />
+        </div>
+        <div>
+          <Skeleton className="h-3 w-20 mb-1" />
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-3">
+            <div className="flex items-center justify-between py-3.5">
+              <div>
+                <Skeleton className="h-3.5 w-28 mb-1" />
+                <Skeleton className="h-3 w-36" />
+              </div>
+              <Skeleton className="h-7 w-36 rounded-md" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <Skeleton className="h-3 w-24 mb-1" />
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-3 space-y-3">
+            <div className="flex items-center justify-between py-3.5 border-b border-border/40">
+              <div>
+                <Skeleton className="h-3.5 w-28 mb-1" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+              <Skeleton className="h-7 w-28 rounded-md" />
+            </div>
+            <div className="flex items-center justify-between py-3.5 border-b border-border/40">
+              <div>
+                <Skeleton className="h-3.5 w-32 mb-1" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between py-3.5">
+              <div>
+                <Skeleton className="h-3.5 w-32 mb-1" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <Skeleton className="h-3 w-20 mb-1" />
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-3">
+            <div className="flex items-center justify-between py-3.5">
+              <div>
+                <Skeleton className="h-3.5 w-36 mb-1" />
+                <Skeleton className="h-3 w-52" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

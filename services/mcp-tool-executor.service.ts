@@ -16,6 +16,10 @@ export interface ToolResult {
   error?: string;
 }
 
+interface ToolDefinition {
+  execute?: (args: Record<string, unknown>, context: Record<string, unknown>) => Promise<unknown>;
+}
+
 function parsePrefixedToolName(prefixedName: string): { serverId: string; originalName: string } | null {
   // Format: mcp_{slug}_{originalName}
   const match = prefixedName.match(/^mcp_(.+?)_(.+)$/);
@@ -103,13 +107,13 @@ export async function executeMCPToolCall(
     }
 
     // Check if tool has execute function
-    if (typeof (toolDef as any).execute !== 'function') {
+    if (typeof (toolDef as ToolDefinition).execute !== 'function') {
       return { id: toolCall.id, result: null, error: `Tool ${originalName} is not executable` };
     }
 
     // Execute the tool with timeout
     const result = await withTimeout(
-      (toolDef as any).execute(toolCall.arguments, {}),
+      (toolDef as ToolDefinition).execute!(toolCall.arguments, {}),
       MCP_TOOL_CALL_TIMEOUT_MS,
       `Tool call timed out after ${MCP_TOOL_CALL_TIMEOUT_MS}ms`
     );

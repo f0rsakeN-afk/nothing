@@ -162,10 +162,10 @@ export async function getMCPToolsForChat(userId: string): Promise<MCPTool[]> {
 }
 
 /**
- * Format tools for Groq API (OpenAI-compatible tool format)
- * Groq supports OpenAI-compatible tools in chat completions
+ * Format tools for OpenAI API (OpenAI-compatible tool format)
+ * OpenAI supports OpenAI-compatible tools in chat completions
  */
-export function formatMCPToolsForGroq(tools: MCPTool[]): Array<{
+export function formatMCPToolsForOpenAI(tools: MCPTool[]): Array<{
   type: 'function';
   function: {
     name: string;
@@ -177,12 +177,34 @@ export function formatMCPToolsForGroq(tools: MCPTool[]): Array<{
     };
   };
 }> {
-  return tools.map((tool) => ({
-    type: 'function' as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.inputSchema,
-    },
-  }));
+  return tools
+    .filter((tool) => {
+      // Filter out tools with invalid schemas
+      const schema = tool.inputSchema;
+      if (!schema) return false;
+      // Must be object type
+      if (schema.type !== 'object') return false;
+      // Cannot have "None" type which some MCP servers return
+      if (schema.type === 'None' || schema.type === 'none') return false;
+      // Properties must be an object if present
+      if (schema.properties && typeof schema.properties !== 'object') return false;
+      return true;
+    })
+    .map((tool) => {
+      const schema = tool.inputSchema;
+      // Ensure properties is a proper object
+      const safeSchema = {
+        type: 'object' as const,
+        properties: (schema.properties && typeof schema.properties === 'object') ? schema.properties : {},
+        required: Array.isArray(schema.required) ? schema.required : undefined,
+      };
+      return {
+        type: 'function' as const,
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: safeSchema,
+        },
+      };
+    });
 }

@@ -102,6 +102,7 @@ export function useCreditsStream({
     });
   }, [queryClient, onCreditsUpdated]);
 
+  
   useEffect(() => {
     isUnmounted.current = false;
     connect();

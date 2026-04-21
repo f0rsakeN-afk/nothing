@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Lock, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/sileo-toast";
@@ -27,7 +27,7 @@ interface AccountData {
 }
 
 async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account");
+  const res = await fetch("/api/account", { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch account");
   return res.json();
 }
@@ -39,16 +39,30 @@ async function deleteAccount(): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete account");
 }
 
-export const SecuritySection = React.memo(function SecuritySection() {
+interface SecuritySectionProps {
+  accountData?: AccountData;
+}
+
+export const SecuritySection = React.memo(function SecuritySection({
+  accountData,
+}: SecuritySectionProps) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+
+  const { data: localData, isLoading } = useQuery({
+    queryKey: ["account-security"],
+    queryFn: fetchAccount,
+    enabled: !accountData,
+    staleTime: 30000,
+  });
+
+  const data = accountData || localData;
 
   const deleteMutation = useMutation({
     mutationFn: deleteAccount,
     onSuccess: () => {
       toast.success("Account deactivated. We're sorry to see you go.");
       setDeleteDialogOpen(false);
-      // Redirect to home or show deactivated page
       setTimeout(() => {
         router.push("/home");
       }, 1000);

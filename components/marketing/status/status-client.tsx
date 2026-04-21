@@ -90,7 +90,7 @@ interface StatusData {
     redis: DetailedMetrics;
     api: DetailedMetrics;
     search: DetailedMetrics;
-    groq: DetailedMetrics;
+    openai: DetailedMetrics;
   };
 }
 
@@ -99,7 +99,7 @@ interface RawData {
   redis: HealthCheck[];
   api: HealthCheck[];
   search: HealthCheck[];
-  groq: HealthCheck[];
+  openai: HealthCheck[];
   searxng: HealthCheck[];
 }
 
@@ -595,16 +595,16 @@ export function StatusContent() {
   const isDetailedFormat = data && "overall" in data;
 
   const { status: overallStatus, components, sla, activeIncidents, circuitBreakers } = isDetailedFormat
-    ? (data as any).overall || {}
+    ? (data as unknown).overall || {}
     : {};
-  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as any) || {};
+  const { status: dataStatus, sla: dataSla, ...rest } = isDetailedFormat ? {} : (data as unknown) || {};
   const actualStatus = overallStatus || dataStatus || "operational";
   const actualSla = sla || dataSla || { uptimePercent: 100, totalIncidents: 0, mttrMinutes: 0, lastIncidentAt: null };
   const safeActiveIncidents = activeIncidents || [];
 
   const dbData = rawData?.database || [];
   const redisData = rawData?.redis || [];
-  const groqData = rawData?.groq || [];
+  const openaiData = rawData?.openai || [];
 
   const coreComponents = (components || []).filter((c: Component) => c.category === "core");
   const aiComponents = (components || []).filter((c: Component) => c.category === "ai");

@@ -1,9 +1,9 @@
-import Groq from "groq-sdk";
+import OpenAI from "openai";
 import prisma from "./prisma";
 import redis, { KEYS, CHANNELS } from "./redis";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || "",
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
 
 const TITLE_PROMPT = `Given the following first message from a user in a chat application, generate a short, descriptive title (max 5 words) that summarizes the topic. Respond with ONLY the title, no quotes, no explanation.
@@ -14,7 +14,6 @@ Title:`;
 
 export async function generateTitle(chatId: string): Promise<string | null> {
   try {
-    // Get the first user message
     const firstMessage = await prisma.message.findFirst({
       where: {
         chatId,
@@ -29,9 +28,8 @@ export async function generateTitle(chatId: string): Promise<string | null> {
       return null;
     }
 
-    // Generate title using Groq
-    const response = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
       messages: [
         {
           role: "user",
@@ -44,16 +42,13 @@ export async function generateTitle(chatId: string): Promise<string | null> {
 
     const title = response.choices[0]?.message?.content?.trim() || "New Chat";
 
-    // Update chat title in database
     await prisma.chat.update({
       where: { id: chatId },
       data: { title },
     });
 
-    // Update Redis cache
     await redis.hset(KEYS.chatMeta(chatId), "title", title);
 
-    // Publish sidebar event for real-time update
     if (firstMessage.chat.userId) {
       await redis.publish(
         CHANNELS.sidebar(firstMessage.chat.userId),
