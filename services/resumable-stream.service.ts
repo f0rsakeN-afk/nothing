@@ -196,6 +196,8 @@ export async function startResumableStream(
             onChunk?.(event.chunk.textDelta, false);
           }
           if (event.chunk.type === 'tool-call') {
+            // Write tool-call event to SSE stream so client receives it
+            streamDataStream({ type: 'tool-call', data: { toolCallId: event.chunk.toolCallId, toolName: event.chunk.toolName } });
             onToolEvent?.({ type: 'tool_call', toolCallId: event.chunk.toolCallId, toolName: event.chunk.toolName });
           }
         },
