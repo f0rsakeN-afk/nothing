@@ -85,7 +85,9 @@ function SidebarSkeleton({ type }: { type: "chats" | "projects" }) {
 function SidebarErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 gap-3">
-      <p className="text-xs text-destructive tracking-wide font-semibold">Failed to load</p>
+      <p className="text-xs text-destructive tracking-wide font-semibold">
+        Failed to load
+      </p>
       <button
         onClick={onRetry}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -120,10 +122,9 @@ function SidebarEmptyState({
 // Main component
 // =========================================
 
-export function SidebarHistory({
-  activeTab,
-}: SidebarHistoryProps) {
-  const { openCreateProjectDialog, openRenameProject, openDeleteProject } = useProjectDialogs();
+export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
+  const { openCreateProjectDialog, openRenameProject, openDeleteProject } =
+    useProjectDialogs();
   // Subscribe to SSE events for real-time updates
   useChatEvents();
 
@@ -260,7 +261,7 @@ export function SidebarHistory({
     }
 
     return (
-      <>
+      <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar">
         {/* Archived Chats */}
         {hasChats && (
           <SidebarGroup className="py-1 px-2">
@@ -316,7 +317,7 @@ export function SidebarHistory({
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-      </>
+      </div>
     );
   }
 
@@ -348,7 +349,7 @@ export function SidebarHistory({
     const groups = groupChatsByDate(chats);
 
     return (
-      <>
+      <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar">
         {groups.map((group) => (
           <SidebarGroup key={group.label} className="py-1 px-2">
             <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
@@ -373,7 +374,7 @@ export function SidebarHistory({
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-      </>
+      </div>
     );
   }
 
@@ -383,7 +384,7 @@ export function SidebarHistory({
 
     if (projects.length === 0) {
       return (
-        <>
+        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto">
           <SidebarEmptyState type="projects" />
           <SidebarGroup className="py-2 px-2 mt-auto">
             <SidebarMenu>
@@ -400,12 +401,12 @@ export function SidebarHistory({
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
-        </>
+        </div>
       );
     }
 
     return (
-      <>
+      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto">
         <SidebarGroup className="py-1 px-2">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0">
@@ -442,7 +443,7 @@ export function SidebarHistory({
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-      </>
+      </div>
     );
   }
 
