@@ -2,6 +2,8 @@
 
 AI-powered chat application with real-time streaming, MCP tool integration, and multi-container deployment support.
 
+![Chat Interface](public/ss/chat.png)
+
 ---
 
 ## Features
@@ -25,6 +27,22 @@ AI-powered chat application with real-time streaming, MCP tool integration, and 
 - **AI**: Vercel AI SDK with OpenAI compatibility
 - **Queue**: BullMQ for async job processing
 - **Styling**: Tailwind CSS
+
+---
+
+## Preview
+
+| Chat | Search | Memory |
+|------|--------|--------|
+| ![Chat](public/ss/chat.png) | ![Search](public/ss/search.png) | ![Memory](public/ss/memory.png) |
+
+| Customize | Apps | Pricing |
+|----------|-------|---------|
+| ![Customize](public/ss/customize.png) | ![Apps](public/ss/apps.png) | ![Pricing](public/ss/pricing.png) |
+
+| Account | Settings | Feedback |
+|---------|----------|----------|
+| ![Account](public/ss/account.png) | ![Settings](public/ss/settings.png) | ![Feedback](public/ss/feedback.png) |
 
 ---
 
