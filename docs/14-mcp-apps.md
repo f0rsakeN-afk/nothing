@@ -512,10 +512,10 @@ async function getMCPToolsForChat(userId: string) {
 }
 ```
 
-Tools are formatted in OpenAI-compatible schema and sent to Groq:
+Tools are formatted in OpenAI-compatible schema and sent to the model:
 
 ```typescript
-formatMCPToolsForGroq(tools) → [
+formatMCPToolsForOpenAI(tools) → [
   {
     type: "function",
     function: {

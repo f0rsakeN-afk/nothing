@@ -769,7 +769,7 @@ export async function POST(req: NextRequest) {
     const view = new Uint8Array(arrayBuffer);
     view.set(new Uint8Array(buffer));
 
-    const filename = 'scira-export.docx';
+    const filename = 'eryx-export.docx';
     return new Response(arrayBuffer, {
       status: 200,
       headers: {

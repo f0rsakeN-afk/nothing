@@ -11,6 +11,8 @@ interface UseChatMessagesOptions {
   chatId: string;
   initialQuery?: string;
   skipFirstMessage?: boolean; // true when chat was created via /api/chats with firstMessage
+  onElicitation?: (data: { elicitationId: string; serverName: string; message: string; mode: "form" | "url"; requestedSchema?: unknown; url?: string }) => void;
+  onElicitationDone?: (data: { elicitationId: string }) => void;
 }
 
 interface UseChatMessagesResult {
@@ -31,6 +33,8 @@ export function useChatMessages({
   chatId,
   initialQuery,
   skipFirstMessage = false,
+  onElicitation,
+  onElicitationDone,
 }: UseChatMessagesOptions): UseChatMessagesResult {
   const queryClient = useQueryClient();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -275,6 +279,8 @@ export function useChatMessages({
                   }
                 );
               },
+              onElicitation: (data) => onElicitation?.(data),
+              onElicitationDone: (data) => onElicitationDone?.(data),
             },
             abortControllerRef.current.signal,
             mode
@@ -462,6 +468,8 @@ export function useChatMessages({
                   }
                 );
               },
+              onElicitation: (data) => onElicitation?.(data),
+              onElicitationDone: (data) => onElicitationDone?.(data),
             },
             abortControllerRef.current.signal,
             mode
@@ -664,6 +672,8 @@ export function useChatMessages({
                   }
                 );
               },
+              onElicitation: (data) => onElicitation?.(data),
+              onElicitationDone: (data) => onElicitationDone?.(data),
             },
             abortControllerRef.current.signal,
             mode

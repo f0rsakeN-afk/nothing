@@ -666,7 +666,8 @@ export async function POST(req: NextRequest) {
         fullMessages,
         {
           tools: mcpTools,
-          onToolCall: async (toolCalls) => executeMCPToolCalls(toolCalls, user.id),
+          onToolCall: async (toolCalls, mcpClients) => executeMCPToolCalls(toolCalls, user.id, mcpClients),
+          userId: user.id,
         },
         (chunk, isResume) => {
           // onChunk - content streamed to client via SSE
@@ -719,7 +720,6 @@ export async function POST(req: NextRequest) {
     const streamId = getStreamId(chatId);
 
     // Return the stream directly - JsonToSseTransformStream handles the SSE framing
-    // This works like scira - stream completes even if client disconnects
     return new Response(resumableStream!.pipeThrough(new JsonToSseTransformStream()), {
       headers: {
         "Content-Type": "text/event-stream",

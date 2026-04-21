@@ -3,10 +3,21 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 
 // Define custom data types for the data stream
+export interface ElicitationData {
+  elicitationId: string;
+  serverName: string;
+  message: string;
+  mode: "form" | "url";
+  requestedSchema?: unknown;
+  url?: string;
+}
+
 export interface CustomDataTypes {
   'data-appendMessage': unknown;
   'data-chat_title': { title: string };
   'data-auto_routed_model': { model: string; route: string };
+  'data-mcp_elicitation': ElicitationData;
+  'data-mcp_elicitation_done': { elicitationId: string };
 }
 
 interface DataStreamContextValue {
@@ -26,8 +37,12 @@ export function DataStreamProvider({ children }: { children: React.ReactNode }) 
 
 export function useDataStream() {
   const context = useContext(DataStreamContext);
+  // Return a no-op context if no provider is available (for backward compatibility)
   if (!context) {
-    throw new Error('useDataStream must be used within a DataStreamProvider');
+    return {
+      dataStream: [] as Array<{ type: string; data?: unknown }>,
+      setDataStream: () => {},
+    };
   }
   return context;
 }

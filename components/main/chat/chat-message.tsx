@@ -51,10 +51,6 @@ export interface SearchResult {
   thumbnail?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Search Loading State (Scira pattern - BorderTrail + TextShimmer)
-// ---------------------------------------------------------------------------
-
 export const SearchLoadingState = memo(function SearchLoadingState({
   query,
 }: {

@@ -10,7 +10,7 @@ This document describes the resumable streaming implementation for AI chat respo
 
 ```
 ┌─────────┐      ┌──────────────┐      ┌─────────────────┐
-│ Client  │──────│  Next.js API  │──────│     Groq        │
+│ Client  │──────│  Next.js API  │──────│  OpenAI Models   │
 └─────────┘      └───────┬──────┘      └─────────────────┘
                          │
                     ┌────▼────┐

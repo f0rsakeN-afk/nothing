@@ -249,6 +249,8 @@ export interface StreamCallbacks {
   onResume?: () => void; // Called when stream was resumed from existing chunks
   onToolStart?: (toolName: string, toolCallId: string) => void;
   onToolComplete?: (toolName: string, toolCallId: string, result?: unknown, error?: string) => void;
+  onElicitation?: (data: { elicitationId: string; serverName: string; message: string; mode: "form" | "url"; requestedSchema?: unknown; url?: string }) => void;
+  onElicitationDone?: (data: { elicitationId: string }) => void;
 }
 
 export async function streamChat(
@@ -259,7 +261,7 @@ export async function streamChat(
   mode?: "chat" | "web",
   options?: { resume?: boolean; maxRetries?: number }
 ): Promise<string> {
-  const { onChunk, onComplete, onError, onSearchComplete, onStep, onResume, onToolStart, onToolComplete } = callbacks;
+  const { onChunk, onComplete, onError, onSearchComplete, onStep, onResume, onToolStart, onToolComplete, onElicitation, onElicitationDone } = callbacks;
   const maxRetries = options?.maxRetries ?? 2;
   let attempt = 0;
 
@@ -312,7 +314,7 @@ export async function streamChat(
       const decoder = new TextDecoder();
       let accumulated = "";
 
-      // Throttle chunk updates for smooth rendering - 100ms like scira
+      // Throttle chunk updates for smooth rendering - 100ms 
       let pendingDeltas: string[] = [];
       let throttleTimeout: ReturnType<typeof setTimeout> | null = null;
       const THROTTLE_MS = 100;
@@ -379,6 +381,24 @@ export async function streamChat(
 
             // Handle finish event - stream is complete
             if (parsed.type === "finish") {
+              continue;
+            }
+
+            // MCP elicitation events
+            if (parsed.type === "data-mcp_elicitation" || parsed.type === "mcp_elicitation") {
+              onElicitation?.({
+                elicitationId: parsed.data?.elicitationId,
+                serverName: parsed.data?.serverName,
+                message: parsed.data?.message,
+                mode: parsed.data?.mode || "form",
+                requestedSchema: parsed.data?.requestedSchema,
+                url: parsed.data?.url,
+              });
+              continue;
+            }
+
+            if (parsed.type === "data-mcp_elicitation_done" || parsed.type === "mcp_elicitation_done") {
+              onElicitationDone?.({ elicitationId: parsed.data?.elicitationId });
               continue;
             }
 

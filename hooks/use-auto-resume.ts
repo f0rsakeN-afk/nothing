@@ -15,11 +15,6 @@ interface AppendMessageData {
   data: string;
 }
 
-/**
- * Hook to handle auto-resume of AI streaming when page reloads
- * Checks if there's an active stream or recent message to restore
- * Similar to scira's use-auto-resume hook
- */
 export function useAutoResume({
   chatId,
   initialMessages,

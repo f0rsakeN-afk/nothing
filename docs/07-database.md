@@ -166,6 +166,8 @@ model ChatSummary {
   id        String @id @default(cuid())
   chatId    String @unique  // One summary per chat
 
+  version   Int    @default(1)  // For re-summarization from scratch
+
   // LLM-generated summary
   summary   String @db.Text
 
