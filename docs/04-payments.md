@@ -68,8 +68,9 @@ export const polarConfig = {
 
 ### Credit Costs
 
-Each AI operation costs credits:
-- **Chat message**: 1 credit
+Each AI operation costs credits based on model tier:
+- **Fast models** (`eryx-fast`, `eryx-nano`): 1 credit
+- **Pro models** (`eryx-pro`, `eryx-ultra`): 5 credits
 - **Web search**: 3 credits
 - **File analysis**: 5 credits
 - **Image generation**: 20 credits

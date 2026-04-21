@@ -155,9 +155,28 @@ const config = parsePoolConfig();
 Protects against cascading failures when external services go down.
 
 ### Services Protected
-- `openai` - AI API (3 failures → open, 15s recovery)
-- `polar` - Payments (5 failures → open, 30s recovery)
-- `searxng` - Web Search (5 failures → open, 30s recovery)
+
+| Service | Failure Threshold | Recovery Timeout |
+|---------|-------------------|------------------|
+| `openai` | 3 | 15s |
+| `polar` | 5 | 30s |
+| `searxng` | 5 | 30s |
+
+### Configuration
+
+Each service can be configured with:
+- **failureThreshold**: Failures before opening (default: 5)
+- **successThreshold**: Successes in half-open before closing (default: 3)
+- **openTimeoutMs**: Time before trying half-open (default: 30s)
+- **halfOpenMaxCalls**: Max calls in half-open state (default: 3)
+
+### States
+
+- **CLOSED**: Normal operation, requests pass through
+- **OPEN**: Service down, requests fail fast
+- **HALF_OPEN**: Testing recovery, limited requests pass through
+
+Uses **Redis** for distributed state across multiple instances.
 
 ### Monitoring
 
@@ -168,8 +187,8 @@ GET /api/status/circuit-breakers
 ```json
 {
   "circuitBreakers": {
-    "openai": { "state": "CLOSED", "failures": 0 },
-    "searxng": { "state": "OPEN", "nextAttempt": "2024-01-01T00:00:30Z" }
+    "openai": { "state": "CLOSED", "failures": 0, "totalCalls": 45 },
+    "searxng": { "state": "OPEN", "nextAttempt": "2024-01-01T00:00:30Z", "totalCalls": 120 }
   }
 }
 ```
@@ -196,7 +215,7 @@ GET /api/status/circuit-breakers
 ## Quick Wins Checklist
 
 - [x] Redis caching (credits, preferences, settings, memories, notifications, projects, chats, search)
-- [x] Circuit breaker (Groq, Polar, SearxNG)
+- [x] Circuit breaker (OpenAI, Polar, SearxNG)
 - [x] Request coalescing (implemented, ready to use)
 - [x] Image compression (service ready, client-side integration needed)
 - [x] Connection pool tuning (documented, configure via DATABASE_URL)

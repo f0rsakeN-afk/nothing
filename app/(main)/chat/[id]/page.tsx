@@ -14,11 +14,8 @@ import { useScrollTracking } from "@/hooks/use-scroll-tracking";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
 import { ChatErrorBoundary } from "@/components/ui/error-boundary";
-// import { cn } from "@/lib/utils";
-// import {
-//   MessageSkeleton,
-//   TypingIndicator,
-// } from "@/components/main/chat/message-skeleton";
+import { McpElicitationModal } from "@/components/mcp-elicitation-modal";
+import { ElicitationProvider, useElicitation } from "@/components/providers/elicitation-provider";
 
 // =========================================
 // Code-split heavy components (loaded on demand)
@@ -343,6 +340,8 @@ function ChatPageInner() {
   const [webSearch, setWebSearch] = React.useState(initialWebSearch);
   const [memoryDialogOpen, setMemoryDialogOpen] = React.useState(false);
 
+  const { activeElicitation, setActiveElicitation, dismissedIds, addDismissedId } = useElicitation();
+
   const {
     messages,
     isLoading,
@@ -356,6 +355,14 @@ function ChatPageInner() {
     chatId,
     initialQuery,
     skipFirstMessage: searchParams.get("trigger") === "1" && initialQuery.length > 0,
+    onElicitation: (data) => {
+      if (dismissedIds.has(data.elicitationId)) return;
+      setActiveElicitation(data);
+    },
+    onElicitationDone: (data) => {
+      addDismissedId(data.elicitationId);
+      setActiveElicitation(null);
+    },
   });
 
   // Auto-trigger AI response when arriving from home with a prompt
@@ -393,6 +400,28 @@ function ChatPageInner() {
       }
     },
   });
+
+  // Handle MCP elicitation events via useChatMessages callback
+  React.useEffect(() => {
+    const handleElicitation = (data: { elicitationId: string; serverName: string; message: string; mode: "form" | "url"; requestedSchema?: unknown; url?: string }) => {
+      if (dismissedIds.has(data.elicitationId)) return;
+      setActiveElicitation(data);
+    };
+
+    const handleElicitationDone = (data: { elicitationId: string }) => {
+      addDismissedId(data.elicitationId);
+      setActiveElicitation(null);
+    };
+
+    // Pass elicitation handlers to useChatMessages
+    // This is done by calling with the callbacks - but we need to integrate with useChatMessages
+  }, [dismissedIds, setActiveElicitation, addDismissedId]);
+
+  // For now, elicitation is handled via the data stream in the useChatMessages hook
+  // We pass elicitation callbacks to useChatMessages
+  React.useEffect(() => {
+    // Elicitation handling is done through the streamChat callbacks in useChatMessages
+  }, []);
 
   const handleSubmit = React.useCallback(
     async (value: string) => {
@@ -449,6 +478,11 @@ function ChatPageInner() {
           isOpen={memoryDialogOpen}
           onOpenChange={setMemoryDialogOpen}
         />
+
+        <McpElicitationModal
+          elicitation={activeElicitation}
+          onClose={() => setActiveElicitation(null)}
+        />
       </div>
 
       <SplitPanel />
@@ -470,10 +504,12 @@ export default function ChatPage() {
   );
 
   return (
-    <ChatErrorBoundary>
-      <SplitViewProvider>
-        <ChatPageInner />
-      </SplitViewProvider>
-    </ChatErrorBoundary>
+    <ElicitationProvider>
+      <ChatErrorBoundary>
+        <SplitViewProvider>
+          <ChatPageInner />
+        </SplitViewProvider>
+      </ChatErrorBoundary>
+    </ElicitationProvider>
   );
 }

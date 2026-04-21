@@ -4,7 +4,6 @@
  * and cross-process stop signaling via pub/sub
  *
  * Uses ai-sdk/openai for smooth SSE streaming with createUIMessageStream.
- * Pattern copied from scira's implementation.
  */
 
 import { createResumableUIMessageStream } from "ai-resumable-stream";
@@ -13,6 +12,7 @@ import { streamText, createUIMessageStream, JsonToSseTransformStream, tool } fro
 import { eryxProvider } from "@/lib/ai/providers";
 import { aiConfig } from "@/lib/config";
 import { after } from "next/server";
+import { resolveMcpToolsWithElicitation, type ResolvedMcpClients } from "./mcp-tool-executor.service";
 
 export interface MCPTool {
   type: 'function';
@@ -39,11 +39,14 @@ export interface ToolResult {
   error?: string;
 }
 
+type DataStreamWriter = (event: { type: string; data: unknown }) => void;
+
 interface StartStreamOptions {
   tools?: MCPTool[];
-  onToolCall?: (toolCalls: ToolCall[]) => Promise<ToolResult[]>;
+  onToolCall?: (toolCalls: ToolCall[], mcpClients?: ResolvedMcpClients) => Promise<ToolResult[]>;
   onToolEvent?: (event: { type: 'tool_call' | 'tool_result' | 'tool_error'; toolCallId?: string; toolName?: string; result?: unknown; error?: string | undefined }) => void;
   systemPrompt?: string;
+  userId?: string;
 }
 
 function createRedisClient() {
@@ -127,7 +130,7 @@ export async function startResumableStream(
   stop: () => void;
 }> {
   const streamId = getStreamId(chatId);
-  const { tools, onToolCall, onToolEvent, systemPrompt } = options || {};
+  const { tools, onToolCall, onToolEvent, systemPrompt, userId } = options || {};
 
   if (activeStreamIds.has(streamId)) {
     console.warn(`[ResumableStream] Stream already active for ${streamId}`);
@@ -141,29 +144,45 @@ export async function startResumableStream(
   streamAbortControllers.set(chatId, abortController);
   activeStreamIds.add(streamId);
 
-  const model = tools?.length ? aiConfig.modelWithTools : aiConfig.model;
-
-  // Build tools for ai-sdk
-  const aiTools: Record<string, any> = {};
-  if (tools?.length) {
-    for (const t of tools) {
-      aiTools[t.function.name] = {
-        description: t.function.description,
-        parameters: t.function.parameters as any,
-        execute: async (args: Record<string, unknown>) => {
-          const result = await onToolCall?.([{ id: "", name: t.function.name, arguments: args }]);
-          return result?.[0]?.result;
-        },
-      };
-    }
-  }
+  // Shared ref to store MCP clients for cleanup
+  const mcpClientsRef: { current: ResolvedMcpClients | undefined } = { current: undefined };
 
   const assistantMessageCreatedAt = new Date().toISOString();
 
-  // Create the stream using scira's exact pattern
   // onFinish is OUTSIDE execute - this is critical for receiving complete messages
   const stream = createUIMessageStream({
-    execute: async ({ writer: dataStream }: { writer: any }) => {
+    execute: async ({ writer: internalDataStream }: { writer: any }) => {
+      // Create a dataStream writer that merges events into the internal stream
+      const streamDataStream: DataStreamWriter = (event: { type: string; data: unknown }) => {
+        internalDataStream.write(event);
+      };
+
+      // Resolve MCP tools with elicitation support using the internal dataStream
+      if (userId) {
+        try {
+          mcpClientsRef.current = await resolveMcpToolsWithElicitation({ userId, dataStream: streamDataStream });
+        } catch (error) {
+          console.warn("[ResumableStream] Failed to resolve MCP tools with elicitation:", error);
+        }
+      }
+
+      const model = tools?.length ? aiConfig.modelWithTools : aiConfig.model;
+
+      // Build tools for ai-sdk - use MCP clients if available
+      const aiTools: Record<string, any> = {};
+      if (tools?.length) {
+        for (const t of tools) {
+          aiTools[t.function.name] = {
+            description: t.function.description,
+            parameters: t.function.parameters as any,
+            execute: async (args: Record<string, unknown>) => {
+              const result = await onToolCall?.([{ id: "", name: t.function.name, arguments: args }], mcpClientsRef.current);
+              return result?.[0]?.result;
+            },
+          };
+        }
+      }
+
       const result = streamText({
         model: eryxProvider.languageModel(model),
         messages: messages as any,
@@ -208,7 +227,7 @@ export async function startResumableStream(
         },
       } as any);
 
-      dataStream.merge(uiMessageStream as any);
+      internalDataStream.merge(uiMessageStream as any);
     },
     onError: (error: any) => {
       console.log('[ResumableStream] Error: ', error);
@@ -222,7 +241,6 @@ export async function startResumableStream(
       console.log("[ResumableStream] onFinish called, messages count:", streamedMessages?.length);
       console.log("[ResumableStream] Full streamedMessages:", JSON.stringify(streamedMessages).slice(0, 2000));
 
-      // Extract content from streamed messages (scira pattern)
       const fullContent = streamedMessages
         .filter((m: any) => m.role === "assistant")
         .map((m: any) => {
@@ -252,6 +270,15 @@ export async function startResumableStream(
         onComplete?.(fullContent, false);
       } else {
         console.warn("[ResumableStream] No content to save - fullContent:", JSON.stringify(fullContent?.slice(0, 200)));
+      }
+
+      // Cleanup MCP clients after stream finishes
+      if (mcpClientsRef.current) {
+        try {
+          await mcpClientsRef.current.closeAll();
+        } catch (error) {
+          console.warn("[ResumableStream] Failed to close MCP clients:", error);
+        }
       }
     },
   });

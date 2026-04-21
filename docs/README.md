@@ -8,7 +8,7 @@ Welcome to the Eryx AI Assistant codebase documentation. This folder contains de
 2. [Middleware & Security](./02-middleware-security.md) - Security headers, CORS, rate limiting
 3. [Redis](./03-redis.md) - Caching and Pub/Sub architecture
 4. [Payments](./04-payments.md) - Polar integration and subscriptions
-5. [AI System](./05-ai-system.md) - Groq integration, context management
+5. [AI System](./05-ai-system.md) - OpenAI integration, context management
 6. [Web Search](./06-web-search.md) - SearxNG integration
 7. [Database](./07-database.md) - Prisma schema and models
 8. [Services](./08-services.md) - Business logic layer
@@ -39,10 +39,11 @@ Welcome to the Eryx AI Assistant codebase documentation. This folder contains de
             ▼                   ▼                   ▼
 ┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
 │    Services       │ │   AI Provider     │ │   External        │
-│  (Business Logic) │ │   (Groq)          │ │   Services        │
+│  (Business Logic) │ │   (OpenAI)        │ │   Services        │
 │  - chat.service   │ │                   │ │   - Polar         │
 │  - credit.service │ │                   │ │   - SearxNG       │
-│  - limit.service  │ │                   │ │   - Stack Auth    │
+│  - limit.service  │ │                   │ │   - MCP Servers   │
+│  - mcp-tools      │ │                   │ │   - Stack Auth    │
 └────────┬──────────┘ └───────────────────┘ └───────────────────┘
          │
          ▼
@@ -56,12 +57,12 @@ Welcome to the Eryx AI Assistant codebase documentation. This folder contains de
 
 | Component | Technology |
 |-----------|------------|
-| Framework | Next.js 16.2.2, React 19.2.4 |
+| Framework | Next.js 16.2.4, React 19.2.5 |
 | Runtime | Bun |
 | Database | PostgreSQL + Prisma |
 | Cache/PubSub | Redis (ioredis) |
 | Auth | Stack Auth |
-| AI | Groq SDK (Llama models) |
+| AI | OpenAI (GPT models via @ai-sdk/openai) |
 | Payments | Polar (Merchant of Record) |
 | Search | SearxNG |
 | UI | shadcn/ui, Radix, Tailwind |
@@ -79,10 +80,15 @@ REDIS_URL=redis://localhost:6380
 STACK_SECRET_KEY=sk_...
 STACK_PUBLISHABLE_KEY=pk_...
 
-# Groq AI
-GROQ_API_KEY=gsk_...
+# OpenAI AI
+OPENAI_API_KEY=gsk_...
 
-# Polar
+# Web Search
+SEARXNG_BASE_URL=http://localhost:8888
+
+# AI Settings
+AI_MODEL=eryx-fast
+AI_MODEL_WITH_TOOLS=eryx-fast
 POLAR_ACCESS_TOKEN=pk_live_...
 POLAR_MODE=sandbox  # or 'production'
 POLAR_WEBHOOK_SECRET=whsec_...
@@ -92,10 +98,11 @@ POLAR_PRO_PRODUCT_ID=prod_...
 # Web Search
 SEARXNG_BASE_URL=http://localhost:8888
 
-# AI Settings
-AI_MODEL=llama-3.1-8b-instant
+AI_MODEL=eryx-fast
+AI_MODEL_WITH_TOOLS=eryx-fast
 AI_MAX_TOKENS=1024
 AI_TEMPERATURE=0.7
+OPENAI_API_KEY=gsk_...
 
 # MCP Apps
 MCP_CREDENTIALS_ENCRYPTION_KEY=your-32-byte-secret-key
@@ -127,7 +134,9 @@ MCP_OAUTH_CALLBACK_ORIGIN=http://localhost:3000
 │   ├── credit.service.ts
 │   ├── limit.service.ts
 │   ├── plan.service.ts
-│   └── summarize.service.ts  # Chat context summarization
+│   ├── summarize.service.ts  # Chat context summarization
+│   ├── mcp-tools.service.ts # MCP tools integration
+│   └── mcp-tool-executor.service.ts # MCP tool execution
 ├── prisma/                # Database schema
 │   └── schema.prisma
 └── src/

@@ -2,7 +2,6 @@
  * AI Stream Endpoint
  * GET /api/chats/:id/ai-stream - Resume AI streaming for a chat
  *
- * Similar to scira's /api/search/[id]/stream endpoint
  * Handles stream resumption when page reloads with active streaming
  */
 

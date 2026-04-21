@@ -502,15 +502,15 @@ const catalogItems = [
   },
 
   // Other
-  {
-    name: "Google Workspace",
-    category: "productivity",
-    url: "https://google-mcp.scira.app/mcp",
-    authType: "apikey",
-    maintainer: "Google",
-    maintainerUrl: "https://google.com",
-    isFeatured: false,
-  },
+  // {
+  //   name: "Google Workspace",
+  //   category: "productivity",
+  //   url: "https://google-mcp.scira.app/mcp",
+  //   authType: "apikey",
+  //   maintainer: "Google",
+  //   maintainerUrl: "https://google.com",
+  //   isFeatured: false,
+  // },
   {
     name: "Google Maps",
     category: "other",

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AI system uses **Groq** for language model inference with **hierarchical context management** to handle long conversations efficiently.
+The AI system uses **OpenAI** models via `@ai-sdk/openai` with a custom provider (`eryxProvider`) that maps logical model names to actual OpenAI deployments. The system includes **hierarchical context management** for handling long conversations efficiently.
 
 ## Configuration
 
@@ -10,14 +10,64 @@ The AI system uses **Groq** for language model inference with **hierarchical con
 
 ```typescript
 export const aiConfig = {
-  model: process.env.AI_MODEL || "llama-3.1-8b-instant",
+  // Model settings - logical names mapped via eryxProvider
+  model: process.env.AI_MODEL || "eryx-fast",
+  modelWithTools: process.env.AI_MODEL_WITH_TOOLS || "eryx-fast",
   maxTokens: parseIntOrDefault(process.env.AI_MAX_TOKENS, 1024),
   temperature: parseFloat(process.env.AI_TEMPERATURE || "0.7"),
-  maxContextTokens: 2000,
-  maxSystemPromptTokens: 1500,
-  maxRecentMessages: 20,
+
+  // Context/token limits
+  maxContextTokens: parseIntOrDefault(process.env.MAX_CONTEXT_TOKENS, 2000),
+  maxSystemPromptTokens: parseIntOrDefault(process.env.MAX_SYSTEM_PROMPT_TOKENS, 1500),
+  maxRecentMessages: parseIntOrDefault(process.env.MAX_RECENT_MESSAGES, 20),
+  maxContextTokensFallback: parseIntOrDefault(process.env.MAX_CONTEXT_TOKENS_FALLBACK, 4000),
+  minRecentTokens: parseIntOrDefault(process.env.MIN_RECENT_TOKENS, 1500),
 };
 ```
+
+## Model Provider
+
+**File:** `lib/ai/providers.ts`
+
+The `eryxProvider` custom provider wraps OpenAI and provides multiple model options:
+
+```typescript
+export const eryxProvider = customProvider({
+  languageModels: {
+    'eryx-fast': openai('gpt-4.1-mini'),
+    'eryx-nano': openai('gpt-4.1-nano'),
+    'eryx-standard': openai('gpt-4.1'),
+    'eryx-plus': openai('gpt-4o-mini'),
+    'eryx-pro': openai('gpt-4o'),
+    'eryx-ultra': openai('gpt-5.1-mini'),
+    'eryx-max': openai('gpt-5.1'),
+    'eryx-next': openai('gpt-5.2-mini'),
+    'eryx-prime': openai('gpt-5.2'),
+    'eryx-flash': openai('gpt-5.4-mini'),
+    'eryx-reason': openai('gpt-5.4'),
+    'eryx-mini-o3': openai('o3-mini'),
+    'eryx-mini-o4': openai('o4-mini'),
+  },
+});
+```
+
+### Available Models
+
+| Logical Name | OpenAI Model | Use Case |
+|--------------|--------------|----------|
+| `eryx-fast` | gpt-4.1-mini | Fast, low-cost general use |
+| `eryx-nano` | gpt-4.1-nano | Minimal footprint |
+| `eryx-standard` | gpt-4.1 | Standard benchmark |
+| `eryx-plus` | gpt-4o-mini | Balanced speed/intelligence |
+| `eryx-pro` | gpt-4o | High intelligence |
+| `eryx-ultra` | gpt-5.1-mini | Next-gen mini |
+| `eryx-max` | gpt-5.1 | Maximum capability |
+| `eryx-next` | gpt-5.2-mini | Future-proof mini |
+| `eryx-prime` | gpt-5.2 | Future flagship |
+| `eryx-flash` | gpt-5.4-mini | Speed optimized |
+| `eryx-reason` | gpt-5.4 | Reasoning optimized |
+| `eryx-mini-o3` | o3-mini | O-series mini |
+| `eryx-mini-o4` | o4-mini | O-series latest mini |
 
 ## Context Management Architecture
 
@@ -45,9 +95,20 @@ For production-grade handling of long conversations, we use a **hierarchical con
 
 ### When Summary is Generated
 
-- After every 50 messages in a chat
+- After every 50 messages in a chat (configurable)
 - When token budget would be exceeded
 - Async (fire and forget) - user never waits
+
+### RAG (Retrieval-Augmented Generation)
+
+The system also uses vector similarity search for context retrieval:
+
+**File:** `services/rag.service.ts`
+
+- Embeds user queries and file content using OpenAI embeddings
+- Performs similarity search against file chunks and memories
+- Combines with keyword matching for hybrid retrieval
+- Budget-aware: limits context to configurable token count
 
 ### Summary Storage
 
@@ -149,39 +210,48 @@ OUTPUT FORMAT (JSON):
 
 ### Request Flow
 
-1. **Authenticate** - Validate user token
+1. **Authenticate** - Validate user token via `validateAuth()`
 2. **Rate Limit** - Check chat rate limit
-3. **Credit Check** - Verify enough credits (1 per chat)
-4. **Build Context** - `getChatContext()` → smart retrieval with summary
-5. **Stream Response** - Call Groq with context
-6. **Save Response** - Store AI message
-7. **Queue Summarization** - Async trigger if threshold reached
+3. **Verify Ownership** - Ensure user owns the chat
+4. **Credit Check** - Verify enough credits based on model
+5. **Build Context** - `buildMessages()` → smart retrieval with summary, memory, project files, RAG
+6. **Load MCP Tools** - Load tools from user's enabled MCP servers
+7. **Stream Response** - Call OpenAI with context via `startResumableStream()`
+8. **Save Response** - Store AI message on completion
+9. **Queue Summarization** - Async trigger if threshold reached
 
 ### Context Building
 
 ```typescript
-async function buildMessages(chatId, incomingMessages) {
-  // Get smart context (summary + recent messages)
-  const { messages, summary, topics, keyFacts, truncated } = await getChatContext(chatId);
+async function buildMessages(chatId, incomingMessages, searchResults?, responseStyle?) {
+  // 1. Get smart context (summary + recent messages)
+  const { messages, summary, topics, keyFacts, truncated } = await getChatContext(chatId, {
+    maxTokens: aiConfig.maxContextTokens,
+  });
 
-  // Build system prompt with all context layers
+  // 2. Build system prompt with preferences
   let systemPrompt = buildSystemPrompt(promptConfig);
 
-  if (summary) {
-    systemPrompt += `\n\nCONVERSATION SUMMARY:\n${summary}`;
-  }
+  // 3. Add memory context via RAG
+  const memoryContexts = await retrieveContext(incomingMessages, { maxTokens: 1000, userId });
 
-  if (topics) {
-    systemPrompt += `\n\nTopics: ${topics.join(", ")}`;
-  }
+  // 4. Add project context via RAG
+  const ragContexts = await retrieveContext(incomingMessages, { fileIds, maxTokens: 3000 });
 
-  if (keyFacts) {
-    systemPrompt += `\n\nKEY FACTS TO PRESERVE:\n${keyFacts.map((f, i) => `${i+1}. ${f}`).join("\n")}`;
-  }
+  // 5. Add chat-attached file contents
+  const chatFileContents = await getChatFileContents(chatId, incomingMessages);
+
+  // 6. Add conversation summary, topics, key facts
+  if (summary) systemPrompt += `\n\nCONVERSATION SUMMARY:\n${summary}`;
+  if (topics) systemPrompt += `\n\nTopics: ${topics.join(", ")}`;
+  if (keyFacts) systemPrompt += `\n\nKEY FACTS TO PRESERVE:\n...`;
+
+  // 7. Add search results if in web mode
+  if (searchResults) systemPrompt += formatSearchResultsForPrompt(searchResults);
 
   return [
     { role: "system", content: systemPrompt },
-    ...messages,
+    ...contextMessages,
     ...incomingMessages,
   ];
 }
@@ -222,11 +292,15 @@ const KEY_FACT_PATTERNS = [
 ## Environment Variables
 
 ```env
-GROQ_API_KEY=gsk_...
-AI_MODEL=llama-3.1-8b-instant
+OPENAI_API_KEY=gsk_...
+OPENAI_API_KEY_2=gsk_...  # Optional second API key for failover
+AI_MODEL=eryx-fast
+AI_MODEL_WITH_TOOLS=eryx-fast
 AI_MAX_TOKENS=1024
 AI_TEMPERATURE=0.7
 MAX_CONTEXT_TOKENS=2000
+MAX_SYSTEM_PROMPT_TOKENS=1500
+MAX_RECENT_MESSAGES=20
 ```
 
 ## Why Not Vector Search?
@@ -239,7 +313,7 @@ Vector embeddings sound powerful but are **overkill** for chat context because:
 4. **Complexity** - consistency between sessions is hard
 
 What we do instead:
-- **Summary-based retrieval** (what ChatGPT/Claude use)
+- **Summary-based retrieval** (similar to what ChatGPT/Claude use)
 - **Key fact extraction** (structured, not semantic)
 - **Topic tracking** (easy categorization)
 

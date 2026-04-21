@@ -649,7 +649,7 @@ export async function POST(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="scira-export.pdf"`,
+        'Content-Disposition': `attachment; filename="eryx-export.pdf"`,
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         Pragma: 'no-cache',
       },
