@@ -1,7 +1,18 @@
 "use client";
 
 import { memo, useState, useCallback, useEffect, useRef } from "react";
-import { Copy, Check, Volume2, Pause, ThumbsUp, ThumbsDown, GitBranch, Loader2, Download, FileText } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Volume2,
+  Pause,
+  ThumbsUp,
+  ThumbsDown,
+  GitBranch,
+  Loader2,
+  Download,
+  FileText,
+} from "lucide-react";
 import { toast } from "@/components/ui/sileo-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -11,31 +22,39 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { branchChat } from "@/services/chat.service";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Strip markdown/rich text formatting for clean speech
 function cleanTextForSpeech(text: string): string {
   if (!text) return "";
 
-  return text
-    // Remove markdown emphasis: *text* or **text**
-    .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
-    // Remove code blocks and inline code
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/`([^`]+)`/g, "$1")
-    // Remove links but keep text
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    // Remove images
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
-    // Remove headers markers
-    .replace(/^#+\s+/gm, "")
-    // Remove blockquotes
-    .replace(/^>\s+/gm, "")
-    // Remove list markers
-    .replace(/^[-*+]\s+/gm, "")
-    .replace(/^\d+\.\s+/gm, "")
-    // Clean up extra whitespace
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    text
+      // Remove markdown emphasis: *text* or **text**
+      .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
+      // Remove code blocks and inline code
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/`([^`]+)`/g, "$1")
+      // Remove links but keep text
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      // Remove images
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
+      // Remove headers markers
+      .replace(/^#+\s+/gm, "")
+      // Remove blockquotes
+      .replace(/^>\s+/gm, "")
+      // Remove list markers
+      .replace(/^[-*+]\s+/gm, "")
+      .replace(/^\d+\.\s+/gm, "")
+      // Clean up extra whitespace
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 interface MessageActionsProps {
@@ -58,7 +77,9 @@ export const MessageActions = memo(function MessageActions({
   className,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
-  const [feedback, setFeedback] = useState<"like" | "dislike" | null>(initialReaction);
+  const [feedback, setFeedback] = useState<"like" | "dislike" | null>(
+    initialReaction,
+  );
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isBranching, setIsBranching] = useState(false);
 
@@ -102,7 +123,11 @@ export const MessageActions = memo(function MessageActions({
     if (typeof window === "undefined") return;
 
     const handleVisibilityChange = () => {
-      if (document.hidden && typeof window !== "undefined" && "speechSynthesis" in window) {
+      if (
+        document.hidden &&
+        typeof window !== "undefined" &&
+        "speechSynthesis" in window
+      ) {
         window.speechSynthesis.cancel();
         if (isMountedRef.current) {
           setIsSpeaking(false);
@@ -188,32 +213,41 @@ export const MessageActions = memo(function MessageActions({
     synth.speak(utterance);
   }, [content, isSpeaking]);
 
-  const handleReaction = useCallback(async (reaction: "like" | "dislike") => {
-    if (!messageId || !chatId) return;
+  const handleReaction = useCallback(
+    async (reaction: "like" | "dislike") => {
+      if (!messageId || !chatId) return;
 
-    // Optimistic update
-    const newFeedback = feedback === reaction ? null : reaction;
-    setFeedback(newFeedback);
+      // Optimistic update
+      const newFeedback = feedback === reaction ? null : reaction;
+      setFeedback(newFeedback);
 
-    try {
-      const res = await fetch(`/api/messages/${messageId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reaction, chatId }),
-      });
+      try {
+        const res = await fetch(`/api/messages/${messageId}/feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reaction, chatId }),
+        });
 
-      if (!res.ok) {
+        if (!res.ok) {
+          // Revert on error
+          setFeedback(feedback);
+        }
+      } catch {
         // Revert on error
         setFeedback(feedback);
       }
-    } catch {
-      // Revert on error
-      setFeedback(feedback);
-    }
-  }, [messageId, chatId, feedback]);
+    },
+    [messageId, chatId, feedback],
+  );
 
-  const handleLike = useCallback(() => handleReaction("like"), [handleReaction]);
-  const handleDislike = useCallback(() => handleReaction("dislike"), [handleReaction]);
+  const handleLike = useCallback(
+    () => handleReaction("like"),
+    [handleReaction],
+  );
+  const handleDislike = useCallback(
+    () => handleReaction("dislike"),
+    [handleReaction],
+  );
 
   const handleBranch = useCallback(async () => {
     if (!messageId || !chatId) return;
@@ -222,14 +256,26 @@ export const MessageActions = memo(function MessageActions({
       const res = await branchChat(chatId, messageId);
       window.location.href = `/chat/${res.newChatId}`;
     } catch (err) {
-      const error = err as { code?: string; message?: string; upgradeTo?: string };
-      if (error.code === "BRANCH_LIMIT_REACHED" || error.code === "BRANCH_NOT_AVAILABLE") {
+      const error = err as {
+        code?: string;
+        message?: string;
+        upgradeTo?: string;
+      };
+      if (
+        error.code === "BRANCH_LIMIT_REACHED" ||
+        error.code === "BRANCH_NOT_AVAILABLE"
+      ) {
         toast.error(error.message || "Branch limit reached", {
-          description: error.upgradeTo ? `Upgrade to ${error.upgradeTo} for more branches` : undefined,
-          action: error.upgradeTo ? {
-            label: `Upgrade to ${error.upgradeTo}`,
-            onClick: () => window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
-          } : undefined,
+          description: error.upgradeTo
+            ? `Upgrade to ${error.upgradeTo} for more branches`
+            : undefined,
+          action: error.upgradeTo
+            ? {
+                label: `Upgrade to ${error.upgradeTo}`,
+                onClick: () =>
+                  window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
+              }
+            : undefined,
         });
       } else {
         toast.error("Failed to branch chat. Please try again.");
@@ -335,7 +381,7 @@ export const MessageActions = memo(function MessageActions({
               "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted/80 focus-visible:bg-muted/80",
               isSpeaking
                 ? "text-primary"
-                : "text-muted-foreground/40 hover:text-muted-foreground"
+                : "text-muted-foreground/40 hover:text-muted-foreground",
             )}
           >
             {isSpeaking ? (
@@ -395,7 +441,9 @@ export const MessageActions = memo(function MessageActions({
             aria-label="Branch from this message"
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted/80 focus-visible:bg-muted/80",
-              isBranching ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"
+              isBranching
+                ? "text-primary"
+                : "text-muted-foreground/40 hover:text-muted-foreground",
             )}
           >
             {isBranching ? (
@@ -409,33 +457,26 @@ export const MessageActions = memo(function MessageActions({
           </TooltipContent>
         </Tooltip>
 
-        {/* Download PDF Action */}
-        <Tooltip>
-          <TooltipTrigger
-            onClick={handleDownloadPDF}
-            aria-label="Download as PDF"
+        {/* Download Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 hover:bg-muted/80 hover:text-muted-foreground focus-visible:bg-muted/80"
+            aria-label="Download response"
           >
             <Download className="h-4 w-4" />
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="center">
-            Download as PDF
-          </TooltipContent>
-        </Tooltip>
-
-        {/* Download DOCX Action */}
-        <Tooltip>
-          <TooltipTrigger
-            onClick={handleDownloadDOCX}
-            aria-label="Download as DOCX"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 hover:bg-muted/80 hover:text-muted-foreground focus-visible:bg-muted/80"
-          >
-            <FileText className="h-4 w-4" />
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="center">
-            Download as DOCX
-          </TooltipContent>
-        </Tooltip>
+         
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" side="bottom" className={'w-max'}>
+            <DropdownMenuItem onClick={handleDownloadPDF} className={'font-medium'}>
+              {/* <FileText className="mr-2 h-4 w-4" /> */}
+              PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDownloadDOCX} className={'font-medium'}>
+              {/* <FileText className="mr-2 h-4 w-4" /> */}
+              DOCX
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </TooltipProvider>
   );

@@ -26,8 +26,9 @@ export default function HomePage() {
 
   const { createChat, isCreating } = useCreateChat({
     getNavigatePath: (chatId, firstMessage, shouldTriggerAI) => {
+      const triggerParam = shouldTriggerAI ? "&trigger=1" : "";
       const webParam = webSearchEnabled ? "&web=1" : "";
-      return `/chat/${chatId}?q=${encodeURIComponent(firstMessage)}${webParam}`;
+      return `/chat/${chatId}?q=${encodeURIComponent(firstMessage)}${triggerParam}${webParam}`;
     },
   });
 

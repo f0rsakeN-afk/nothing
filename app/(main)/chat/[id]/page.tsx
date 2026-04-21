@@ -355,8 +355,31 @@ function ChatPageInner() {
   } = useChatMessages({
     chatId,
     initialQuery,
-    skipFirstMessage: false,
+    skipFirstMessage: searchParams.get("trigger") === "1" && initialQuery.length > 0,
   });
+
+  // Auto-trigger AI response when arriving from home with a prompt
+  React.useEffect(() => {
+    const shouldTrigger = searchParams.get("trigger") === "1" && initialQuery.length > 0;
+    const hasUserMessage = messages.some((m) => m.role === "user");
+    const hasAssistantMessage = messages.some((m) => m.role === "assistant");
+
+    if (shouldTrigger && hasUserMessage && !hasAssistantMessage) {
+      // User message exists but no AI response yet - trigger AI
+      sendUserMessage(initialQuery);
+    }
+  }, [messages, initialQuery, searchParams, sendUserMessage]);
+
+  // Clear trigger and q params once AI starts streaming to prevent re-trigger on refresh
+  React.useEffect(() => {
+    if (messages.some((m) => m.role === "assistant" && m.isStreaming)) {
+      // AI started streaming - clean URL params
+      const url = new URL(window.location.href);
+      url.searchParams.delete("trigger");
+      url.searchParams.delete("q");
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [messages]);
 
   // Subscribe to real-time message updates from other devices
   useChatStream({

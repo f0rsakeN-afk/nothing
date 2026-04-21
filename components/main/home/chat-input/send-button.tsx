@@ -20,9 +20,11 @@ export const SendButton = React.memo(({ onSubmit, disabled, isLoading }: SendBut
       className={cn(
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        disabled || isLoading
-          ? "bg-muted/60 text-muted-foreground/40 cursor-not-allowed"
-          : "bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:scale-105 active:scale-95",
+        isLoading
+          ? "bg-red-500 text-white cursor-not-allowed"
+          : disabled
+            ? "bg-muted/60 text-muted-foreground/40 cursor-not-allowed"
+            : "bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:scale-105 active:scale-95",
       )}
     >
       {isLoading ? (
