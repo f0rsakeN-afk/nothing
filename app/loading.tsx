@@ -10,7 +10,7 @@ export default function Loading() {
           alt="Eryx"
           width={40}
           height={40}
-          className="object-contain"
+          className="object-contain dark:invert"
           priority
         />
       </div>

@@ -7,6 +7,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useServers } from "@/hooks/use-mcp-servers";
 import { useUser } from "@stackframe/stack";
@@ -27,20 +32,33 @@ export const ChatActionsMenu = React.memo(function ChatActionsMenu({
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [connectorsDialogOpen, setConnectorsDialogOpen] = React.useState(false);
   const user = useUser();
+  const isAuthenticated = !!user;
   const { data: servers = [] } = useServers(user?.id);
 
   const enabledServers = servers.filter((s) => s.isEnabled).slice(0, 4);
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isAuthenticated && newOpen) return;
+    setPopoverOpen(newOpen);
+  };
+
   return (
     <>
-      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <Popover open={popoverOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
-            "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70",
+            !isAuthenticated
+              ? "text-muted-foreground/30 hover:text-muted-foreground/50"
+              : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70",
           )}
         >
-          <Link2 className="h-[14px] w-[14px]" />
+          <Tooltip>
+            <TooltipTrigger render={<div className="flex items-center justify-center h-full w-full"><Link2 className="h-[14px] w-[14px]" /></div>} />
+            <TooltipContent side="bottom" sideOffset={8}>
+              {isAuthenticated ? "Connectors & web search" : "Sign in to access connectors"}
+            </TooltipContent>
+          </Tooltip>
         </PopoverTrigger>
         <PopoverContent
           side="bottom"

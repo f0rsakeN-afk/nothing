@@ -11,8 +11,10 @@ import { CreditsButton } from "@/components/main/header/credits-button";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
 import { ShortcutHandler } from "@/components/main/shortcut-handler";
+import { AuthDialog } from "@/components/main/sidebar/dialogs/auth/auth-dialog";
 import { useAuthStatus } from "@/hooks/use-auth-status";
 import { useCreateChat } from "@/hooks/use-create-chat";
+import { usePendingPrompt } from "@/hooks/use-pending-prompt";
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,6 +25,17 @@ export default function HomePage() {
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
   const { data: authStatus, isLoading: authLoading } = useAuthStatus();
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const { pendingPrompt, setPendingPrompt, clearPendingPrompt } = usePendingPrompt();
+
+  // Restore pending prompt into input on mount
+  useEffect(() => {
+    if (pendingPrompt) {
+      setInput(pendingPrompt);
+      clearPendingPrompt();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { createChat, isCreating } = useCreateChat({
     getNavigatePath: (chatId, firstMessage, shouldTriggerAI) => {
@@ -44,9 +57,17 @@ export default function HomePage() {
   const handleSubmit = useCallback(
     async (value: string) => {
       if (isCreating) return;
+
+      // Auth check - if not authenticated, save prompt and show auth dialog
+      if (!authStatus?.authenticated) {
+        setPendingPrompt(value);
+        setAuthDialogOpen(true);
+        return;
+      }
+
       await createChat(value);
     },
-    [createChat, isCreating],
+    [createChat, isCreating, authStatus, setPendingPrompt],
   );
 
   // Closes the modal and populates the input in one go.
@@ -76,11 +97,11 @@ export default function HomePage() {
             {heading}
           </h1>
 
-          <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
+          {/* <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
             {CHIPS.map((chip) => (
               <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
             ))}
-          </div>
+          </div> */}
         </div>
 
         <div className="w-full max-w-2xl">
@@ -94,6 +115,12 @@ export default function HomePage() {
             onWebSearchToggle={(enabled) => setWebSearchEnabled(enabled)}
           />
         </div>
+
+         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {CHIPS.map((chip) => (
+              <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
+            ))}
+          </div> 
       </div>
 
       <PromptModal
@@ -108,6 +135,11 @@ export default function HomePage() {
       />
 
       <ShortcutHandler />
+
+      <AuthDialog
+        open={authDialogOpen}
+        onOpenChange={setAuthDialogOpen}
+      />
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
 import { AppSidebar } from "@/components/main/sidebar/app-sidebar";
 import { InitUser } from "@/components/init-user";
 import { ProjectDialogsProvider } from "@/components/main/sidebar/dialogs/projects/project-dialogs-provider";
+import { AuthGuard } from "@/components/main/auth-guard";
+import { AuthStatusProvider } from "@/components/main/auth-status-provider";
 import "../../styles/hide-scrollbar.css";
 
 export default async function MainLayout({
@@ -32,7 +34,11 @@ export default async function MainLayout({
           </header>
 
           <InitUser />
-          {children}
+          <AuthStatusProvider>
+            <AuthGuard>
+              {children}
+            </AuthGuard>
+          </AuthStatusProvider>
         </ProjectDialogsProvider>
       </SidebarInset>
     </SidebarProvider>

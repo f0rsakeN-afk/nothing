@@ -14,9 +14,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/use-projects";
 import { useProjectDialogs } from "@/components/main/sidebar/dialogs/projects/create-project-context";
+import { useUser } from "@stackframe/stack";
 
 export type ResponseStyle = "normal" | "learning" | "concise" | "explanatory" | "formal";
 
@@ -178,9 +184,16 @@ export const MoreOptionsPopover = React.memo(function MoreOptionsPopover({
   const [open, setOpen] = React.useState(false);
   const [projectSubmenuOpen, setProjectSubmenuOpen] = React.useState(false);
   const [styleSubmenuOpen, setStyleSubmenuOpen] = React.useState(false);
+  const user = useUser();
+  const isAuthenticated = !!user;
   const { data: projectsData, isLoading: projectsLoading } = useProjects();
 
   const projects = projectsData?.projects || [];
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isAuthenticated && newOpen) return;
+    setOpen(newOpen);
+  };
 
   const handleProjectSelect = React.useCallback((projectId: string | null) => {
     onProjectSelect?.(projectId);
@@ -202,16 +215,23 @@ export const MoreOptionsPopover = React.memo(function MoreOptionsPopover({
   }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
-          currentProjectId || currentStyle !== "normal"
+          !isAuthenticated
+            ? "text-muted-foreground/30 hover:text-muted-foreground/50"
+            : currentProjectId || currentStyle !== "normal"
             ? "bg-primary/10 text-primary"
             : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70"
         )}
       >
-        <Plus className="h-[14px] w-[14px]" />
+        <Tooltip>
+          <TooltipTrigger render={<div className="flex items-center justify-center h-full w-full"><Plus className="h-[14px] w-[14px]" /></div>} />
+          <TooltipContent side="bottom" sideOffset={8}>
+            {isAuthenticated ? "Add file, project, or style" : "Sign in to access options"}
+          </TooltipContent>
+        </Tooltip>
       </PopoverTrigger>
       <PopoverContent
         side="bottom"

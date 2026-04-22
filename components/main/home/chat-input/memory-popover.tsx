@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useMemories } from "@/hooks/use-memories";
+import { useUser } from "@stackframe/stack";
 import type { MemoryItem } from "@/components/main/memory/memory-modal";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,11 @@ interface MemoryPopoverProps {
 export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverProps) {
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [showAuthTooltip, setShowAuthTooltip] = React.useState(false);
+  const user = useUser();
   const { memories, isLoading } = useMemories();
+
+  const isAuthenticated = !!user;
 
   const toggleMemory = (id: string) => {
     setSelected((prev) => {
@@ -47,6 +52,11 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
   };
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (!isAuthenticated) {
+      setShowAuthTooltip(true);
+      setTimeout(() => setShowAuthTooltip(false), 2000);
+      return;
+    }
     setOpen(newOpen);
     if (!newOpen) setSelected(new Set());
   };
@@ -57,22 +67,35 @@ export function MemoryPopover({ onOpenMemory, onMemoriesSelect }: MemoryPopoverP
         render={
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => handleOpenChange(true)}
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
               selected.size > 0
                 ? "bg-primary/10 text-primary"
+                : !isAuthenticated
+                ? "text-muted-foreground/30 hover:text-muted-foreground/50"
                 : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/70",
             )}
           >
-            <Tooltip>
-              <TooltipTrigger
-                render={<div className="flex items-center justify-center h-full w-full"><Brain className="h-[14px] w-[14px]" /></div>}
-              />
-              <TooltipContent side="bottom" sideOffset={8}>
-                Memory
-              </TooltipContent>
-            </Tooltip>
+            {isAuthenticated ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={<div className="flex items-center justify-center h-full w-full"><Brain className="h-[14px] w-[14px]" /></div>}
+                />
+                <TooltipContent side="bottom" sideOffset={8}>
+                  Memory
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger
+                  render={<div className="flex items-center justify-center h-full w-full"><Brain className="h-[14px] w-[14px]" /></div>}
+                />
+                <TooltipContent side="bottom" sideOffset={8}>
+                  Sign in to use memory
+                </TooltipContent>
+              </Tooltip>
+            )}
           </button>
         }
       />
