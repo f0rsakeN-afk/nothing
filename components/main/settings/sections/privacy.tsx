@@ -297,18 +297,6 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
               size="sm"
             />
           </SettingRow>
-          <SettingRow
-            label="Marketing cookies"
-            description="Help us deliver relevant ads and track campaigns."
-          >
-            <Switch
-              checked={cookieConsent.consent.marketing}
-              onCheckedChange={(val) =>
-                cookieConsent.updateConsent({ ...cookieConsent.consent, marketing: val })
-              }
-              size="sm"
-            />
-          </SettingRow>
         </div>
       </div>
 
