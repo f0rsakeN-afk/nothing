@@ -3,19 +3,19 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Read the Terms of Service for Nothing. Understand your rights, responsibilities, and the rules that govern your use of our platform.",
+    "Terms of Service governing your use of Eryx AI platform. Understand your rights, responsibilities, and the rules that govern your use of our service.",
   openGraph: {
-    title: "Terms of Service — Nothing",
+    title: "Terms of Service — Eryx",
     description:
-      "Read the Terms of Service for Nothing. Understand your rights, responsibilities, and the rules that govern your use of our platform.",
+      "Terms of Service governing your use of Eryx AI platform. Understand your rights, responsibilities, and the rules that govern your use of our service.",
     type: "website",
     url: "/legal/terms",
   },
   twitter: {
     card: "summary",
-    title: "Terms of Service — Nothing",
+    title: "Terms of Service — Eryx",
     description:
-      "Read the Terms of Service for Nothing. Understand your rights, responsibilities, and the rules that govern your use of our platform.",
+      "Terms of Service governing your use of Eryx AI platform. Understand your rights, responsibilities, and the rules that govern your use of our service.",
   },
   alternates: {
     canonical: "/legal/terms",

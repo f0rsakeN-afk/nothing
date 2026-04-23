@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sileo-toast";
 import { StackProviderWrapper } from "@/components/providers/stack-provider-wrapper";
 import { CookieConsentProvider } from "@/hooks/use-cookie-consent";
 import { CookieConsentBanner } from "@/components/main/cookie-consent-banner";
+import { UmamiScript } from "@/components/analytics/umami";
 //import { PageTransitionProvider } from "@/components/shared/page-transition-provider";
 
 // const inter = Inter({
@@ -108,6 +109,10 @@ export default function RootLayout({
             <ThemeProvider defaultTheme="dark" attribute="class">
               <Toaster position="top-center" />
               <MainLayout>{children}</MainLayout>
+              <UmamiScript
+                websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || ""}
+                src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL || "https://analytics.eryx.ai/script.js"}
+              />
               <CookieConsentBanner />
             </ThemeProvider>
           </StackProviderWrapper>

@@ -2,12 +2,11 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
-export type CookieCategory = "analytics" | "personalization" | "marketing";
+export type CookieCategory = "analytics" | "personalization";
 
 export interface CookieConsent {
   analytics: boolean;
   personalization: boolean;
-  marketing: boolean;
 }
 
 export interface CookieConsentContextValue {
@@ -23,8 +22,7 @@ export interface CookieConsentContextValue {
 
 const DEFAULT_CONSENT: CookieConsent = {
   analytics: false,
-  personalization: true, // Personalization is on by default for core functionality
-  marketing: false,
+  personalization: true,
 };
 
 const COOKIE_KEY = "eryx_cookie_consent";
@@ -103,7 +101,6 @@ export function CookieConsentProvider({ children }: { children: ReactNode }) {
     const allAccepted: CookieConsent = {
       analytics: true,
       personalization: true,
-      marketing: true,
     };
     updateConsent(allAccepted);
   }, [updateConsent]);
@@ -111,8 +108,7 @@ export function CookieConsentProvider({ children }: { children: ReactNode }) {
   const rejectAll = useCallback(() => {
     const allRejected: CookieConsent = {
       analytics: false,
-      personalization: true, // Keep personalization on for core functionality
-      marketing: false,
+      personalization: true,
     };
     updateConsent(allRejected);
   }, [updateConsent]);
