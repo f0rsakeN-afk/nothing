@@ -35,9 +35,12 @@ export function securityHeaders(request: NextRequest) {
   );
 
   // Content Security Policy
+  // Note: 'unsafe-inline' is required for Next.js/React inline styles
+  // 'unsafe-eval' removed as it's not needed for modern React
+  // In production, consider nonce-based CSP for better XSS protection
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.openai.com https://*.stack.auth wss://*.stack.auth"
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.openai.com https://*.stack.auth wss://*.stack.auth"
   );
 
   return response;

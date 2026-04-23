@@ -2,10 +2,23 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Download, Trash2, Cookie } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/components/ui/sileo-toast";
+import { useCookieConsent } from "@/hooks/use-cookie-consent";
 
 function SettingRow({
   label,
@@ -60,6 +73,11 @@ interface PrivacySectionProps {
 export function PrivacySection({ settings: propSettings }: PrivacySectionProps) {
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = React.useState<Settings | null>(null);
+  const [deleteChatsOpen, setDeleteChatsOpen] = React.useState(false);
+  const [deactivateOpen, setDeactivateOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
+  const cookieConsent = useCookieConsent();
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -76,11 +94,71 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
       queryClient.setQueryData(["settings"], newData);
       setLocalSettings(newData);
     },
+    onError: () => {
+      toast.error("Failed to update privacy settings");
+    },
   });
 
   const onUpdate = React.useCallback((key: keyof Settings, value: boolean) => {
     mutation.mutate({ key, value });
   }, [mutation]);
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/settings/export");
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `eryx-data-${new Date().toISOString().split("T")[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Data exported successfully");
+    } catch {
+      toast.error("Failed to export data");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteChats = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/settings/delete-chats", { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+
+      toast.success("All conversations deleted");
+      setDeleteChatsOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    } catch {
+      toast.error("Failed to delete conversations");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/settings/deactivate", { method: "POST" });
+      if (!res.ok) throw new Error("Deactivate failed");
+
+      toast.success("Account deactivated");
+      setDeactivateOpen(false);
+      // Redirect to home after deactivation
+      window.location.href = "/";
+    } catch {
+      toast.error("Failed to deactivate account");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const displaySettings = localSettings || propSettings || settings;
 
@@ -192,6 +270,50 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
 
       <div>
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
+          Cookies
+        </p>
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
+          <SettingRow
+            label="Analytics cookies"
+            description="Help us improve by tracking how you use the app."
+          >
+            <Switch
+              checked={cookieConsent.consent.analytics}
+              onCheckedChange={(val) =>
+                cookieConsent.updateConsent({ ...cookieConsent.consent, analytics: val })
+              }
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Personalization cookies"
+            description="Remember your preferences for better experience."
+          >
+            <Switch
+              checked={cookieConsent.consent.personalization}
+              onCheckedChange={(val) =>
+                cookieConsent.updateConsent({ ...cookieConsent.consent, personalization: val })
+              }
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Marketing cookies"
+            description="Help us deliver relevant ads and track campaigns."
+          >
+            <Switch
+              checked={cookieConsent.consent.marketing}
+              onCheckedChange={(val) =>
+                cookieConsent.updateConsent({ ...cookieConsent.consent, marketing: val })
+              }
+              size="sm"
+            />
+          </SettingRow>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
           Data management
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
@@ -204,8 +326,24 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
                 Download all your conversations and account data.
               </p>
             </div>
-            <Button variant="outline" size="sm" className="h-7 text-[12px]">
-              Export
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[12px]"
+              onClick={handleExportData}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <>
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-muted-foreground/30 border-t-primary animate-spin mr-1.5" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Export
+                </>
+              )}
             </Button>
           </div>
           <div className="flex items-center justify-between gap-4 py-3.5">
@@ -221,7 +359,9 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
               variant="outline"
               size="sm"
               className="h-7 text-[12px] text-destructive border-destructive/30 hover:bg-destructive/5"
+              onClick={() => setDeleteChatsOpen(true)}
             >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
               Clear all
             </Button>
           </div>
@@ -232,21 +372,71 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
         <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
         <div>
           <p className="text-[12.5px] font-medium text-foreground mb-0.5">
-            Delete account
+            Deactivate account
           </p>
           <p className="text-[12px] text-muted-foreground leading-snug mb-2.5">
-            Permanently delete your account and all associated data. This cannot
-            be undone.
+            Deactivate your account. You can reactivate anytime by signing in.
           </p>
           <Button
             variant="destructive"
             size="sm"
             className="h-7 text-[12px] text-white"
+            onClick={() => setDeactivateOpen(true)}
           >
-            Delete my account
+            Deactivate
           </Button>
         </div>
       </div>
+
+      {/* Delete All Chats Confirmation */}
+      <AlertDialog open={deleteChatsOpen} onOpenChange={setDeleteChatsOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10">
+              <Trash2 className="size-5 text-destructive" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete all conversations?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all your conversations and messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              render={<Button variant="destructive" />}
+              onClick={handleDeleteChats}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete all"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Deactivate Account Confirmation */}
+      <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10">
+              <AlertTriangle className="size-5 text-destructive" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Deactivate your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can reactivate anytime by signing in. Your data will be preserved but your account will be deactivated.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              render={<Button variant="destructive" />}
+              onClick={handleDeactivateAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deactivating..." : "Deactivate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

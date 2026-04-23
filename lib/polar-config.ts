@@ -34,9 +34,26 @@ export const polarConfig = {
 
   // Credit costs per operation
   creditCosts: {
-    "eryx-1": 1,
-    "eryx-1-fast": 1,
-    "eryx-1-pro": 5,
+    // OpenAI models - must match keys in lib/ai/providers.ts
+    "gpt-4.1-mini": 1,
+    "gpt-4.1-nano": 1,
+    "gpt-4.1": 2,
+    "gpt-4o-mini": 2,
+    "gpt-4o": 3,
+    "gpt-5.1-mini": 4,
+    "gpt-5.1": 5,
+    "gpt-5.2-mini": 4,
+    "gpt-5.2": 5,
+    "gpt-5.4-mini": 3,
+    "gpt-5.4": 4,
+    "o3-mini": 2,
+    "o4-mini": 3,
+    // Anthropic models
+    "claude-3.5-haiku": 1,
+    "claude-3.5-sonnet": 3,
+    "claude-3.5-opus": 5,
+    "claude-3.7-sonnet": 4,
+    "claude-3.7-opus": 6,
     "web-search": 3,
     "file-analysis": 5,
     "image-generation": 20,

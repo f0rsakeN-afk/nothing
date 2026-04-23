@@ -24,6 +24,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TabId } from "./data";
 import { useProjectDialogs } from "./dialogs/projects/create-project-context";
+import { toast } from "@/components/ui/sileo-toast";
 
 interface SidebarHistoryProps {
   activeTab: TabId;
@@ -167,7 +168,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await archiveChat(chatId);
     } catch (error) {
-      console.error("Failed to archive chat:", error);
+      toast.error("Failed to archive chat");
     }
   };
 
@@ -175,7 +176,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unarchiveChat(chatId);
     } catch (error) {
-      console.error("Failed to unarchive chat:", error);
+      toast.error("Failed to restore chat");
     }
   };
 
@@ -186,7 +187,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await shareChat(chatId, visibility);
     } catch (error) {
-      console.error("Failed to share chat:", error);
+      toast.error("Failed to update sharing settings");
     }
   };
 
@@ -194,7 +195,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await pinChat(chatId);
     } catch (error) {
-      console.error("Failed to pin chat:", error);
+      toast.error("Failed to pin chat");
     }
   };
 
@@ -202,7 +203,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unpinChat(chatId);
     } catch (error) {
-      console.error("Failed to unpin chat:", error);
+      toast.error("Failed to unpin chat");
     }
   };
 
@@ -213,7 +214,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await archiveProject.mutateAsync(project.id);
     } catch (error) {
-      console.error("Failed to archive project:", error);
+      toast.error("Failed to archive project");
     }
   };
 
@@ -224,7 +225,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unarchiveProject.mutateAsync(project.id);
     } catch (error) {
-      console.error("Failed to unarchive project:", error);
+      toast.error("Failed to restore project");
     }
   };
 
@@ -232,7 +233,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await pinProject.mutateAsync(project.id);
     } catch (error) {
-      console.error("Failed to pin project:", error);
+      toast.error("Failed to pin project");
     }
   };
 
@@ -240,7 +241,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unpinProject.mutateAsync(project.id);
     } catch (error) {
-      console.error("Failed to unpin project:", error);
+      toast.error("Failed to unpin project");
     }
   };
 

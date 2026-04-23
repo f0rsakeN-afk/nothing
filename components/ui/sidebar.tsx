@@ -38,6 +38,7 @@ type SidebarContextProps = {
   setOpen: (open: boolean) => void;
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
+  closeMobileSidebar: () => void;
   isMobile: boolean;
   toggleSidebar: () => void;
 };
@@ -73,6 +74,10 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
+
+  // Debounce cookie writes to prevent layout thrashing
+  const cookieTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
@@ -82,11 +87,20 @@ function SidebarProvider({
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      // Debounce cookie writes to prevent layout thrashing
+      if (cookieTimeoutRef.current) {
+        clearTimeout(cookieTimeoutRef.current);
+      }
+      cookieTimeoutRef.current = setTimeout(() => {
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      }, 100);
     },
     [setOpenProp, open],
   );
+
+  const closeMobileSidebar = React.useCallback(() => {
+    setOpenMobile(false);
+  }, [setOpenMobile]);
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -121,9 +135,10 @@ function SidebarProvider({
       isMobile,
       openMobile,
       setOpenMobile,
+      closeMobileSidebar,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, closeMobileSidebar, toggleSidebar],
   );
 
   return (
@@ -181,7 +196,7 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+      <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
           dir={dir}
           data-sidebar="sidebar"

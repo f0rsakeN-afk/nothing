@@ -6,6 +6,7 @@ import { Copy, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AiResponseFormatter } from '@/components/main/chat/ai-response-formatter';
+import { forkChat } from '@/services/chat.service';
 
 interface SharedChatViewerProps {
   chatId: string;
@@ -43,6 +44,7 @@ export function SharedChatViewer({
 }: SharedChatViewerProps) {
   const router = useRouter();
   const [copied, setCopied] = React.useState(false);
+  const [isForking, setIsForking] = React.useState(false);
 
   const handleCopyLink = async () => {
     try {
@@ -51,6 +53,18 @@ export function SharedChatViewer({
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy link:', error);
+    }
+  };
+
+  const handleFork = async () => {
+    if (!chatId || isForking) return;
+    setIsForking(true);
+    try {
+      const result = await forkChat(chatId);
+      router.push(`/chat/${result.newChatId}`);
+    } catch (error) {
+      console.error('Failed to fork chat:', error);
+      setIsForking(false);
     }
   };
 
@@ -164,8 +178,8 @@ export function SharedChatViewer({
                 <Copy className="h-3.5 w-3.5" />
               </Button>
               {isSignedIn ? (
-                <Button size="sm" className="h-9 text-xs rounded-lg gap-1.5 px-4">
-                  Continue
+                <Button size="sm" onClick={handleFork} disabled={isForking} className="h-9 text-xs rounded-lg gap-1.5 px-4">
+                  {isForking ? "Forking..." : "Continue"}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               ) : (

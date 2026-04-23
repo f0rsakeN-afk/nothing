@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { stackServerApp } from "@/src/stack/server";
+import { validateAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { updateAccountSchema } from "@/schemas/validation";
 import { getAccountData, invalidateAccountCache } from "@/services/account.service";
@@ -15,25 +15,18 @@ import { invalidateUserLimitsCache } from "@/services/limit.service";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await stackServerApp.getUser({ tokenStore: request });
+    // Use validateAuth which checks proxy-set headers first (fast path)
+    const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get prisma user by stackId to get internal UUID
-    const prismaUser = await prisma.user.findUnique({
-      where: { stackId: user.id },
-      select: { id: true },
-    });
-
-    if (!prismaUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     // Use cached account data
-    const accountData = await getAccountData(prismaUser.id);
+    const accountData = await getAccountData(user.id);
 
-    return NextResponse.json(accountData);
+    const response = NextResponse.json(accountData);
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+    return response;
   } catch (error) {
     console.error("Get account error:", error);
     return NextResponse.json({ error: "Failed to get account" }, { status: 500 });
@@ -42,13 +35,14 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const user = await stackServerApp.getUser({ tokenStore: request });
+    // Use validateAuth which checks proxy-set headers first (fast path)
+    const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const fullUser = await prisma.user.findUnique({
-      where: { stackId: user.id },
+      where: { stackId: user.stackId },
     });
 
     if (!fullUser) {
@@ -139,13 +133,14 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await stackServerApp.getUser({ tokenStore: request });
+    // Use validateAuth which checks proxy-set headers first (fast path)
+    const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const fullUser = await prisma.user.findUnique({
-      where: { stackId: user.id },
+      where: { stackId: user.stackId },
     });
 
     if (!fullUser) {

@@ -174,6 +174,11 @@ export default function OnboardingPage() {
       });
 
       if (response.ok) {
+        // Save profession to cookie for persistence (localStorage can be cleared)
+        if (formData.profession) {
+          document.cookie = `eryx_profession=${formData.profession}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+          localStorage.setItem("eryx_profession", formData.profession);
+        }
         router.push("/home");
       } else {
         console.error("Onboarding failed");

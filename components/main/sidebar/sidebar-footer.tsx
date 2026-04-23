@@ -41,6 +41,7 @@ import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { CustomizeDialog } from "@/components/customize/customize-dialog";
 import { PricingDialog } from "./dialogs/pricing/pricing-dialog";
 import { LogoutDialog } from "./dialogs/auth/logout-dialog";
+import { AuthDialog } from "./dialogs/auth/auth-dialog";
 import { SettingsDialog } from "@/components/main/settings/settings-dialog";
 import { AccountDialog } from "@/components/main/account/account-dialog";
 import { ShortcutsDialog } from "@/components/main/sidebar/dialogs/shortcuts-dialog";
@@ -60,6 +61,7 @@ export function AppSidebarFooter() {
   const [pricingDialogOpen, setPricingDialogOpen] =
     React.useState<boolean>(false);
   const [logoutAlertOpen, setLogoutAlertOpen] = React.useState<boolean>(false);
+  const [authDialogOpen, setAuthDialogOpen] = React.useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = React.useState<boolean>(false);
   const [accountOpen, setAccountOpen] = React.useState<boolean>(false);
   const [shortcutsOpen, setShortcutsOpen] = React.useState<boolean>(false);
@@ -89,6 +91,7 @@ export function AppSidebarFooter() {
   const openPricing = React.useCallback(() => setPricingDialogOpen(true), []);
   const openFeedback = React.useCallback(() => setFeedbackOpen(true), []);
   const openLogout = React.useCallback(() => setLogoutAlertOpen(true), []);
+  const openAuth = React.useCallback(() => setAuthDialogOpen(true), []);
   const openShortcuts = React.useCallback(() => setShortcutsOpen(true), []);
   const openReport = React.useCallback(() => setReportOpen(true), []);
 
@@ -162,7 +165,7 @@ export function AppSidebarFooter() {
         ) : (
           <Button
             variant="outline"
-            onClick={() => app.redirectToSignIn()}
+            onClick={openAuth}
             className={cn(
               "gap-2 items-center justify-center border-sidebar-border bg-transparent text-[13px] font-semibold tracking-wide text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               isCollapsed ? "h-8 w-8 p-0" : "h-9 w-full px-2",
@@ -335,6 +338,7 @@ export function AppSidebarFooter() {
       <AccountDialog isOpen={accountOpen} onOpenChange={setAccountOpen} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <LogoutDialog open={logoutAlertOpen} onOpenChange={setLogoutAlertOpen} />
+      <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
       <SettingsDialog isOpen={settingsOpen} onOpenChange={setSettingsOpen} />
       <FeedbackDialog isOpen={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <CustomizeDialog isOpen={customizeOpen} onOpenChange={setCustomizeOpen} />

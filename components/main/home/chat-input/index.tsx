@@ -16,9 +16,10 @@ import { useChatSuggestions } from "@/hooks/use-chat-suggestions";
 import { useSound } from "@/hooks/use-sound";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Attachment, ChatInputProps } from "@/types/chat-input";
+//import { Textarea } from "@/components/ui/textarea";
 import type { ResponseStyle } from "./more-options-popover";
 
-export function ChatInput({
+export const ChatInput = React.memo(function ChatInput({
   value,
   onChange,
   onSubmit,
@@ -51,7 +52,7 @@ export function ChatInput({
       onChange(suggestion);
       textareaRef.current?.focus();
     },
-    [onChange]
+    [onChange],
   );
 
   const {
@@ -64,7 +65,11 @@ export function ChatInput({
     handleSelect: handleSelectFromHook,
     recentSearches,
     clearRecentSearches,
-  } = useChatSuggestions({ input: value, onSelect: handleSuggestionSelect, enabled: suggestionsEnabled });
+  } = useChatSuggestions({
+    input: value,
+    onSelect: handleSuggestionSelect,
+    enabled: suggestionsEnabled,
+  });
 
   const { playSelect } = useSound();
 
@@ -73,11 +78,12 @@ export function ChatInput({
       playSelect();
       handleSelectFromHook(suggestion);
     },
-    [playSelect, handleSelectFromHook]
+    [playSelect, handleSelectFromHook],
   );
 
   const isEmpty = !value.trim() && files.length === 0;
-  const showRecent = showSuggestions && value.trim().length === 0 && recentSearches.length > 0;
+  const showRecent =
+    showSuggestions && value.trim().length === 0 && recentSearches.length > 0;
   const showDropdown = showSuggestions && suggestions.length > 0;
 
   const handleChange = React.useCallback(
@@ -166,7 +172,7 @@ export function ChatInput({
       <div
         className={cn(
           "relative flex flex-col rounded-2xl border",
-          "bg-background transition-all duration-300 ease-out",
+          "bg-background duration-300 ease-out",
           focused ? "border-foreground/20" : "border-border shadow-xs",
         )}
       >
@@ -175,7 +181,10 @@ export function ChatInput({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => { setFocused(true); setShowSuggestions(true); }}
+          onFocus={() => {
+            setFocused(true);
+            setShowSuggestions(true);
+          }}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           rows={1}
           placeholder={placeholder}
@@ -183,7 +192,7 @@ export function ChatInput({
           className={cn(
             "block w-full resize-none bg-transparent px-4 py-4 pr-20",
             "text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/40",
-            "outline-none placeholder:font-light",
+            "outline-none placeholder:font-light hide-scrollbar",
           )}
         />
 
@@ -219,7 +228,9 @@ export function ChatInput({
                         onClick={() => handleSuggestionClick(search)}
                         className={cn(
                           "flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors border-b border-border/40 last:border-0",
-                          selectedIndex === i ? "bg-muted/60" : "hover:bg-muted/60"
+                          selectedIndex === i
+                            ? "bg-muted/60"
+                            : "hover:bg-muted/60",
                         )}
                       >
                         <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -233,33 +244,37 @@ export function ChatInput({
                 )}
 
                 {/* Suggestions */}
-                {showDropdown && !isSuggestionsLoading && suggestions.length > 0 && (
-                  <>
-                    {showRecent && (
-                      <div className="px-4 py-1.5 border-b border-border/40">
-                        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                          Suggestions
-                        </span>
-                      </div>
-                    )}
-                    {suggestions.map((suggestion, i) => (
-                      <button
-                        key={`${suggestion}-${i}`}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className={cn(
-                          "flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors border-b border-border/40 last:border-0",
-                          selectedIndex === i ? "bg-muted/60" : "hover:bg-muted/60"
-                        )}
-                      >
-                        <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <p className="text-[13px] text-foreground truncate flex-1">
-                          {suggestion}
-                        </p>
-                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                      </button>
-                    ))}
-                  </>
-                )}
+                {showDropdown &&
+                  !isSuggestionsLoading &&
+                  suggestions.length > 0 && (
+                    <>
+                      {showRecent && (
+                        <div className="px-4 py-1.5 border-b border-border/40">
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            Suggestions
+                          </span>
+                        </div>
+                      )}
+                      {suggestions.map((suggestion, i) => (
+                        <button
+                          key={`${suggestion}-${i}`}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className={cn(
+                            "flex items-center gap-3 w-full px-4 py-2.5 text-left transition-colors border-b border-border/40 last:border-0",
+                            selectedIndex === i
+                              ? "bg-muted/60"
+                              : "hover:bg-muted/60",
+                          )}
+                        >
+                          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <p className="text-[13px] text-foreground truncate flex-1">
+                            {suggestion}
+                          </p>
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                        </button>
+                      ))}
+                    </>
+                  )}
 
                 {isSuggestionsLoading && value.trim().length > 0 && (
                   <div className="flex items-center justify-center py-3 px-4">
@@ -300,7 +315,10 @@ export function ChatInput({
 
           {/* Right: send button + active connectors */}
           <div className="flex items-center gap-2">
-            <ModelSelector currentModel={currentModel} onModelChange={onModelChange} />
+            <ModelSelector
+              currentModel={currentModel}
+              onModelChange={onModelChange}
+            />
             <ActiveConnectorsPill
               servers={servers}
               webSearchEnabled={webSearchEnabled ?? false}
@@ -315,4 +333,4 @@ export function ChatInput({
       </div>
     </div>
   );
-}
+});

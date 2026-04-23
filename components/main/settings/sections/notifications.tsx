@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/sileo-toast";
 
 function SettingRow({
   label,
@@ -74,6 +75,9 @@ export function NotificationsSection({ settings: propSettings }: NotificationsSe
     onSuccess: (newData) => {
       queryClient.setQueryData(["settings"], newData);
       setLocalSettings(newData);
+    },
+    onError: () => {
+      toast.error("Failed to update notification settings");
     },
   });
 

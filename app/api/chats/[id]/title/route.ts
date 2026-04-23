@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateTitle } from "@/lib/title";
 import prisma from "@/lib/prisma";
-import { validateAuth } from "@/lib/auth";
+import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 
 export async function POST(
   request: NextRequest,
@@ -29,6 +29,9 @@ export async function POST(
 
     return NextResponse.json({ title: title || "New Chat" });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     console.error("Error generating title:", error);
     return NextResponse.json(
       { error: "Failed to generate title" },

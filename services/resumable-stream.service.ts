@@ -62,6 +62,7 @@ interface StartStreamOptions {
   onToolEvent?: (event: { type: 'tool_call' | 'tool_result' | 'tool_error'; toolCallId?: string; toolName?: string; result?: unknown; error?: string | undefined }) => void;
   systemPrompt?: string;
   userId?: string;
+  model?: string;
 }
 
 function createRedisClient() {
@@ -96,6 +97,28 @@ const streamAbortControllers = new Map<string, AbortController>();
 
 // Track content length for partial refunds
 const streamContentLengths = new Map<string, number>();
+
+// Periodic cleanup of stale entries (every 5 minutes)
+const STALE_ENTRY_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const streamTimestamps = new Map<string, number>();
+
+function cleanupStaleEntries() {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [chatId, timestamp] of streamTimestamps.entries()) {
+    if (now - timestamp > STALE_ENTRY_TTL_MS) {
+      streamAbortControllers.delete(chatId);
+      streamTimestamps.delete(chatId);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.warn(`[ResumableStream] Cleaned up ${cleaned} stale stream entries`);
+  }
+}
+
+// Run cleanup every 5 minutes
+setInterval(cleanupStaleEntries, 5 * 60 * 1000);
 
 export function getStreamId(chatId: string): string {
   return `chat:${chatId}:stream`;
@@ -191,7 +214,11 @@ function cleanupStream(chatId: string) {
   if (abortController) {
     abortController.abort();
     streamAbortControllers.delete(chatId);
+    streamTimestamps.delete(chatId);
   }
+
+  // Clean up instance reference to prevent memory leaks
+  resumableStreamInstances.delete(streamId);
 
   // Feature 4: Cross-Container Active Detection - untrack from Redis
   untrackActiveStream(streamId).catch((err) => {
@@ -268,7 +295,7 @@ export async function startResumableStream(
   stop: () => void;
 }> {
   const streamId = getStreamId(chatId);
-  const { tools, onToolCall, onToolEvent, systemPrompt, userId } = options || {};
+  const { tools, onToolCall, onToolEvent, systemPrompt, userId, model: requestedModel } = options || {};
 
   // Feature 4: Cross-Container Active Detection - check Redis first
   const isActiveRemotely = await getCrossContainerActiveStreams().then(
@@ -285,6 +312,7 @@ export async function startResumableStream(
 
   const abortController = new AbortController();
   streamAbortControllers.set(chatId, abortController);
+  streamTimestamps.set(chatId, Date.now());
 
   // Feature 4: Cross-Container Active Detection - track in Redis
   await trackActiveStream(streamId);
@@ -315,7 +343,7 @@ export async function startResumableStream(
         }
       }
 
-      const model = tools?.length ? aiConfig.modelWithTools : aiConfig.model;
+      const model = requestedModel || (tools?.length ? aiConfig.modelWithTools : aiConfig.model);
 
       // Build tools for ai-sdk - use MCP clients if available
       const aiTools: Record<string, any> = {};

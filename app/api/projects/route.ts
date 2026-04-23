@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
       try {
         const cached = await redis.get(cacheKey);
         if (cached) {
-          return NextResponse.json(JSON.parse(cached) as ProjectCache);
+          const response = NextResponse.json(JSON.parse(cached) as ProjectCache);
+          response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+          return response;
         }
       } catch {
         // Redis error, continue to DB
@@ -83,7 +85,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(result);
+    const response = NextResponse.json(result);
+    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+    return response;
   } catch (error) {
     if (error instanceof AccountDeactivatedError) {
       return NextResponse.json({ error: "Account deactivated" }, { status: 403 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import promptsData from "@/data/prompts.json";
 import { trackPromptUsage } from "@/services/trending.service";
+import { logger } from "@/lib/logger";
 
 type TrieNode = {
   isEnd?: true;
@@ -39,7 +40,7 @@ function buildIndexes() {
     }
   }
 
-  console.log(`[suggest] Built index with ${promptLowercase.length} prompts`);
+  logger.info(`[suggest] Built index with ${promptLowercase.length} prompts`);
 }
 
 function searchTrie(query: string, limit: number): string[] {
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
     const suggestions = performSearch(q);
     return NextResponse.json({ suggestions, cached: false });
   } catch (error) {
-    console.error("[suggest] error:", error);
+    logger.error("[suggest] Failed to get suggestions", error as Error);
     return NextResponse.json({ suggestions: [] }, { status: 500 });
   }
 }

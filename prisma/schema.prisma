@@ -73,6 +73,8 @@ model User {
   @@index([stackId])
   @@index([role])
   @@index([planTier])
+  @@index([planId])
+  @@index([updatedAt])
 }
 
 model Chat {
@@ -112,6 +114,7 @@ model Chat {
   @@index([shareToken])
   @@index([parentChatId])
   @@index([userId, archivedAt]) // For fetching user's chats filtered by archive status
+  @@index([title])
 }
 
 enum SENDER {
@@ -143,6 +146,8 @@ model Message {
   @@index([chatId])
   @@index([parentId])
   @@index([chatId, createdAt]) // For fetching messages in chronological order within a chat
+  @@index([sender])
+  @@index([updatedAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +185,8 @@ model ChatSummary {
 
   @@index([chatId])
   @@index([parentSummaryId])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 enum FileStatus {
@@ -223,6 +230,8 @@ model File {
   @@index([projectId])
   @@index([status])
   @@index([projectId, status]) // For fetching files by project with status filter
+  @@index([createdAt])
+  @@index([name])
 }
 
 model ProjectFile {
@@ -277,6 +286,8 @@ model Project {
   @@index([archivedAt])
   @@index([pinnedAt])
   @@index([name])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Report {
@@ -398,20 +409,21 @@ model Settings {
 }
 
 model Memory {
-  id               String            @id @default(cuid())
-  userId           String
-  title            String
-  content          String
-  tags             String[]
-  category         String?
-  metadata         Json?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  tags      String[]
+  category  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   // memoryEmbeddings MemoryEmbedding[] // Requires pgvector extension
 
   @@index([userId])
   @@index([userId, category])
   @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model OnboardingData {
@@ -515,6 +527,8 @@ model Plan {
 
   @@index([tier])
   @@index([isActive, isVisible])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Subscription {
@@ -554,6 +568,9 @@ model Subscription {
   @@index([status])
   @@index([polarCustomerId])
   @@index([currentPeriodEnd])
+  @@index([planId])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -593,12 +610,12 @@ enum IncidentSeverity {
 }
 
 model Incident {
-  id        String   @id @default(cuid())
-  title     String
-  status    IncidentStatus @default(INVESTIGATING)
-  severity  IncidentSeverity @default(MINOR)
-  message   String?
-  startedAt DateTime @default(now())
+  id         String           @id @default(cuid())
+  title      String
+  status     IncidentStatus   @default(INVESTIGATING)
+  severity   IncidentSeverity @default(MINOR)
+  message    String?
+  startedAt  DateTime         @default(now())
   resolvedAt DateTime?
 
   // Components affected (stored as JSON array)
@@ -614,19 +631,19 @@ model Incident {
 // ---------------------------------------------------------------------------
 
 model McpCatalogItem {
-  id          String   @id @default(cuid())
-  name        String
-  category    String   // "dev" | "productivity" | "design" | "crm" | "payments" | "database" | "search" | "data" | "travel" | "email" | "shopping" | "other"
-  url         String   @unique
-  authType    String   @default("open") // "oauth" | "apikey" | "open"
-  maintainer  String
+  id            String   @id @default(cuid())
+  name          String
+  category      String // "dev" | "productivity" | "design" | "crm" | "payments" | "database" | "search" | "data" | "travel" | "email" | "shopping" | "other"
+  url           String   @unique
+  authType      String   @default("open") // "oauth" | "apikey" | "open"
+  maintainer    String
   maintainerUrl String
-  customIcon  String?
-  isFeatured   Boolean  @default(false)
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  customIcon    String?
+  isFeatured    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([category])
   @@index([isFeatured])
@@ -642,7 +659,7 @@ model McpUserServer {
   authType                   String    @default("none")
   encryptedCredentials       String?
   oauthIssuerUrl             String?
-  oauthAuthorizationUrl       String?
+  oauthAuthorizationUrl      String?
   oauthTokenUrl              String?
   oauthScopes                String?
   oauthClientId              String?
@@ -651,9 +668,9 @@ model McpUserServer {
   oauthRefreshTokenEncrypted String?
   oauthAccessTokenExpiresAt  DateTime?
   oauthConnectedAt           DateTime?
-  oauthError                String?
+  oauthError                 String?
   isEnabled                  Boolean   @default(true)
-  disabledTools             String[]  @default([])
+  disabledTools              String[]  @default([])
   lastTestedAt               DateTime?
   lastError                  String?
   createdAt                  DateTime  @default(now())

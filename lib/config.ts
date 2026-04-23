@@ -14,8 +14,8 @@ function parseIntOrDefault(value: string | undefined, defaultValue: number): num
 
 export const aiConfig = {
   // Model settings
-  model: process.env.AI_MODEL || "eryx-fast",
-  modelWithTools: process.env.AI_MODEL_WITH_TOOLS || "eryx-fast",
+  model: process.env.AI_MODEL || "gpt-4.1-mini",
+  modelWithTools: process.env.AI_MODEL_WITH_TOOLS || "gpt-4o-mini",
   maxTokens: parseIntOrDefault(process.env.AI_MAX_TOKENS, 1024), // Conservative
   temperature: parseFloat(process.env.AI_TEMPERATURE || "0.7"),
 

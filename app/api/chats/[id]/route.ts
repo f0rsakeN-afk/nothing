@@ -42,13 +42,14 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, archivedAt, projectId, pinnedAt } = body;
+    const { title, archivedAt, projectId, pinnedAt, visibility } = body;
 
     const chat = await updateChat(id, user.id, {
       ...(title !== undefined && { title }),
       ...(archivedAt !== undefined && { archivedAt }),
       ...(projectId !== undefined && { projectId }),
       ...(pinnedAt !== undefined && { pinnedAt }),
+      ...(visibility !== undefined && { visibility }),
     });
 
     // Publish events for real-time sync

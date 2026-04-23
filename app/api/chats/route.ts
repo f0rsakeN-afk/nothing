@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
 
     const result = await getUserChats(user.id, Math.min(Math.max(limit, 1), 100), cursor, { archived, projectId: projectId || undefined });
 
-    return NextResponse.json(result);
+    const response = NextResponse.json(result);
+    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+    return response;
   } catch (error) {
     if (error instanceof AccountDeactivatedError) {
       return NextResponse.json({ error: "Account deactivated" }, { status: 403 });

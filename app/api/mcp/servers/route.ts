@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/auth';
+import { getOrCreateUser, AccountDeactivatedError } from '@/lib/auth';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   validateMcpServerUrl,
   getEncryptedMcpCredentials,
@@ -33,10 +34,7 @@ const createMcpServerSchema = z.object({
 });
 
 function isProUser(planTier: string | null | undefined) {
-  // Allow all logged-in users for now (development mode)
-  // TODO: Re-enable subscription check when ready
-  return true;
-  // return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
+  return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
 }
 
 function serializeMcpServer(server: {
@@ -111,10 +109,13 @@ export async function GET(request: Request) {
 
     return Response.json({ servers: servers.map(serializeMcpServer) });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.error('Failed to list MCP servers:', error);
+    logger.error("[MCPServers] Failed to list MCP servers", error as Error);
     return NextResponse.json({ error: 'Failed to list MCP servers' }, { status: 500 });
   }
 }
@@ -161,10 +162,13 @@ export async function POST(request: Request) {
 
     return Response.json({ server: serializeMcpServer(created) });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.error('Failed to create MCP server:', error);
+    logger.error("[MCPServers] Failed to create MCP server", error as Error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || 'Invalid request' }, { status: 400 });
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { validateAuth } from "@/lib/auth";
+import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 
 export async function POST(
   request: NextRequest,
@@ -14,9 +14,9 @@ export async function POST(
 
     const { id } = await params;
 
-    // Get the original chat
+    // Find the original chat by shareToken (not by chat id)
     const originalChat = await prisma.chat.findFirst({
-      where: { id, visibility: "public" },
+      where: { shareToken: id, visibility: "public" },
       include: {
         messages: {
           orderBy: { createdAt: "asc" },
@@ -26,6 +26,11 @@ export async function POST(
 
     if (!originalChat) {
       return NextResponse.json({ error: "Chat not found or not public" }, { status: 404 });
+    }
+
+    // Check if share link has expired
+    if (originalChat.shareExpiry && originalChat.shareExpiry < new Date()) {
+      return NextResponse.json({ error: "Share link has expired" }, { status: 410 });
     }
 
     // Create a new chat for the current user
@@ -47,6 +52,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, newChatId: newChat.id });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     console.error("Fork chat error:", error);
     return NextResponse.json({ error: "Failed to fork chat" }, { status: 500 });
   }

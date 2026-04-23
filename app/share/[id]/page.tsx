@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { stackServerApp } from '@/src/stack/server';
 import { SharedChatViewer } from '@/components/main/share/shared-chat-viewer';
+import { PasswordGate } from '@/components/main/share/password-gate';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   // Check for demo mode
   if (id === 'demo') {
@@ -17,11 +18,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 
   const chat = await prisma.chat.findFirst({
-    where: { id, visibility: 'public' },
-    select: { title: true },
+    where: { shareToken: id, visibility: 'public' },
+    select: { title: true, shareExpiry: true, sharePassword: true },
   });
 
-  if (!chat) {
+  // Return not found metadata if chat doesn't exist or is expired
+  if (!chat || (chat.shareExpiry && chat.shareExpiry < new Date())) {
     return {
       title: 'Shared Chat | Eryx',
       description: 'A shared chat on Eryx',
@@ -71,7 +73,10 @@ const DEMO_MESSAGES = [
 export default async function SharePage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
 
-  // Demo mode - show preview with dummy messages
+  // Get user from stack server app - works in server components
+  const user = await stackServerApp.getUser();
+
+  // Handle demo mode separately
   if (id === 'demo') {
     return (
       <SharedChatViewer
@@ -79,18 +84,15 @@ export default async function SharePage(props: { params: Promise<{ id: string }>
         chatTitle="Vector Databases & RAG Explained"
         shareUrl="/share/demo"
         messages={DEMO_MESSAGES}
-        isSignedIn={false}
+        isSignedIn={Boolean(user)}
         sharedBy="eryx_demo"
         isDemo={true}
       />
     );
   }
 
-  // Get user from stack server app - works in server components
-  const user = await stackServerApp.getUser();
-
   const chat = await prisma.chat.findFirst({
-    where: { id, visibility: 'public' },
+    where: { shareToken: id, visibility: 'public' },
     include: {
       user: {
         select: {
@@ -106,6 +108,26 @@ export default async function SharePage(props: { params: Promise<{ id: string }>
 
   if (!chat) {
     return notFound();
+  }
+
+  // Check if share link has expired
+  if (chat.shareExpiry && chat.shareExpiry < new Date()) {
+    return notFound();
+  }
+
+  // If password protected and no verified cookie, show password gate
+  if (chat.sharePassword) {
+    const cookieStore = await cookies();
+    const verifiedCookie = cookieStore.get(`share_verified_${id}`);
+    if (!verifiedCookie || verifiedCookie.value !== "1") {
+      return (
+        <PasswordGate
+          shareToken={id}
+          chatTitle={chat.title}
+          sharedBy={chat.user?.email?.split('@')[0] || 'Anonymous'}
+        />
+      );
+    }
   }
 
   const shareUrl = `/share/${id}`;

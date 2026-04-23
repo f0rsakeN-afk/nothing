@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
 import { redisPubSub } from "@/lib/redis";
 import { CHANNELS } from "@/lib/redis";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
 
       // Subscribe
       redisPubSub.subscribe(channel).catch((err) => {
-        console.error(`[ChatsStream] Subscribe failed:`, err);
+        logger.error("[ChatsStream] Subscribe failed", err);
         clearInterval(heartbeat);
         try {
           controller.close();

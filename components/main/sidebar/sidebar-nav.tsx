@@ -88,7 +88,7 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
-  const { state } = useSidebar();
+  const { state, closeMobileSidebar } = useSidebar();
   const user = useUser();
   const isCollapsed = state === "collapsed";
 
@@ -108,7 +108,12 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
                   comingSoon && isCollapsed ? `${label} — Coming soon` : label
                 }
                 render={href ? <Link href={href} /> : undefined}
-                onClick={id === "search" ? onSearchOpen : undefined}
+                onClick={() => {
+                  if (id === "search") {
+                    onSearchOpen();
+                  }
+                  closeMobileSidebar();
+                }}
                 className={cn(
                   " ",
                   primary && !isCollapsed

@@ -57,3 +57,45 @@ export const CHIPS: readonly ChipData[] = [
     ],
   },
 ];
+
+// Chip priority by profession - determines order shown on home page
+const CHIP_PRIORITY_BY_PROFESSION: Record<string, string[]> = {
+  developer: ["Code", "Explain", "Design", "Search"],
+  lead: ["Design", "Code", "Explain", "Search"],
+  pm: ["Design", "Search", "Explain", "Code"],
+  architect: ["Design", "Code", "Explain", "Search"],
+  researcher: ["Search", "Explain", "Design", "Code"],
+  designer: ["Design", "Explain", "Search", "Code"],
+  student: ["Explain", "Code", "Design", "Search"],
+  founder: ["Design", "Search", "Code", "Explain"],
+  devops: ["Code", "Design", "Explain", "Search"],
+  other: ["Search", "Code", "Design", "Explain"],
+};
+
+/**
+ * Get chips reordered based on user's profession
+ * Falls back to default order if no profession provided
+ */
+export function getChipsByProfession(profession: string | null): readonly ChipData[] {
+  if (!profession) return CHIPS;
+
+  const priority = CHIP_PRIORITY_BY_PROFESSION[profession.toLowerCase()];
+  if (!priority) return CHIPS;
+
+  const chipMap = new Map(CHIPS.map((chip) => [chip.label, chip]));
+  const reordered: ChipData[] = [];
+
+  for (const label of priority) {
+    const chip = chipMap.get(label);
+    if (chip) reordered.push(chip);
+  }
+
+  // Add any chips not explicitly prioritized
+  for (const chip of CHIPS) {
+    if (!reordered.includes(chip)) {
+      reordered.push(chip);
+    }
+  }
+
+  return reordered;
+}

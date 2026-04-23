@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/auth';
+import { getOrCreateUser, AccountDeactivatedError } from '@/lib/auth';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   validateMcpServerUrl,
   getEncryptedMcpCredentials,
@@ -12,8 +13,8 @@ import {
   McpTransportType,
 } from '@/lib/mcp/server-config';
 
-function isProUser(_planTier: string | null | undefined) {
-  return true;
+function isProUser(planTier: string | null | undefined) {
+  return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
 }
 
 const optionalUrlField = z.preprocess(
@@ -216,10 +217,13 @@ export async function PATCH(
 
     return Response.json({ server: serializeMcpServer(updated) });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.error('Failed to update MCP server:', error);
+    logger.error("[MCPServers] Failed to update MCP server", error as Error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || 'Invalid request' }, { status: 400 });
     }
@@ -253,10 +257,13 @@ export async function DELETE(
 
     return Response.json({ success: true });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.error('Failed to delete MCP server:', error);
+    logger.error("[MCPServers] Failed to delete MCP server", error as Error);
     return NextResponse.json({ error: 'Failed to delete MCP server' }, { status: 500 });
   }
 }

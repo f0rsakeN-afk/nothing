@@ -156,8 +156,14 @@ export function validateMcpOAuthConfig(input: Pick<
 const ALGORITHM = 'aes-256-gcm';
 
 function getKey(): Buffer {
-  const ENCRYPTION_KEY = process.env.MCP_CREDENTIALS_ENCRYPTION_KEY || 'development-key-32-bytes-long!!';
-  return Buffer.from(ENCRYPTION_KEY, 'utf8').subarray(0, 32);
+  const encryptionKey = process.env.MCP_CREDENTIALS_ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error("MCP_CREDENTIALS_ENCRYPTION_KEY environment variable is required");
+  }
+  if (encryptionKey.length < 32) {
+    throw new Error("MCP_CREDENTIALS_ENCRYPTION_KEY must be at least 32 characters");
+  }
+  return Buffer.from(encryptionKey, 'utf8').subarray(0, 32);
 }
 
 function encryptCredential(plaintext: string): string {

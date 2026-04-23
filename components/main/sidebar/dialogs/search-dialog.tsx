@@ -132,7 +132,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         </div>
 
         {/* Results list */}
-        <div className="max-h-[300px] overflow-y-auto px-2 pb-2">
+        <div className="max-h-[300px] overflow-y-auto px-2 pb-2 hide-scrollbar">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />

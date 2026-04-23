@@ -36,19 +36,23 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get("projectId");
     const type = searchParams.get("type"); // filter by file type
 
-    // Run all three file ID queries in parallel
+    // Run all three file ID queries in parallel with limits to prevent unbounded collection
+    const MAX_FILE_IDS = 1000;
     const [projectFileIds, chatFileIds, messageFileRecords] = await Promise.all([
       prisma.projectFile.findMany({
         where: { project: { userId: user.id } },
         select: { fileId: true },
+        take: MAX_FILE_IDS,
       }),
       prisma.chatFile.findMany({
         where: { chat: { userId: user.id } },
         select: { fileId: true },
+        take: MAX_FILE_IDS,
       }),
       prisma.messageFile.findMany({
         where: { message: { chat: { userId: user.id } } },
         select: { fileId: true },
+        take: MAX_FILE_IDS,
       }),
     ]);
 

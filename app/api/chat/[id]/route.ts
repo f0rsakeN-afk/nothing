@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { validateAuth } from "@/lib/auth";
+import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 
 export async function PATCH(
   request: NextRequest,
@@ -36,6 +36,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, visibility });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     console.error("Chat visibility update error:", error);
     return NextResponse.json({ error: "Failed to update visibility" }, { status: 500 });
   }

@@ -23,7 +23,7 @@ interface UseChatMessagesResult {
   hasOlder: boolean;
   isFetchingOlder: boolean;
   refetch: () => void;
-  sendUserMessage: (content: string, mode?: "chat" | "web", fileIds?: string[]) => Promise<void>;
+  sendUserMessage: (content: string, mode?: "chat" | "web", fileIds?: string[], model?: string) => Promise<void>;
   loadOlder: () => void;
   abortCurrentMessage: () => void;
   isStreaming: boolean;
@@ -40,11 +40,11 @@ export function useChatMessages({
   const abortControllerRef = useRef<AbortController | null>(null);
   const isStreamingRef = useRef(false);
 
-  // Seed message from query param
+  // Seed message from query param - use stable ID based on content hash
   const seedMessage = useMemo<Message | null>(
     () =>
       initialQuery
-        ? { id: `seed-${Date.now()}`, role: "user", content: initialQuery }
+        ? { id: `seed-${initialQuery.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '')}`, role: "user", content: initialQuery }
         : null,
     [initialQuery]
   );
@@ -110,7 +110,7 @@ export function useChatMessages({
 
   // Send user message and get AI response
   const sendUserMessage = useCallback(
-    async (content: string, mode: "chat" | "web" = "chat", fileIds?: string[]) => {
+    async (content: string, mode: "chat" | "web" = "chat", fileIds?: string[], model?: string) => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -284,7 +284,8 @@ export function useChatMessages({
               onElicitationDone: (data) => onElicitationDone?.(data),
             },
             abortControllerRef.current.signal,
-            mode
+            mode,
+            { model }
           );
         } catch (err) {
           // Ignore AbortError - this happens when user sends new message while streaming
@@ -474,7 +475,8 @@ export function useChatMessages({
               onElicitationDone: (data) => onElicitationDone?.(data),
             },
             abortControllerRef.current.signal,
-            mode
+            mode,
+            { model }
           );
         } catch (err) {
           // Ignore AbortError - this happens when user sends new message while streaming
@@ -679,7 +681,8 @@ export function useChatMessages({
               onElicitationDone: (data) => onElicitationDone?.(data),
             },
             abortControllerRef.current.signal,
-            mode
+            mode,
+            { model }
           );
         } catch (err) {
           console.error("[sendUserMessage] error:", err);

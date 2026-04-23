@@ -6,8 +6,8 @@ import { getMcpAuthHeaders } from '@/lib/mcp/auth-headers';
 import { validateMcpServerUrl } from '@/lib/mcp/server-config';
 import { injectManagedOAuthCredentials } from '@/lib/mcp/managed-credentials';
 
-function isProUser(_planTier: string | null | undefined) {
-  return true;
+function isProUser(planTier: string | null | undefined) {
+  return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
 }
 
 export async function GET(

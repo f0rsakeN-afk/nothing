@@ -22,7 +22,7 @@ export function handleCors(request: NextRequest): NextResponse | Response {
   if (request.method === "OPTIONS") {
     const origin = request.headers.get("origin");
 
-    if (origin && isOriginAllowed(origin, request.headers.get("host") || "")) {
+    if (origin && isOriginAllowed(origin)) {
       const response = new NextResponse(null, { status: 204 });
       applyCorsHeaders(response, origin);
       return response;
@@ -34,7 +34,7 @@ export function handleCors(request: NextRequest): NextResponse | Response {
   // For actual requests, validate origin
   const origin = request.headers.get("origin");
 
-  if (origin && !isOriginAllowed(origin, request.headers.get("host") || "")) {
+  if (origin && !isOriginAllowed(origin)) {
     return NextResponse.json(
       { error: "CORS policy violation" },
       { status: 403 }
@@ -45,7 +45,7 @@ export function handleCors(request: NextRequest): NextResponse | Response {
   return NextResponse.next();
 }
 
-function isOriginAllowed(origin: string, host: string): boolean {
+function isOriginAllowed(origin: string): boolean {
   try {
     const originUrl = new URL(origin);
     const originHost = originUrl.host;
@@ -63,11 +63,7 @@ function isOriginAllowed(origin: string, host: string): boolean {
       return true;
     }
 
-    // Allow same-origin requests
-    if (originHost === host) {
-      return true;
-    }
-
+    // Deny all other origins (no host header fallback - it can be spoofed)
     return false;
   } catch {
     return false;

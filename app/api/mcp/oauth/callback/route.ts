@@ -4,12 +4,12 @@ import prisma from '@/lib/prisma';
 import { exchangeMcpOAuthCode, verifyMcpOAuthState } from '@/lib/mcp/oauth';
 import { injectManagedOAuthCredentials } from '@/lib/mcp/managed-credentials';
 
-function redirectToApps(request: Request, status: 'success' | 'error', message?: string) {
+function redirectToApps(request: Request, status: 'success' | 'error', serverId?: string) {
   const origin = new URL(request.url).origin;
   const url = new URL('/apps', origin);
   url.searchParams.set('tab', 'my-servers');
   url.searchParams.set('mcpOauth', status);
-  if (message) url.searchParams.set('message', message.slice(0, 120));
+  // Store error server-side only, not in URL to prevent log leakage
   return Response.redirect(url.toString(), 302);
 }
 
@@ -27,9 +27,9 @@ export async function GET(request: Request) {
     const oauthErrorDesc = requestUrl.searchParams.get('error_description');
 
     if (oauthError) {
-      return redirectToApps(request, 'error', oauthErrorDesc ?? oauthError);
+      return redirectToApps(request, 'error');
     }
-    if (!code || !state) return redirectToApps(request, 'error', 'Missing OAuth callback params');
+    if (!code || !state) return redirectToApps(request, 'error');
 
     const payload = verifyMcpOAuthState({ state, expectedUserId: user.id });
     resolvedServerId = payload.serverId;
@@ -37,8 +37,8 @@ export async function GET(request: Request) {
     const rawServer = await prisma.mcpUserServer.findFirst({
       where: { id: payload.serverId, userId: user.id },
     });
-    if (!rawServer) return redirectToApps(request, 'error', 'MCP server not found');
-    if (rawServer.authType !== 'oauth') return redirectToApps(request, 'error', 'Server is not OAuth');
+    if (!rawServer) return redirectToApps(request, 'error');
+    if (rawServer.authType !== 'oauth') return redirectToApps(request, 'error');
 
     // Inject env-var credentials for managed OAuth apps
     const server = injectManagedOAuthCredentials(rawServer);
@@ -64,6 +64,6 @@ export async function GET(request: Request) {
         data: { oauthError: error instanceof Error ? error.message.slice(0, 1000) : 'OAuth callback failed' },
       }).catch(() => null);
     }
-    return redirectToApps(request, 'error', error instanceof Error ? error.message : 'OAuth callback failed');
+    return redirectToApps(request, 'error');
   }
 }

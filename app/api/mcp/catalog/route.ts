@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import redis, { KEYS, TTL } from '@/lib/redis';
 import type { CategoryId, CatalogAuth } from '@/components/apps/catalog-data';
+import { logger } from '@/lib/logger';
 
 function serializeCatalogItem(item: {
   id: string;
@@ -55,7 +56,7 @@ export async function GET() {
 
     return Response.json({ items: serialized });
   } catch (error) {
-    console.error('Failed to fetch catalog:', error);
+    logger.error("[Catalog] Failed to fetch catalog", error as Error);
     return NextResponse.json({ error: 'Failed to fetch catalog' }, { status: 500 });
   }
 }

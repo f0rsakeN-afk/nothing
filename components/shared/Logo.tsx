@@ -7,8 +7,8 @@ export default function Logo() {
       <Image
         src={"/logo.png"}
         alt="kumari ai logo"
-        height={50}
-        width={50}
+        height={30}
+        width={30}
         priority
       />
     </Link>

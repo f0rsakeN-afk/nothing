@@ -1,13 +1,22 @@
 /**
  * Health Check Cron - External cron service trigger
+ * Protected by CRON_SECRET header verification
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { performHealthCheck } from "@/services/incident.service";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Verify cron secret from cron service
+  const cronSecret = request.headers.get("x-cron-secret");
+  const expectedSecret = process.env.CRON_SECRET;
+
+  if (!expectedSecret || cronSecret !== expectedSecret) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const start = Date.now();
     const results = await performHealthCheck();

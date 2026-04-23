@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
 
 // Define custom data types for the data stream
 export interface ElicitationData {
@@ -30,7 +30,10 @@ const DataStreamContext = createContext<DataStreamContextValue | null>(null);
 export function DataStreamProvider({ children }: { children: React.ReactNode }) {
   const [dataStream, setDataStream] = useState<Array<{ type: string; data?: unknown }>>([]);
 
-  const value = useMemo(() => ({ dataStream, setDataStream }), [dataStream]);
+  // Wrap in useCallback to ensure stable reference
+  const stableSetDataStream = useCallback(setDataStream, []);
+
+  const value = useMemo(() => ({ dataStream, setDataStream: stableSetDataStream }), [dataStream, stableSetDataStream]);
 
   return <DataStreamContext.Provider value={value}>{children}</DataStreamContext.Provider>;
 }

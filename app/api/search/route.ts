@@ -21,13 +21,21 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse(rateLimit.resetAt);
     }
 
-    // Auth check - optional for search
+    // Auth check - required for search (use anonymous only for rate limit tracking)
     let userId = "anonymous";
+    let isAuthenticated = false;
     try {
       const user = await stackServerApp.getUser({ tokenStore: request });
-      userId = user?.id || "anonymous";
+      if (user) {
+        userId = user.id;
+        isAuthenticated = true;
+      }
     } catch {
-      // Allow anonymous search
+      // Continue with anonymous
+    }
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);

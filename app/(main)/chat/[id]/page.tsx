@@ -15,7 +15,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { MemoryDialog } from "@/components/main/memory/memory-dialog";
 import { ChatErrorBoundary } from "@/components/ui/error-boundary";
 import { McpElicitationModal } from "@/components/mcp-elicitation-modal";
-import { ElicitationProvider, useElicitation } from "@/components/providers/elicitation-provider";
+import {
+  ElicitationProvider,
+  useElicitation,
+} from "@/components/providers/elicitation-provider";
 
 // =========================================
 // Code-split heavy components (loaded on demand)
@@ -284,7 +287,7 @@ function VirtualizedMessageList({
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-3xl px-4">
+      <div className="mx-auto w-full max-w-3xl px-2">
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,
@@ -339,8 +342,14 @@ function ChatPageInner() {
   const [input, setInput] = React.useState("");
   const [webSearch, setWebSearch] = React.useState(initialWebSearch);
   const [memoryDialogOpen, setMemoryDialogOpen] = React.useState(false);
+  const [currentModel, setCurrentModel] = React.useState("gpt-4.1-mini");
 
-  const { activeElicitation, setActiveElicitation, dismissedIds, addDismissedId } = useElicitation();
+  const {
+    activeElicitation,
+    setActiveElicitation,
+    dismissedIds,
+    addDismissedId,
+  } = useElicitation();
 
   const {
     messages,
@@ -354,7 +363,8 @@ function ChatPageInner() {
   } = useChatMessages({
     chatId,
     initialQuery,
-    skipFirstMessage: searchParams.get("trigger") === "1" && initialQuery.length > 0,
+    skipFirstMessage:
+      searchParams.get("trigger") === "1" && initialQuery.length > 0,
     onElicitation: (data) => {
       if (dismissedIds.has(data.elicitationId)) return;
       setActiveElicitation(data);
@@ -367,7 +377,8 @@ function ChatPageInner() {
 
   // Auto-trigger AI response when arriving from home with a prompt
   React.useEffect(() => {
-    const shouldTrigger = searchParams.get("trigger") === "1" && initialQuery.length > 0;
+    const shouldTrigger =
+      searchParams.get("trigger") === "1" && initialQuery.length > 0;
     const hasUserMessage = messages.some((m) => m.role === "user");
     const hasAssistantMessage = messages.some((m) => m.role === "assistant");
 
@@ -395,7 +406,9 @@ function ChatPageInner() {
       // Only show toast if message is from AI (someone else using the account)
       if (message.role === "assistant") {
         toast("New AI response", {
-          description: message.content.slice(0, 100) + (message.content.length > 100 ? "..." : ""),
+          description:
+            message.content.slice(0, 100) +
+            (message.content.length > 100 ? "..." : ""),
         });
       }
     },
@@ -403,7 +416,14 @@ function ChatPageInner() {
 
   // Handle MCP elicitation events via useChatMessages callback
   React.useEffect(() => {
-    const handleElicitation = (data: { elicitationId: string; serverName: string; message: string; mode: "form" | "url"; requestedSchema?: unknown; url?: string }) => {
+    const handleElicitation = (data: {
+      elicitationId: string;
+      serverName: string;
+      message: string;
+      mode: "form" | "url";
+      requestedSchema?: unknown;
+      url?: string;
+    }) => {
       if (dismissedIds.has(data.elicitationId)) return;
       setActiveElicitation(data);
     };
@@ -427,21 +447,33 @@ function ChatPageInner() {
     async (value: string) => {
       setInput("");
       try {
-        await sendUserMessage(value, webSearch ? "web" : "chat");
+        await sendUserMessage(
+          value,
+          webSearch ? "web" : "chat",
+          undefined,
+          currentModel,
+        );
       } catch (err) {
-        const error = err as { code?: string; message?: string; required?: number; current?: number; upgradeTo?: string };
+        const error = err as {
+          code?: string;
+          message?: string;
+          required?: number;
+          current?: number;
+          upgradeTo?: string;
+        };
         if (error.code === "CREDIT_ERROR") {
           toast.error("Out of credits", {
             description: error.message || `You need more credits to continue.`,
             action: {
               label: "Upgrade to Pro",
-              onClick: () => window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
+              onClick: () =>
+                window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
             },
           });
         }
       }
     },
-    [sendUserMessage, webSearch],
+    [sendUserMessage, webSearch, currentModel],
   );
 
   if (isLoading) return <div />;
@@ -470,6 +502,8 @@ function ChatPageInner() {
               webSearchEnabled={webSearch}
               onWebSearchToggle={(enabled) => setWebSearch(enabled)}
               suggestionsEnabled={false}
+              currentModel={currentModel}
+              onModelChange={(model) => setCurrentModel(model)}
             />
           </div>
         </div>

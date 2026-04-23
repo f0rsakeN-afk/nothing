@@ -70,6 +70,11 @@ export async function DELETE(
     // Delete embeddings first
     await deleteFileEmbeddings(fileId);
 
+    // Invalidate project context cache if file was in a project
+    if (file.project) {
+      await invalidateProjectContext(file.project.id);
+    }
+
     // Clear extracted content (remove from AI context)
     await prisma.file.update({
       where: { id: fileId },

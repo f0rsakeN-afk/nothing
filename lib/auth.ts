@@ -21,6 +21,20 @@ export class AccountDeactivatedError extends Error {
 }
 
 /**
+ * Fast path: extract user from middleware-set headers
+ */
+function extractFromHeaders(request: Request): AuthenticatedUser | null {
+  const userId = request.headers.get("x-user-id");
+  const email = request.headers.get("x-user-email");
+  const stackId = request.headers.get("x-user-stack-id");
+
+  if (userId && email && stackId) {
+    return { id: userId, email, stackId };
+  }
+  return null;
+}
+
+/**
  * Validate auth via Stack Auth and get/create user
  * Use this in API routes - handles full auth flow
  */
@@ -94,6 +108,13 @@ export async function getOrCreateUser(request: Request): Promise<AuthenticatedUs
  * Returns null if not authenticated
  */
 export async function validateAuth(request: Request): Promise<AuthenticatedUser | null> {
+  // Fast path: check middleware-set headers first
+  const fromHeaders = extractFromHeaders(request);
+  if (fromHeaders) {
+    return fromHeaders;
+  }
+
+  // Fallback: authenticate via Stack (original behavior)
   try {
     const stackUser = await stackServerApp.getUser({ tokenStore: request });
 

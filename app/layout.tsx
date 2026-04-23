@@ -7,8 +7,9 @@ import "../styles/hide-scrollbar.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import MainLayout from "./mainLayout";
 import { Toaster } from "@/components/ui/sileo-toast";
-import { StackProvider, StackTheme } from "@stackframe/stack";
-import { stackServerApp } from "@/src/stack/server";
+import { StackProviderWrapper } from "@/components/providers/stack-provider-wrapper";
+import { CookieConsentProvider } from "@/hooks/use-cookie-consent";
+import { CookieConsentBanner } from "@/components/main/cookie-consent-banner";
 //import { PageTransitionProvider } from "@/components/shared/page-transition-provider";
 
 // const inter = Inter({
@@ -102,14 +103,15 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${sourceSerif.variable} [--font-code:var(--font-sans)] h-full antialiased scroll-smooth`}
     >
       <body className="min-h-dvh flex flex-col bg-background text-foreground">
-        <StackProvider app={stackServerApp}>
-          <StackTheme>
+        <CookieConsentProvider>
+          <StackProviderWrapper>
             <ThemeProvider defaultTheme="dark" attribute="class">
               <Toaster position="top-center" />
               <MainLayout>{children}</MainLayout>
+              <CookieConsentBanner />
             </ThemeProvider>
-          </StackTheme>
-        </StackProvider>
+          </StackProviderWrapper>
+        </CookieConsentProvider>
       </body>
     </html>
   );

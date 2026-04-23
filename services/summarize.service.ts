@@ -10,9 +10,19 @@ import redis, { KEYS, TTL } from "@/lib/redis";
 import OpenAI from "openai";
 import { aiConfig } from "@/lib/config";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "",
-});
+// Singleton OpenAI client - lazy initialization
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY environment variable is required");
+    }
+    openaiClient = new OpenAI({ apiKey });
+  }
+  return openaiClient;
+}
 
 // Summarize when chat has 50+ messages
 const SUMMARY_THRESHOLD = 50;
@@ -98,7 +108,8 @@ Return valid JSON only:
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const client = getOpenAIClient();
+    const response = await client.chat.completions.create({
       model: aiConfig.model,
       messages: [
         { role: "system", content: "You are a helpful assistant that summarizes conversations accurately. Return only valid JSON." },

@@ -1,7 +1,7 @@
 import "server-only";
 import { StackServerApp } from "@stackframe/stack";
-import { stackClientApp } from "./client";
 
 export const stackServerApp = new StackServerApp({
-  inheritsFrom: stackClientApp,
+  tokenStore: "nextjs-cookie",
+  publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY,
 });

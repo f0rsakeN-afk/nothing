@@ -11,6 +11,7 @@ import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
 import { redisPubSub } from "@/lib/redis";
 import { CHANNELS } from "@/lib/redis";
 import prisma from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -82,7 +83,7 @@ export async function GET(
 
       // Subscribe
       redisPubSub.subscribe(channel).catch((err) => {
-        console.error(`[ChatStream] Subscribe failed:`, err);
+        logger.error("[ChatStream] Subscribe failed", err);
         clearInterval(heartbeat);
         try {
           controller.close();

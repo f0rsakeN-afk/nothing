@@ -9,7 +9,6 @@ import {
   ExternalLink,
   GitBranch,
   Globe,
-  Lock,
   MoreHorizontal,
   Pencil,
   Pin,
@@ -19,7 +18,7 @@ import {
   FolderPlus,
 } from "lucide-react";
 
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { useChatPrefetch } from "@/hooks/use-chat-prefetch";
 import { useProjects } from "@/hooks/use-projects";
 import { updateChat } from "@/services/chat.service";
+import { ShareDialog } from "@/components/main/share/share-dialog";
 import type { Project } from "@/types/project";
 
 interface HistoryItem {
@@ -280,32 +280,134 @@ function ProjectSelectDialog({
 }
 
 // =========================================
-// Download Dialog (placeholder)
+// Download Dialog
 // =========================================
+
+type ExportFormat = 'pdf' | 'docx' | 'md' | 'txt';
+
+function formatLabel(fmt: ExportFormat): string {
+  return { pdf: 'PDF', docx: 'Word Document', md: 'Markdown', txt: 'Plain Text' }[fmt];
+}
+
+function formatDescription(fmt: ExportFormat): string {
+  return {
+    pdf: 'Best for printing or sharing read-only documents',
+    docx: 'Editable document for Microsoft Word or Google Docs',
+    md: 'Lightweight format, great for developers',
+    txt: 'Plain text, works in any text editor',
+  }[fmt];
+}
 
 function DownloadChatDialog({
   open,
   onOpenChange,
+  chatId,
   title,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  chatId: string;
   title: string;
 }) {
+  const [selectedFormat, setSelectedFormat] = React.useState<ExportFormat | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleExport = async (format: ExportFormat) => {
+    setSelectedFormat(format);
+    setIsExporting(true);
+    setError(null);
+
+    try {
+      const ext = format === 'docx' ? 'docx' : format;
+      const filename = `${title.replace(/[^a-zA-Z0-9\-_\s]/g, '')}.${ext}`;
+      const url = `/api/export/chat/${chatId}/${format}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 413) {
+          throw new Error('Chat is too large to export. Try a shorter chat.');
+        }
+        throw new Error(data.error || 'Export failed');
+      }
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setIsExporting(false);
+      setSelectedFormat(null);
+    }
+  };
+
+  const formats: ExportFormat[] = ['pdf', 'docx', 'md', 'txt'];
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent size="sm">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Download conversation</AlertDialogTitle>
-          <AlertDialogDescription>
-            Download functionality coming soon.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Close</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[360px]">
+        <DialogHeader>
+          <DialogTitle>Download conversation</DialogTitle>
+          <DialogDescription>
+            Choose a format to download <span className="font-medium text-foreground">&ldquo;{title}&rdquo;</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {formats.map((fmt) => (
+            <button
+              key={fmt}
+              onClick={() => handleExport(fmt)}
+              disabled={isExporting}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-3 rounded-lg border transition-colors text-left',
+                'hover:bg-muted/60',
+                selectedFormat === fmt ? 'border-primary bg-primary/5' : 'border-border',
+                isExporting && selectedFormat !== fmt && 'opacity-50'
+              )}
+            >
+              <div className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted',
+                selectedFormat === fmt && 'bg-primary/15'
+              )}>
+                {isExporting && selectedFormat === fmt ? (
+                  <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                ) : (
+                  <Download className={cn('h-4 w-4', selectedFormat === fmt && 'text-primary')} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{formatLabel(fmt)}</p>
+                <p className="text-xs text-muted-foreground">{formatDescription(fmt)}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -325,14 +427,17 @@ export function ChatHistoryItem({
   isArchived = false,
 }: ChatHistoryItemProps) {
   const { prefetchOnHover } = useChatPrefetch();
+  const { closeMobileSidebar } = useSidebar();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [renameOpen, setRenameOpen] = React.useState(false);
   const [downloadOpen, setDownloadOpen] = React.useState(false);
+  const [shareOpen, setShareOpen] = React.useState(false);
   const [projectOpen, setProjectOpen] = React.useState(false);
 
   const [deleteEver, setDeleteEver] = React.useState(false);
   const [renameEver, setRenameEver] = React.useState(false);
   const [downloadEver, setDownloadEver] = React.useState(false);
+  const [shareEver, setShareEver] = React.useState(false);
 
   const handleDelete = () => {
     onDelete?.(item.id);
@@ -371,7 +476,7 @@ export function ChatHistoryItem({
       <SidebarMenuItem>
         <SidebarMenuButton
           render={
-            <Link href={`/chat/${item.id}`} className="flex min-w-0 items-center gap-2 pr-7" onMouseEnter={() => prefetchOnHover(item.id)}>
+            <Link href={`/chat/${item.id}`} onClick={closeMobileSidebar} className="flex min-w-0 items-center gap-2 pr-7" onMouseEnter={() => prefetchOnHover(item.id)}>
               <span className="flex-1 font-semibold tracking-wider truncate text-[12.5px]">
                 {item.parentChatId && (
                   <GitBranch className="inline-block h-3 w-3 mr-1.5 text-sidebar-foreground/40 align-text-bottom" />
@@ -438,33 +543,14 @@ export function ChatHistoryItem({
                 Move to Project
               </DropdownMenuItem>
 
-              {/* Share/Visibility */}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2.5 text-[13px] font-medium cursor-pointer">
-                  {isPublic ? (
-                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                  ) : (
-                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
-                  {isPublic ? "Make Private" : "Make Public"}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-40">
-                  <DropdownMenuItem
-                    className="gap-2.5 text-[13px] cursor-pointer"
-                    onClick={() => handleShare("public")}
-                  >
-                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                    Public
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="gap-2.5 text-[13px] cursor-pointer"
-                    onClick={() => handleShare("private")}
-                  >
-                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                    Private
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
+              {/* Share */}
+              <DropdownMenuItem
+                className="gap-2.5 text-[13px] cursor-pointer"
+                onClick={() => { setShareEver(true); setShareOpen(true); }}
+              >
+                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                Share
+              </DropdownMenuItem>
 
               {/* Archive/Unarchive */}
               {isArchived ? (
@@ -523,7 +609,20 @@ export function ChatHistoryItem({
         <DownloadChatDialog
           open={downloadOpen}
           onOpenChange={setDownloadOpen}
+          chatId={item.id}
           title={item.title}
+        />
+      )}
+      {shareEver && (
+        <ShareDialog
+          isOpen={shareOpen}
+          onOpenChange={setShareOpen}
+          chatId={item.id}
+          selectedVisibilityType={item.visibility || "private"}
+          onShare={async (chatId, visibility) => {
+            item.visibility = visibility;
+          }}
+          isOwner={true}
         />
       )}
       <ProjectSelectDialog

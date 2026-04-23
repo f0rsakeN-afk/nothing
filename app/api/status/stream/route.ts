@@ -1,13 +1,21 @@
 /**
  * Status SSE Stream - Real-time status updates
+ * Requires authentication
  */
 
+import { NextRequest, NextResponse } from "next/server";
+import { validateAuth } from "@/lib/auth";
 import { redisPubSub, CHANNELS } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const user = await validateAuth(request);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const encoder = new TextEncoder();
   const channel = CHANNELS.status();
 

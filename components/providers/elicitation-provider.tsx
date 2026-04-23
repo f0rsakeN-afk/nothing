@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 export interface ElicitationData {
   elicitationId: string;
@@ -37,14 +37,16 @@ export function ElicitationProvider({ children }: { children: React.ReactNode })
     });
   }, []);
 
+  const value = useMemo(() => ({
+    activeElicitation,
+    setActiveElicitation,
+    dismissedIds,
+    addDismissedId,
+    removeDismissedId,
+  }), [activeElicitation, dismissedIds, addDismissedId, removeDismissedId]);
+
   return (
-    <ElicitationContext.Provider value={{
-      activeElicitation,
-      setActiveElicitation,
-      dismissedIds,
-      addDismissedId,
-      removeDismissedId,
-    }}>
+    <ElicitationContext.Provider value={value}>
       {children}
     </ElicitationContext.Provider>
   );

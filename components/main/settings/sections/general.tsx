@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "@/components/ui/sileo-toast";
 
 function SettingRow({
   label,
@@ -94,6 +95,9 @@ export function GeneralSection({ settings: propSettings }: GeneralSectionProps) 
     onSuccess: (newData) => {
       queryClient.setQueryData(["settings"], newData);
       setLocalSettings(newData);
+    },
+    onError: () => {
+      toast.error("Failed to update settings");
     },
   });
 

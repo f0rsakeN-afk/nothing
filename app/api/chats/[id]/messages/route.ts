@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getChatMessages, addChatMessage } from "@/lib/stack-server";
-import { validateAuth } from "@/lib/auth";
+import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { publishMessageNew } from "@/services/chat-pubsub.service";
 
 export async function GET(
@@ -23,6 +23,9 @@ export async function GET(
 
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     console.error("Error fetching messages:", error);
     return NextResponse.json(
       { error: "Failed to fetch messages" },
@@ -79,6 +82,9 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     console.error("Error adding message:", error);
     return NextResponse.json(
       { error: "Failed to add message" },

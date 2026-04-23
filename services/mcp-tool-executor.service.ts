@@ -101,107 +101,119 @@ export async function resolveMcpToolsWithElicitation({
   const clients: MCPClient[] = [];
   const tools: Record<string, unknown> = {};
 
-  for (const server of servers) {
-    try {
-      const authHeaders = await getMcpAuthHeaders(
-        {
-          id: server.id,
-          authType: server.authType as "none" | "bearer" | "header" | "oauth",
-          encryptedCredentials: server.encryptedCredentials,
-          oauthAccessTokenEncrypted: server.oauthAccessTokenEncrypted,
-          oauthRefreshTokenEncrypted: server.oauthRefreshTokenEncrypted,
-          oauthAccessTokenExpiresAt: server.oauthAccessTokenExpiresAt,
-          oauthIssuerUrl: server.oauthIssuerUrl,
-          oauthTokenUrl: server.oauthTokenUrl,
-          oauthClientId: server.oauthClientId,
-          oauthClientSecretEncrypted: server.oauthClientSecretEncrypted,
-        },
-        userId
-      );
+  // Load servers in parallel for better performance
+  const serverResults = await Promise.all(
+    servers.map(async (server) => {
+      try {
+        const authHeaders = await getMcpAuthHeaders(
+          {
+            id: server.id,
+            authType: server.authType as "none" | "bearer" | "header" | "oauth",
+            encryptedCredentials: server.encryptedCredentials,
+            oauthAccessTokenEncrypted: server.oauthAccessTokenEncrypted,
+            oauthRefreshTokenEncrypted: server.oauthRefreshTokenEncrypted,
+            oauthAccessTokenExpiresAt: server.oauthAccessTokenExpiresAt,
+            oauthIssuerUrl: server.oauthIssuerUrl,
+            oauthTokenUrl: server.oauthTokenUrl,
+            oauthClientId: server.oauthClientId,
+            oauthClientSecretEncrypted: server.oauthClientSecretEncrypted,
+          },
+          userId
+        );
 
-      const client = await createMCPClient({
-        transport: {
-          type: server.transportType as "http" | "sse",
-          url: server.url,
-          headers: authHeaders,
-        },
-        capabilities: {
-          elicitation: {},
-        },
-      });
-
-      // Register elicitation handler if dataStream is provided
-      if (dataStream) {
-        const serverName = server.name;
-        client.onElicitationRequest(ElicitationRequestSchema, async (request) => {
-          const elicitationId = randomUUID();
-          const params = request.params as {
-            message: string;
-            requestedSchema?: unknown;
-            mode?: string;
-            url?: string;
-          };
-
-          const isUrlMode = params.mode === "url" && Boolean(params.url);
-
-          dataStream({
-            type: "data-mcp_elicitation",
-            data: {
-              elicitationId,
-              serverName,
-              message: params.message,
-              mode: isUrlMode ? "url" : "form",
-              requestedSchema: isUrlMode ? undefined : params.requestedSchema,
-              url: isUrlMode ? params.url : undefined,
-            },
-          });
-
-          let result: { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> };
-          try {
-            result = await withTimeout(
-              waitForElicitation(elicitationId),
-              ELICITATION_TIMEOUT_MS,
-              "Elicitation timed out"
-            );
-          } catch {
-            result = { action: "cancel" };
-          }
-
-          dataStream({
-            type: "data-mcp_elicitation_done",
-            data: { elicitationId },
-          });
-
-          return result;
+        const client = await createMCPClient({
+          transport: {
+            type: server.transportType as "http" | "sse",
+            url: server.url,
+            headers: authHeaders,
+          },
+          capabilities: {
+            elicitation: {},
+          },
         });
+
+        const serverTools = await withTimeout(
+          client.tools(),
+          MCP_TOOL_CALL_TIMEOUT_MS,
+          `MCP tool loading timed out for ${server.name} after ${MCP_TOOL_CALL_TIMEOUT_MS}ms`
+        );
+
+        return { server, client, serverTools, error: null };
+      } catch (error) {
+        console.error(`[MCP] Failed to load server ${server.name}:`, error);
+        return { server, client: null, serverTools: null, error };
       }
+    })
+  );
 
-      clients.push(client);
+  for (const result of serverResults) {
+    const { server, client, serverTools } = result;
 
-      const serverTools = await withTimeout(
-        client.tools(),
-        MCP_TOOL_CALL_TIMEOUT_MS,
-        `MCP tool loading timed out for ${server.name} after ${MCP_TOOL_CALL_TIMEOUT_MS}ms`
-      );
+    if (!client || !serverTools) continue;
 
-      const slug = toSafeSlug(server.name);
-      const disabledForServer: string[] = Array.isArray(server.disabledTools) ? server.disabledTools : [];
+    // Register elicitation handler if dataStream is provided
+    if (dataStream) {
+      const serverName = server.name;
+      client.onElicitationRequest(ElicitationRequestSchema, async (request) => {
+        const elicitationId = randomUUID();
+        const params = request.params as {
+          message: string;
+          requestedSchema?: unknown;
+          mode?: string;
+          url?: string;
+        };
 
-      for (const [toolName, toolDef] of Object.entries(serverTools)) {
-        if (disabledForServer.includes(toolName)) continue;
+        const isUrlMode = params.mode === "url" && Boolean(params.url);
 
-        const baseName = `mcp_${slug}_${toolName}`;
-        let uniqueName = baseName;
-        let counter = 2;
-        while (tools[uniqueName]) {
-          uniqueName = `${baseName}_${counter}`;
-          counter += 1;
+        dataStream({
+          type: "data-mcp_elicitation",
+          data: {
+            elicitationId,
+            serverName,
+            message: params.message,
+            mode: isUrlMode ? "url" : "form",
+            requestedSchema: isUrlMode ? undefined : params.requestedSchema,
+            url: isUrlMode ? params.url : undefined,
+          },
+        });
+
+        let result: { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> };
+        try {
+          result = await withTimeout(
+            waitForElicitation(elicitationId),
+            ELICITATION_TIMEOUT_MS,
+            "Elicitation timed out"
+          );
+        } catch {
+          result = { action: "cancel" };
         }
 
-        tools[uniqueName] = toolDef;
+        dataStream({
+          type: "data-mcp_elicitation_done",
+          data: { elicitationId },
+        });
+
+        return result;
+      });
+    }
+
+    clients.push(client);
+
+    const slug = toSafeSlug(server.name);
+    const disabledForServer: string[] = Array.isArray(server.disabledTools) ? server.disabledTools : [];
+
+    for (const [toolName, toolDef] of Object.entries(serverTools)) {
+      if (disabledForServer.includes(toolName)) continue;
+
+      const baseName = `mcp_${slug}_${toolName}`;
+      let uniqueName = baseName;
+      let counter = 2;
+      while (tools[uniqueName]) {
+        uniqueName = `${baseName}_${counter}`;
+        counter += 1;
       }
-    } catch (error) {
-      console.error(`[MCP] Failed to load server ${server.name}:`, error);
+
+      tools[uniqueName] = toolDef;
     }
   }
 

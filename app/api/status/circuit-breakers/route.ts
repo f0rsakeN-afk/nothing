@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCircuitBreakerHealth } from "@/services/circuit-breaker.service";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Circuit breaker health check error:", error);
+    logger.error("[CircuitBreakers] Health check failed", error as Error);
     return NextResponse.json(
       { error: "Failed to get circuit breaker status" },
       { status: 500 }

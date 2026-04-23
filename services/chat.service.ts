@@ -174,12 +174,48 @@ export async function updateChatVisibility(
   chatId: string,
   visibility: "public" | "private"
 ): Promise<{ success: boolean; visibility: string }> {
-  const res = await fetch(`/api/chat/${chatId}`, {
+  const res = await fetch(`/api/chats/${chatId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ visibility }),
   });
   if (!res.ok) throw new Error("Failed to update visibility");
+  return res.json();
+}
+
+export async function createShareLink(
+  chatId: string,
+  expiryHours = 24,
+  password?: string
+): Promise<{ success: boolean; visibility: string; shareExpiry: string | null; shareUrl: string; shareToken?: string }> {
+  console.log("[createShareLink] Sending request for chatId:", chatId);
+  const res = await fetch(`/api/chat/${chatId}/share`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expiryHours, password }),
+  });
+  console.log("[createShareLink] Response status:", res.status);
+  if (!res.ok) throw new Error("Failed to create share link");
+  const data = await res.json();
+  console.log("[createShareLink] Response data:", JSON.stringify(data));
+  return data;
+}
+
+export async function removeShareLink(
+  chatId: string
+): Promise<{ success: boolean; visibility: string }> {
+  const res = await fetch(`/api/chat/${chatId}/share`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to remove share link");
+  return res.json();
+}
+
+export async function forkChat(chatId: string): Promise<{ success: boolean; newChatId: string }> {
+  const res = await fetch(`/api/chat/${chatId}/fork`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to fork chat");
   return res.json();
 }
 
@@ -259,7 +295,7 @@ export async function streamChat(
   callbacks: StreamCallbacks,
   signal?: AbortSignal,
   mode?: "chat" | "web",
-  options?: { resume?: boolean; maxRetries?: number }
+  options?: { resume?: boolean; maxRetries?: number; model?: string }
 ): Promise<string> {
   const { onChunk, onComplete, onError, onSearchComplete, onStep, onResume, onToolStart, onToolComplete, onElicitation, onElicitationDone } = callbacks;
   const maxRetries = options?.maxRetries ?? 2;
@@ -269,7 +305,7 @@ export async function streamChat(
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatId, messages, mode, resume: isResume }),
+      body: JSON.stringify({ chatId, messages, mode, resume: isResume, model: options?.model }),
       signal,
     });
 

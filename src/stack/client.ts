@@ -1,5 +1,15 @@
+"use client";
+
 import { StackClientApp } from "@stackframe/stack";
 
-export const stackClientApp = new StackClientApp({
-  tokenStore: "nextjs-cookie",
-});
+let stackClientApp: StackClientApp<true, string> | null = null;
+
+export function getStackClientApp(): StackClientApp<true, string> {
+  if (!stackClientApp) {
+    stackClientApp = new StackClientApp({
+      tokenStore: "nextjs-cookie",
+      publishableClientKey: process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY,
+    });
+  }
+  return stackClientApp;
+}

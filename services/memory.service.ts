@@ -142,24 +142,9 @@ export async function searchMemories(
 
   const result: MemorySearchResult = { memories: memories as MemoryItem[], total };
 
-  // Cache the result (without limit applied)
+  // Cache the result for this specific query/limit combo
   try {
-    const fullWhere: Record<string, unknown> = { userId };
-    if (query.trim()) {
-      fullWhere.OR = [
-        { title: { contains: query, mode: "insensitive" } },
-        { content: { contains: query, mode: "insensitive" } },
-        { tags: { hasSome: [query.toLowerCase()] } },
-      ];
-    }
-    if (category) {
-      fullWhere.category = category;
-    }
-    const allMemories = await prisma.memory.findMany({
-      where: fullWhere,
-      orderBy: { createdAt: "desc" },
-    });
-    await redis.setex(cacheKey, TTL.userMemories, JSON.stringify({ memories: allMemories, total }));
+    await redis.setex(cacheKey, TTL.userMemories, JSON.stringify({ memories, total }));
   } catch {
     // Redis error, ignore
   }
@@ -214,17 +199,9 @@ export async function getMemories(
 
   const result: MemorySearchResult = { memories: memories as MemoryItem[], total };
 
-  // Cache the result (without limit applied)
+  // Cache the result for this specific limit
   try {
-    const fullWhere: Record<string, unknown> = { userId };
-    if (category) {
-      fullWhere.category = category;
-    }
-    const allMemories = await prisma.memory.findMany({
-      where: fullWhere,
-      orderBy: { createdAt: "desc" },
-    });
-    await redis.setex(cacheKey, TTL.userMemories, JSON.stringify({ memories: allMemories, total }));
+    await redis.setex(cacheKey, TTL.userMemories, JSON.stringify({ memories, total }));
   } catch {
     // Redis error, ignore
   }

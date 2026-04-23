@@ -13,7 +13,7 @@ import {
   PinOff,
 } from "lucide-react";
 
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +44,7 @@ export function ProjectHistoryItem({
   onUnpin,
   isArchived = false,
 }: ProjectHistoryItemProps) {
+  const { closeMobileSidebar } = useSidebar();
   const isPinned = !!item.pinnedAt;
 
   const handlePin = () => {
@@ -60,6 +61,7 @@ export function ProjectHistoryItem({
         render={
           <Link
             href={`/project/${item.id}`}
+            onClick={closeMobileSidebar}
             className="flex min-w-0 items-center gap-2 pr-7 cursor-pointer w-full"
           />
         }

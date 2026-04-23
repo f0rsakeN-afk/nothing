@@ -6,12 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { validateAuth } from "@/lib/auth";
+import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { getChatMessages } from "@/lib/stack-server";
 import { createResumableUIMessageStream } from "ai-resumable-stream";
 import { createUIMessageStream, JsonToSseTransformStream } from "ai";
 import { differenceInSeconds } from "date-fns";
 import { createClient } from "redis";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -121,11 +122,23 @@ export async function GET(
         },
       });
     } catch (error) {
-      console.error("[AIStream] Resume error:", error);
+      if (error instanceof AccountDeactivatedError) {
+        return new NextResponse(JSON.stringify({ error: "Account deactivated" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      logger.error("[AIStream] Resume error", error as Error);
       return new NextResponse(null, { status: 204 });
     }
   } catch (error) {
-    console.error("[AIStream] Error:", error);
+    if (error instanceof AccountDeactivatedError) {
+      return new NextResponse(JSON.stringify({ error: "Account deactivated" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    logger.error("[AIStream] Stream error", error as Error);
     return new NextResponse(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

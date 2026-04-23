@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getOrCreateUser, AccountDeactivatedError } from '@/lib/auth';
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import { Lexer, type Token } from 'marked';
+import { logger } from '@/lib/logger';
 
 type Color = Awaited<ReturnType<typeof rgb>>;
 
@@ -219,6 +221,11 @@ function processMarkdownText(text: string): { text: string; links: { text: strin
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getOrCreateUser(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = parseExportBody(await req.json());
     if (!body) {
       return NextResponse.json({ error: 'Invalid content' }, { status: 400 });
@@ -656,7 +663,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (e: unknown) {
-    console.error('PDF export error:', e);
+    if (e instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
+    logger.error("[PDFExport] PDF export failed", e as Error);
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to generate PDF' }, { status: 500 });
   }
 }

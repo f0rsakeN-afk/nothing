@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { validateAuth } from "@/lib/auth";
+import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { checkBranchLimit, getUserLimits } from "@/services/limit.service";
 
 export async function POST(
@@ -92,6 +92,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, newChatId: newChat.id, branchTitle });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
     console.error("Branch chat error:", error);
     return NextResponse.json({ error: "Failed to create branch" }, { status: 500 });
   }

@@ -264,10 +264,27 @@ export async function getChatById(chatId: string, userId: string) {
   return chat;
 }
 
+export async function getChatByIdWithMessages(chatId: string, userId: string) {
+  const chat = await prisma.chat.findFirst({
+    where: { id: chatId, userId },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, role: true, content: true, createdAt: true },
+      },
+      project: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  return chat;
+}
+
 export async function updateChat(
   chatId: string,
   userId: string,
-  data: { title?: string; archivedAt?: Date | null; projectId?: string | null; pinnedAt?: Date | null }
+  data: { title?: string; archivedAt?: Date | null; projectId?: string | null; pinnedAt?: Date | null; visibility?: string; shareExpiry?: Date | null; shareToken?: string | null; sharePassword?: string | null }
 ) {
   // Verify ownership first
   const existing = await prisma.chat.findFirst({
@@ -292,6 +309,9 @@ export async function updateChat(
       updatedAt: true,
       archivedAt: true,
       pinnedAt: true,
+      visibility: true,
+      shareExpiry: true,
+      shareToken: true,
     },
   });
 
@@ -305,6 +325,9 @@ export async function updateChat(
   if (data.pinnedAt !== undefined) {
     await redis.hset(KEYS.chatMeta(chat.id), "pinnedAt", data.pinnedAt ? data.pinnedAt.toISOString() : "");
   }
+  if (data.visibility !== undefined) {
+    await redis.hset(KEYS.chatMeta(chat.id), "visibility", data.visibility);
+  }
 
   // Invalidate user chat list cache (covers rename, archive, project changes)
   try {
@@ -315,12 +338,18 @@ export async function updateChat(
   }
 
   // Publish sidebar event
+  let eventType = "chat:renamed";
+  if (data.archivedAt !== undefined) eventType = "chat:archived";
+  else if (data.pinnedAt !== undefined) eventType = "chat:pinned";
+  else if (data.visibility !== undefined) eventType = "chat:visibility";
+
   await redis.publish(
     CHANNELS.sidebar(userId),
     JSON.stringify({
-      type: data.archivedAt ? "chat:archived" : data.pinnedAt ? "chat:pinned" : "chat:renamed",
+      type: eventType,
       chatId: chat.id,
       title: chat.title,
+      visibility: chat.visibility,
     })
   );
 
