@@ -51,7 +51,10 @@ export function useChatEvents() {
             queryClient.setQueryData(
               ["chats"],
               (old: { chats: Array<{ id: string; title: string }> } | undefined) => {
-                if (!old) return old;
+                if (!old) {
+                  queryClient.invalidateQueries({ queryKey: ["chats"] });
+                  return old;
+                }
                 return {
                   ...old,
                   chats: old.chats.map((c) =>

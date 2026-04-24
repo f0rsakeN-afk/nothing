@@ -138,6 +138,37 @@ export function useCreateChat(options: UseCreateChatOptions = {}): UseCreateChat
     onSuccess: (data, firstMessage) => {
       logger.info("Chat created", { chatId: data.id, projectId });
 
+      // Replace temp chat with real chat in cache, removing any duplicate that arrived via SSE
+      queryClient.setQueryData<ChatListResponse>(
+        ["chats"],
+        (old) => {
+          if (!old) return old;
+          // Remove any existing entry with real ID (from SSE chat:created) to avoid duplicates
+          const filteredChats = old.chats.filter((c) => c.id !== data.id);
+          return {
+            ...old,
+            chats: filteredChats.map((c) =>
+              c.id.startsWith("temp-") ? { ...c, id: data.id } : c
+            ),
+          };
+        }
+      );
+      if (projectId) {
+        queryClient.setQueryData<ChatListResponse>(
+          ["project-chats", projectId],
+          (old) => {
+            if (!old) return old;
+            const filteredChats = old.chats.filter((c) => c.id !== data.id);
+            return {
+              ...old,
+              chats: filteredChats.map((c) =>
+                c.id.startsWith("temp-") ? { ...c, id: data.id } : c
+              ),
+            };
+          }
+        );
+      }
+
       // Invalidate to ensure fresh data from server
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       if (projectId) {

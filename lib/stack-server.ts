@@ -542,7 +542,7 @@ export async function addChatMessage(
   await redis.publish(
     CHANNELS.chat(chatId),
     JSON.stringify({
-      type: "message:new",
+      type: "chat:message:new",
       message: {
         id: message.id,
         role: message.role,

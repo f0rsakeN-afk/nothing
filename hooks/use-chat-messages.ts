@@ -137,7 +137,7 @@ export function useChatMessages({
               ...old,
               pages: old.pages.map((page, i) =>
                 i === 0
-                  ? { messages: [...(page.messages || []), { id: aiMsgId, role: "assistant", content: "", isStreaming: true }] }
+                  ? { messages: [...(page.messages || []), { id: aiMsgId, role: "assistant", content: "" }] }
                   : page
               ),
             };
@@ -321,14 +321,14 @@ export function useChatMessages({
             (old: { pages: Array<{ messages: Message[] }> } | undefined) => {
               if (!old) {
                 return {
-                  pages: [{ messages: [savedUserMsg, { id: aiMsgId, role: "assistant", content: "", isStreaming: true }], nextCursor: null, prevCursor: null }],
+                  pages: [{ messages: [savedUserMsg, { id: aiMsgId, role: "assistant", content: "" }], nextCursor: null, prevCursor: null }],
                 };
               }
               return {
                 ...old,
                 pages: old.pages.map((page, i) =>
                   i === 0
-                    ? { messages: [...(page.messages || []), savedUserMsg, { id: aiMsgId, role: "assistant", content: "", isStreaming: true }] }
+                    ? { messages: [...(page.messages || []), savedUserMsg, { id: aiMsgId, role: "assistant", content: "" }] }
                     : page
                 ),
               };
@@ -505,7 +505,7 @@ export function useChatMessages({
               ...old,
               pages: old.pages.map((page, i) =>
                 i === 0
-                  ? { messages: [...(page.messages || []), userMsg, { id: aiMsgId, role: "assistant", content: "", isStreaming: true }] }
+                  ? { messages: [...(page.messages || []), userMsg, { id: aiMsgId, role: "assistant", content: "" }] }
                   : page
               ),
             };
