@@ -65,18 +65,20 @@ export async function GET(request: NextRequest) {
         }
       };
 
+      // Register message handler BEFORE subscribe to avoid leaks on failure
+      redisPubSub.on("message", messageHandler);
+
       // Register Redis subscription
       redisPubSub.subscribe(channel).catch((err) => {
         console.error(`Failed to subscribe to ${channel}:`, err);
         clearInterval(heartbeat);
+        redisPubSub.off("message", messageHandler);
         try {
           controller.close();
         } catch {
           // Already closed
         }
       });
-
-      redisPubSub.on("message", messageHandler);
 
       // Cleanup on close
       request.signal.addEventListener("abort", () => {

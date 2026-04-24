@@ -20,7 +20,7 @@ export const runtime = "nodejs";
 function createRedisClient() {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) {
-    return createClient({ url: "redis://localhost:6380" });
+    return createClient({ url: "redis://localhost:6379" });
   }
   return createClient({ url: redisUrl });
 }

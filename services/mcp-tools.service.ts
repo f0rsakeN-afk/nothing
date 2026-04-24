@@ -3,6 +3,7 @@ import 'server-only';
 import { createMCPClient } from '@ai-sdk/mcp';
 import { getMcpAuthHeaders } from '@/lib/mcp/auth-headers';
 import prisma from '@/lib/prisma';
+import redis, { KEYS, TTL } from '@/lib/redis';
 
 export interface MCPTool {
   name: string;           // prefixed: "srv_abc:github_pullRequests"
@@ -103,8 +104,21 @@ export async function getEnabledMCPServers(userId: string): Promise<Array<{
 
 /**
  * Fetch tools from all enabled MCP servers, merged into unified list
+ * Cached per user with 5-minute TTL to avoid repeated MCP client connections
  */
 export async function getMCPToolsForChat(userId: string): Promise<MCPTool[]> {
+  const cacheKey = KEYS.mcpTools(userId);
+
+  // Try cache first
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as MCPTool[];
+    }
+  } catch (err) {
+    console.warn('[MCP] Cache read error:', err);
+  }
+
   const serversWithAuth = await getEnabledMCPServers(userId);
   if (serversWithAuth.length === 0) return [];
 
@@ -156,6 +170,13 @@ export async function getMCPToolsForChat(userId: string): Promise<MCPTool[]> {
 
   if (errors.length > 0) {
     console.warn('[MCP] Some servers failed:', errors);
+  }
+
+  // Cache the result for 5 minutes
+  try {
+    await redis.setex(cacheKey, TTL.mcpTools, JSON.stringify(tools));
+  } catch (err) {
+    console.warn('[MCP] Cache write error:', err);
   }
 
   return tools;

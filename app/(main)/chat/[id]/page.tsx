@@ -400,18 +400,19 @@ function ChatPageInner() {
   }, [messages]);
 
   // Subscribe to real-time message updates from other devices
+  const handleNewMessage = React.useCallback((message: Message) => {
+    if (message.role === "assistant") {
+      toast("New AI response", {
+        description:
+          message.content.slice(0, 100) +
+          (message.content.length > 100 ? "..." : ""),
+      });
+    }
+  }, []);
+
   useChatStream({
     chatId,
-    onNewMessage: (message) => {
-      // Only show toast if message is from AI (someone else using the account)
-      if (message.role === "assistant") {
-        toast("New AI response", {
-          description:
-            message.content.slice(0, 100) +
-            (message.content.length > 100 ? "..." : ""),
-        });
-      }
-    },
+    onNewMessage: handleNewMessage,
   });
 
   // Handle MCP elicitation events via useChatMessages callback

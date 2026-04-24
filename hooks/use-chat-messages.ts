@@ -709,7 +709,7 @@ export function useChatMessages({
       isStreamingRef.current = false;
       abortControllerRef.current = null;
     },
-    [chatId, queryClient]
+    [chatId, queryClient, messages]
   );
 
   const abortCurrentMessage = useCallback(() => {

@@ -169,11 +169,9 @@ export function useCreateChat(options: UseCreateChatOptions = {}): UseCreateChat
         );
       }
 
-      // Invalidate to ensure fresh data from server
-      queryClient.invalidateQueries({ queryKey: ["chats"] });
-      if (projectId) {
-        queryClient.invalidateQueries({ queryKey: ["project-chats", projectId] });
-      }
+      // Navigation happens before invalidation, so the new chat page will load fresh data
+      // No need to invalidate - cache already has correct data with real ID
+      // Invalidation only on error for cleanup
 
       // Navigate to the new chat
       onBeforeNavigate?.(data.id, firstMessage ?? "");
