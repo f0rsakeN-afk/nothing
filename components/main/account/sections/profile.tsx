@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Lock, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,12 +59,6 @@ interface AccountData {
   };
 }
 
-async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch account");
-  return res.json();
-}
-
 interface ProfileSectionProps {
   accountData?: AccountData;
 }
@@ -98,21 +91,11 @@ function ProfileSkeleton() {
 export const ProfileSection = React.memo(function ProfileSection({
   accountData,
 }: ProfileSectionProps) {
-  const { data: localData, isLoading } = useQuery({
-    queryKey: ["account"],
-    queryFn: fetchAccount,
-    enabled: !accountData,
-    staleTime: 30000,
-  });
-
-  const data = accountData || localData;
-  const isFetching = !accountData && isLoading;
-
-  if (isFetching || !data) {
+  if (!accountData) {
     return <ProfileSkeleton />;
   }
 
-  const profile = data?.profile;
+  const profile = accountData?.profile;
   const initials = profile?.name
     ? profile.name
         .split(" ")

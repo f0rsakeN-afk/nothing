@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Lock, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/sileo-toast";
@@ -26,12 +26,6 @@ interface AccountData {
   };
 }
 
-async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch account");
-  return res.json();
-}
-
 async function deleteAccount(): Promise<void> {
   const res = await fetch("/api/account", {
     method: "DELETE",
@@ -48,15 +42,6 @@ export const SecuritySection = React.memo(function SecuritySection({
 }: SecuritySectionProps) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-
-  const { data: localData, isLoading } = useQuery({
-    queryKey: ["account-security"],
-    queryFn: fetchAccount,
-    enabled: !accountData,
-    staleTime: 30000,
-  });
-
-  const data = accountData || localData;
 
   const deleteMutation = useMutation({
     mutationFn: deleteAccount,

@@ -46,8 +46,8 @@ export async function buildCreditsPayload(userId: string): Promise<Omit<CreditsU
   }
 
   const currentCredits = userData.credits;
-  // Default to free plan credits (25) - plan-specific credits would need to be fetched separately
-  const planCredits = 25;
+  // Use plan's credit allocation from userData, fallback to 25 for free tier
+  const planCredits = userData.planCredits || 25;
   const hasActiveSubscription = userData.subscription?.status === "ACTIVE" || userData.subscription?.status === "TRIALING";
 
   const usedCredits = Math.max(0, planCredits - currentCredits);

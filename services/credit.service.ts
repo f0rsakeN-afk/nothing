@@ -253,6 +253,7 @@ export async function getUserSubscription(userId: string) {
     planId: user.planId,
     planName: planData?.name || "Free",
     displayName: planData?.name || "Free Plan",
+    planCredits: planData?.credits || 25,
     credits: user.credits,
     limits: {
       chats: user.maxChats,

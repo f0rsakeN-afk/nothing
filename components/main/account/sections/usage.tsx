@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +15,6 @@ interface AccountData {
     chats: number;
     messages: number;
   };
-}
-
-async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch account");
-  return res.json();
 }
 
 interface UsageSectionProps {
@@ -51,25 +44,15 @@ function UsageSkeleton() {
 export const UsageSection = React.memo(function UsageSection({
   accountData,
 }: UsageSectionProps) {
-  const { data: localData, isLoading } = useQuery({
-    queryKey: ["account"],
-    queryFn: fetchAccount,
-    enabled: !accountData,
-    staleTime: 30000,
-  });
-
-  const data = accountData || localData;
-  const isFetching = !accountData && isLoading;
-
-  if (isFetching || !data) {
+  if (!accountData) {
     return <UsageSkeleton />;
   }
 
   const stats = [
-    { label: "Messages", value: (data?.monthlyUsage?.messages || 0).toLocaleString(), sub: "this month" },
-    { label: "Chats", value: (data?.monthlyUsage?.chats || 0).toLocaleString(), sub: "this month" },
-    { label: "Total chats", value: (data?.usage?.chats || 0).toLocaleString(), sub: "all time" },
-    { label: "Total projects", value: (data?.usage?.projects || 0).toLocaleString(), sub: "all time" },
+    { label: "Messages", value: (accountData?.monthlyUsage?.messages || 0).toLocaleString(), sub: "this month" },
+    { label: "Chats", value: (accountData?.monthlyUsage?.chats || 0).toLocaleString(), sub: "this month" },
+    { label: "Total chats", value: (accountData?.usage?.chats || 0).toLocaleString(), sub: "all time" },
+    { label: "Total projects", value: (accountData?.usage?.projects || 0).toLocaleString(), sub: "all time" },
   ] as const;
 
   return (
@@ -106,9 +89,9 @@ export const UsageSection = React.memo(function UsageSection({
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
           {[
-            { color: "bg-blue-500", label: "Messages this month", count: (data?.monthlyUsage?.messages || 0).toLocaleString() },
-            { color: "bg-purple-500", label: "Chats this month", count: (data?.monthlyUsage?.chats || 0).toLocaleString() },
-            { color: "bg-amber-400", label: "Projects", count: (data?.usage?.projects || 0).toLocaleString() },
+            { color: "bg-blue-500", label: "Messages this month", count: (accountData?.monthlyUsage?.messages || 0).toLocaleString() },
+            { color: "bg-purple-500", label: "Chats this month", count: (accountData?.monthlyUsage?.chats || 0).toLocaleString() },
+            { color: "bg-amber-400", label: "Projects", count: (accountData?.usage?.projects || 0).toLocaleString() },
           ].map(({ color, label, count }) => (
             <div
               key={label}

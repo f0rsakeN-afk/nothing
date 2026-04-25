@@ -198,15 +198,9 @@ interface SectionContentProps {
 }
 
 const SectionContent = React.memo(function SectionContent({ id, accountData, isLoading }: SectionContentProps) {
-  const { data: fetchedData } = useQuery({
-    queryKey: ["account"],
-    queryFn: fetchAccount,
-    enabled: !accountData,
-    staleTime: 30000,
-  });
-
-  const data = accountData || fetchedData;
-  const isFetching = !accountData && isLoading;
+  // Pass accountData directly to sections - no additional fetching needed
+  // Parent (DesktopAccountDialog/MobileAccountDrawer) already fetched the data
+  const data = accountData;
 
   switch (id) {
     case "profile":

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -54,12 +54,6 @@ const FEATURE_LABELS: Record<string, string> = {
   "dedicated-support": "Dedicated support",
 };
 
-async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch account");
-  return res.json();
-}
-
 interface PlanSectionProps {
   accountData?: AccountData;
 }
@@ -88,15 +82,6 @@ export const PlanSection = React.memo(function PlanSection({
   accountData,
 }: PlanSectionProps) {
   const router = useRouter();
-  const { data: localData, isLoading } = useQuery({
-    queryKey: ["account"],
-    queryFn: fetchAccount,
-    enabled: !accountData,
-    staleTime: 30000,
-  });
-
-  const data = accountData || localData;
-  const isFetching = !accountData && isLoading;
 
   const checkoutMutation = useMutation({
     mutationFn: async (planId: string) => {
@@ -127,7 +112,7 @@ export const PlanSection = React.memo(function PlanSection({
   });
 
   const handleUpgrade = () => {
-    const currentPlan = data?.plan?.name?.toLowerCase();
+    const currentPlan = accountData?.plan?.name?.toLowerCase();
     let targetPlan = "basic";
     if (currentPlan === "basic") {
       targetPlan = "pro";
@@ -138,12 +123,12 @@ export const PlanSection = React.memo(function PlanSection({
     checkoutMutation.mutate(targetPlan);
   };
 
-  if (isFetching || !data) {
+  if (!accountData) {
     return <PlanSkeleton />;
   }
 
-  const plan = data?.plan;
-  const usage = data?.usage;
+  const plan = accountData?.plan;
+  const usage = accountData?.usage;
 
   const creditsUsed = usage?.messages || 0;
   const creditsLimit = typeof plan?.limits?.messages === "number" ? plan.limits.messages : 2500;
