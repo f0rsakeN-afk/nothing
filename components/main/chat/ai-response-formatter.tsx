@@ -37,20 +37,7 @@ function hasMathContent(content: string): boolean {
 }
 
 // Lazy-load math plugins only when needed
-const mathPluginsCache: { remarkPlugins: any[]; rehypePlugins: any[] } | null = null;
-async function getMathPlugins() {
-  if (mathPluginsCache) return mathPluginsCache;
-
-  const [remarkMath, rehypeKatex] = await Promise.all([
-    import("remark-math").then(m => m.default),
-    import("rehype-katex").then(m => m.default),
-  ]);
-
-  return {
-    remarkPlugins: [remarkGfm, remarkMath],
-    rehypePlugins: [rehypeKatex],
-  };
-}
+let mathPluginsCache: { remarkPlugins: any[]; rehypePlugins: any[] } | null = null;
 
 const CodeBlock = dynamic(
   () => import("./format/code-block").then((m) => ({ default: m.CodeBlock })),
@@ -898,21 +885,32 @@ export const AiResponseFormatter = memo(function AiResponseFormatter({
   const completedContent = useMemo(() => remend(content), [content]);
 
   // Lazy-load math plugins only when content contains math patterns
+  // Uses ref to track if loading in progress to avoid duplicate loads
+  const mathLoadRef = useRef(false);
+
   useEffect(() => {
-    if (!hasMathContent(content)) return;
+    // Skip if no math content, already loaded, or currently loading
+    if (!hasMathContent(content) || mathPluginsCache || mathLoadRef.current) return;
 
+    mathLoadRef.current = true;
     let cancelled = false;
-    (async () => {
-      const [remarkMath, rehypeKatex] = await Promise.all([
-        import("remark-math").then(m => m.default),
-        import("rehype-katex").then(m => m.default),
-      ]);
 
-      if (!cancelled) {
-        setMathPlugins({
-          remarkPlugins: [remarkGfm, remarkMath],
-          rehypePlugins: [rehypeKatex],
-        });
+    (async () => {
+      try {
+        const [remarkMath, rehypeKatex] = await Promise.all([
+          import("remark-math").then(m => m.default),
+          import("rehype-katex").then(m => m.default),
+        ]);
+
+        if (!cancelled) {
+          mathPluginsCache = {
+            remarkPlugins: [remarkGfm, remarkMath],
+            rehypePlugins: [rehypeKatex],
+          };
+          setMathPlugins(mathPluginsCache);
+        }
+      } finally {
+        mathLoadRef.current = false;
       }
     })();
 

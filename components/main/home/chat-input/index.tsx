@@ -47,6 +47,17 @@ export const ChatInput = React.memo(function ChatInput({
   const user = useUser();
   const { data: servers = [] } = useServers(user?.id);
 
+  // Memoized handlers for focus/blur to prevent child re-renders
+  const handleFocus = React.useCallback(() => {
+    setFocused(true);
+    setShowSuggestions(true);
+  }, []);
+
+  const handleBlur = React.useCallback(() => {
+    // Delay to allow click events on suggestion items to fire first
+    setTimeout(() => setShowSuggestions(false), 200);
+  }, []);
+
   const handleSuggestionSelect = React.useCallback(
     (suggestion: string) => {
       onChange(suggestion);
@@ -181,11 +192,8 @@ export const ChatInput = React.memo(function ChatInput({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => {
-            setFocused(true);
-            setShowSuggestions(true);
-          }}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           rows={1}
           placeholder={placeholder}
           autoFocus
