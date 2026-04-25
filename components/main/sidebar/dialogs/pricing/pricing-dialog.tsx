@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Check, ArrowRight, X, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
@@ -37,19 +38,19 @@ interface PlansData {
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  "basic-chat": "Basic chat",
-  "basic-projects": "Basic projects",
-  "short-memory": "Short-term memory",
-  "longer-memory": "Longer conversation memory",
-  attachments: "File attachments",
-  "advanced-customization": "Advanced customization",
-  "chat-folders": "Chat folders",
-  "chat-branches": "Chat branches",
-  "export-chats": "Export chats",
-  "team-collaboration": "Team collaboration",
-  "api-access": "API access",
-  "priority-support": "Priority support",
-  "dedicated-support": "Dedicated support",
+  "basic-chat": "pricing.features.basicChat",
+  "basic-projects": "pricing.features.basicProjects",
+  "short-memory": "pricing.features.shortMemory",
+  "longer-memory": "pricing.features.longerMemory",
+  attachments: "pricing.features.attachments",
+  "advanced-customization": "pricing.features.advancedCustomization",
+  "chat-folders": "pricing.features.chatFolders",
+  "chat-branches": "pricing.features.chatBranches",
+  "export-chats": "pricing.features.exportChats",
+  "team-collaboration": "pricing.features.teamCollaboration",
+  "api-access": "pricing.features.apiAccess",
+  "priority-support": "pricing.features.prioritySupport",
+  "dedicated-support": "pricing.features.dedicatedSupport",
 };
 
 async function fetchPlans(): Promise<PlansData> {
@@ -68,6 +69,7 @@ interface TierCardProps {
   variant?: "default" | "featured";
   onUpgrade: (planId: string) => void;
   isUpgrading: boolean;
+  t: ReturnType<typeof useTranslations>;
 }
 
 const TierCard = React.memo(function TierCard({
@@ -76,6 +78,7 @@ const TierCard = React.memo(function TierCard({
   variant = "default",
   onUpgrade,
   isUpgrading,
+  t,
 }: TierCardProps) {
   const { key, value } = tier;
   const isFree = key === "free";
@@ -106,7 +109,7 @@ const TierCard = React.memo(function TierCard({
       {isFeatured && (
         <div className="bg-primary/8 border-b border-primary/15 px-5 py-2 flex items-center justify-between">
           <span className="text-[9px] font-semibold text-primary uppercase tracking-widest">
-            Most Popular
+            {t("pricing.mostPopular")}
           </span>
           <div className="flex gap-1">
             {[...Array(3)].map((_, i) => (
@@ -119,7 +122,7 @@ const TierCard = React.memo(function TierCard({
       {isCurrentPlan && (
         <div className="absolute -top-3 right-3 z-20">
           <span className="bg-green-500/10 text-green-600 text-[9px] font-medium uppercase tracking-wider px-2 py-1 rounded-full border border-green-500/20">
-            Current Plan
+            {t("pricing.currentPlanBadge")}
           </span>
         </div>
       )}
@@ -139,12 +142,12 @@ const TierCard = React.memo(function TierCard({
               {isFree ? "$0" : `$${(value.price / 100).toFixed(2)}`}
             </span>
             <span className="text-[11px] text-muted-foreground pb-0.5">
-              /month
+              {t("pricing.perMonth")}
             </span>
           </div>
           {value.credits > 0 && (
             <p className="text-[11px] text-primary/80 font-medium mb-2">
-              {value.credits.toLocaleString()} credits/mo
+              {value.credits.toLocaleString()} {t("pricing.creditsPerMonth")}
             </p>
           )}
           <p className="text-[12px] text-muted-foreground leading-relaxed">
@@ -172,15 +175,15 @@ const TierCard = React.memo(function TierCard({
           onClick={() => onUpgrade(key)}
         >
           {isCurrentPlan ? (
-            "Current Plan"
+            t("pricing.currentPlanButton")
           ) : isUpgrading ? (
             <>
               <Loader2 className="w-3 h-3 animate-spin" />
-              Redirecting...
+              {t("pricing.redirecting")}
             </>
           ) : (
             <>
-              {isFree ? "Get Started" : `Upgrade to ${value.name}`}
+              {isFree ? t("pricing.getStarted") : t("pricing.upgradeTo", { plan: value.name })}
               <ArrowRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
             </>
           )}
@@ -196,6 +199,7 @@ const TierCard = React.memo(function TierCard({
 
 interface FeatureRowProps {
   label: string;
+  labelKey: string;
   free: string | boolean | number;
   basic: string | boolean | number;
   pro: string | boolean | number;
@@ -203,10 +207,12 @@ interface FeatureRowProps {
 
 const FeatureRow = React.memo(function FeatureRow({
   label,
+  labelKey,
   free,
   basic,
   pro,
 }: FeatureRowProps) {
+  const t = useTranslations("pricing");
   const cells = [
     { value: free, featured: false },
     { value: basic, featured: false },
@@ -216,7 +222,7 @@ const FeatureRow = React.memo(function FeatureRow({
   return (
     <div className="grid grid-cols-4 hover:bg-muted/[0.04] border-b border-border/30 last:border-0">
       <div className="py-3 px-4 flex items-center">
-        <p className="text-[12px] text-foreground/80">{label}</p>
+        <p className="text-[12px] text-foreground/80">{t(labelKey)}</p>
       </div>
       {cells.map((cell, i) => (
         <div
@@ -260,6 +266,7 @@ const FeatureRow = React.memo(function FeatureRow({
 
 export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
   const router = useRouter();
+  const t = useTranslations();
   const { data, isLoading } = useQuery({
     queryKey: ["stripe-plans"],
     queryFn: fetchPlans,
@@ -286,7 +293,7 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
     },
     onError: (error: Error) => {
       if (error.message.includes("Unauthorized")) {
-        toast.error("Please sign in to upgrade");
+        toast.error(t("pricing.pleaseSignInToUpgrade"));
         onOpenChange(false);
         router.push("/login");
       } else {
@@ -314,61 +321,70 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
   const allFeatures = React.useMemo(() => {
     if (!data) return [];
 
-    const featureMap = new Map<string, { free: string | boolean | number; basic: string | boolean | number; pro: string | boolean | number }>();
+    type FeatureEntry = {
+      label: string;
+      labelKey: string;
+      free: string | boolean | number;
+      basic: string | boolean | number;
+      pro: string | boolean | number;
+    };
+
+    const featureMap = new Map<string, FeatureEntry>();
 
     // Add plan-level features
     plans.forEach(({ key, value }) => {
       const tierKey = key === "free" ? "free" : key === "basic" ? "basic" : "pro";
       // Chats
       if (!featureMap.has("Chats")) {
-        featureMap.set("Chats", { free: "—", basic: "—", pro: "—" });
+        featureMap.set("Chats", { label: "Chats", labelKey: "features.chats", free: "—", basic: "—", pro: "—" });
       }
       const current = featureMap.get("Chats")!;
-      current[tierKey as keyof typeof current] = value.maxChats === -1 ? "Unlimited" : value.maxChats;
+      (current as Record<typeof tierKey, string | boolean | number>)[tierKey] = value.maxChats === -1 ? t("unlimited") : value.maxChats;
 
       // Projects
       if (!featureMap.has("Projects")) {
-        featureMap.set("Projects", { free: "—", basic: "—", pro: "—" });
+        featureMap.set("Projects", { label: "Projects", labelKey: "features.projects", free: "—", basic: "—", pro: "—" });
       }
       const proj = featureMap.get("Projects")!;
-      proj[tierKey as keyof typeof proj] = value.maxProjects === -1 ? "Unlimited" : value.maxProjects;
+      (proj as Record<typeof tierKey, string | boolean | number>)[tierKey] = value.maxProjects === -1 ? t("unlimited") : value.maxProjects;
 
       // Credits
       if (!featureMap.has("Monthly credits")) {
-        featureMap.set("Monthly credits", { free: "—", basic: "—", pro: "—" });
+        featureMap.set("Monthly credits", { label: "Monthly credits", labelKey: "features.monthlyCredits", free: "—", basic: "—", pro: "—" });
       }
       const cred = featureMap.get("Monthly credits")!;
-      cred[tierKey as keyof typeof cred] = value.credits > 0 ? value.credits.toLocaleString() : "—";
+      (cred as Record<typeof tierKey, string | boolean | number>)[tierKey] = value.credits > 0 ? value.credits.toLocaleString() : "—";
     });
 
     // Add specific features
     data.plans.free.features.forEach((f) => {
-      if (!featureMap.has(FEATURE_LABELS[f] || f)) {
-        featureMap.set(FEATURE_LABELS[f] || f, { free: true, basic: "—", pro: "—" });
+      const featureLabel = FEATURE_LABELS[f] || f;
+      const featureKey = FEATURE_LABELS[f] ? `features.${FEATURE_LABELS[f].toLowerCase().replace(/\s+/g, "")}` : f;
+      if (!featureMap.has(featureLabel)) {
+        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, free: true, basic: "—", pro: "—" });
       }
     });
     data.plans.basic.features.forEach((f) => {
-      const label = FEATURE_LABELS[f] || f;
-      if (!featureMap.has(label)) {
-        featureMap.set(label, { free: "—", basic: true, pro: "—" });
+      const featureLabel = FEATURE_LABELS[f] || f;
+      const featureKey = FEATURE_LABELS[f] ? `features.${FEATURE_LABELS[f].toLowerCase().replace(/\s+/g, "")}` : f;
+      if (!featureMap.has(featureLabel)) {
+        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, free: "—", basic: true, pro: "—" });
       } else {
-        featureMap.get(label)!.basic = true;
+        featureMap.get(featureLabel)!.basic = true;
       }
     });
     data.plans.pro.features.forEach((f) => {
-      const label = FEATURE_LABELS[f] || f;
-      if (!featureMap.has(label)) {
-        featureMap.set(label, { free: "—", basic: "—", pro: true });
+      const featureLabel = FEATURE_LABELS[f] || f;
+      const featureKey = FEATURE_LABELS[f] ? `features.${FEATURE_LABELS[f].toLowerCase().replace(/\s+/g, "")}` : f;
+      if (!featureMap.has(featureLabel)) {
+        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, free: "—", basic: "—", pro: true });
       } else {
-        featureMap.get(label)!.pro = true;
+        featureMap.get(featureLabel)!.pro = true;
       }
     });
 
-    return Array.from(featureMap.entries()).map(([label, values]) => ({
-      label,
-      ...values,
-    }));
-  }, [data]);
+    return Array.from(featureMap.values());
+  }, [data, t]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -380,13 +396,13 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
         <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-border/60 shrink-0">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground mb-1">
-              Pricing
+              {t("pricing.title")}
             </p>
             <h2 className="text-[15px] font-semibold text-foreground leading-tight">
-              Choose your plan
+              {t("pricing.chooseYourPlan")}
             </h2>
             <p className="text-[12px] text-muted-foreground mt-0.5">
-              Simple, transparent pricing. Upgrade or downgrade anytime.
+              {t("pricing.subtitle")}
             </p>
           </div>
           <DialogClose
@@ -399,7 +415,7 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
             }
           >
             <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("pricing.close")}</span>
           </DialogClose>
         </div>
 
@@ -426,6 +442,7 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
                     variant={key === "pro" ? "featured" : "default"}
                     onUpgrade={handleUpgrade}
                     isUpgrading={checkoutMutation.isPending}
+                    t={t}
                   />
                 ))}
               </div>
@@ -436,7 +453,7 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
               <div className="flex items-center gap-3 py-3">
                 <div className="h-px flex-1 bg-border/40" />
                 <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/50">
-                  Full comparison
+                  {t("pricing.fullComparison")}
                 </p>
                 <div className="h-px flex-1 bg-border/40" />
               </div>
@@ -446,7 +463,7 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
                 <div className="grid grid-cols-4 border-b border-border bg-muted/20">
                   <div className="py-3 px-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-                      Feature
+                      {t("pricing.feature")}
                     </p>
                   </div>
                   {plans.map(({ key, value }) => (
@@ -482,8 +499,9 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
                 ) : (
                   allFeatures.map((feature) => (
                     <FeatureRow
-                      key={feature.label}
+                      key={feature.labelKey}
                       label={feature.label}
+                      labelKey={feature.labelKey}
                       free={feature.free}
                       basic={feature.basic}
                       pro={feature.pro}
@@ -498,14 +516,14 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
         {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/60 shrink-0">
           <p className="text-[11px] text-muted-foreground">
-            All plans include a 14-day free trial. No credit card required.
+            {t("pricing.trialNote")}
           </p>
           <DialogClose
             render={
               <Button variant="ghost" size="sm" className="h-7 text-[12px]" />
             }
           >
-            Maybe later
+            {t("pricing.maybeLater")}
           </DialogClose>
         </div>
       </DialogContent>

@@ -1,5 +1,8 @@
+"use client";
+
 import { LegalSection } from "@/components/plain/legal/legal-section";
 import { LegalToc } from "@/components/plain/legal/legal-toc";
+import { useTranslations } from "next-intl";
 
 function CookiesJsonLd() {
   const jsonLd = {
@@ -48,6 +51,8 @@ const sections = [
 ];
 
 export default function CookiesPage() {
+  const t = useTranslations("legal");
+
   return (
     <>
       <CookiesJsonLd />
@@ -59,7 +64,7 @@ export default function CookiesPage() {
             <aside className="hidden lg:block">
               <div className="sticky top-20">
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4 px-2">
-                  Contents
+                  {t("contents")}
                 </p>
                 <LegalToc items={sections} />
               </div>
@@ -69,7 +74,7 @@ export default function CookiesPage() {
             <main className="min-w-0">
               <div className="mb-8 pb-8 border-b border-border">
                 <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                  Cookie Policy
+                  {t("cookiePolicy")}
                 </h1>
                 <p className="mt-3 text-base text-muted-foreground leading-relaxed max-w-xl">
                   This Cookie Policy explains what cookies are, how Eryx uses
@@ -82,7 +87,7 @@ export default function CookiesPage() {
 
               <details className="mb-8 p-4 rounded-lg border border-border bg-muted/30">
                 <summary className="font-medium text-sm cursor-pointer select-none">
-                  Quick Summary — What You Need to Know
+                  {t("quickSummary")}
                 </summary>
                 <div className="mt-3 text-sm text-muted-foreground space-y-2">
                   <p>

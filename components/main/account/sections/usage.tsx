@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -44,25 +45,27 @@ function UsageSkeleton() {
 export const UsageSection = React.memo(function UsageSection({
   accountData,
 }: UsageSectionProps) {
+  const t = useTranslations("account");
+
   if (!accountData) {
     return <UsageSkeleton />;
   }
 
   const stats = [
-    { label: "Messages", value: (accountData?.monthlyUsage?.messages || 0).toLocaleString(), sub: "this month" },
-    { label: "Chats", value: (accountData?.monthlyUsage?.chats || 0).toLocaleString(), sub: "this month" },
-    { label: "Total chats", value: (accountData?.usage?.chats || 0).toLocaleString(), sub: "all time" },
-    { label: "Total projects", value: (accountData?.usage?.projects || 0).toLocaleString(), sub: "all time" },
+    { label: t("messages"), value: (accountData?.monthlyUsage?.messages || 0).toLocaleString(), sub: t("thisMonth") },
+    { label: t("chats"), value: (accountData?.monthlyUsage?.chats || 0).toLocaleString(), sub: t("thisMonth") },
+    { label: t("totalChats"), value: (accountData?.usage?.chats || 0).toLocaleString(), sub: t("allTime") },
+    { label: t("totalProjects"), value: (accountData?.usage?.projects || 0).toLocaleString(), sub: t("allTime") },
   ] as const;
 
   return (
     <div className="space-y-5">
       <div>
         <h3 className="text-[13px] font-semibold text-foreground mb-0.5">
-          Usage
+          {t("usageTitle")}
         </h3>
         <p className="text-[12px] text-muted-foreground">
-          A breakdown of your activity this month.
+          {t("usageSubtitle")}
         </p>
       </div>
 
@@ -85,13 +88,13 @@ export const UsageSection = React.memo(function UsageSection({
       {/* Top activity */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Activity breakdown
+          {t("activityBreakdown")}
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
           {[
-            { color: "bg-blue-500", label: "Messages this month", count: (accountData?.monthlyUsage?.messages || 0).toLocaleString() },
-            { color: "bg-purple-500", label: "Chats this month", count: (accountData?.monthlyUsage?.chats || 0).toLocaleString() },
-            { color: "bg-amber-400", label: "Projects", count: (accountData?.usage?.projects || 0).toLocaleString() },
+            { color: "bg-blue-500", label: t("messagesThisMonth"), count: (accountData?.monthlyUsage?.messages || 0).toLocaleString() },
+            { color: "bg-purple-500", label: t("chatsThisMonth"), count: (accountData?.monthlyUsage?.chats || 0).toLocaleString() },
+            { color: "bg-amber-400", label: t("projects"), count: (accountData?.usage?.projects || 0).toLocaleString() },
           ].map(({ color, label, count }) => (
             <div
               key={label}

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { LogOut } from "lucide-react";
 import { useStackApp } from "@stackframe/stack";
+import { useTranslations } from "next-intl";
 
 interface LogoutDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface LogoutDialogProps {
 }
 
 export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
+  const t = useTranslations();
   const app = useStackApp();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -27,13 +29,13 @@ export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
           <AlertDialogMedia className="bg-destructive/10">
             <LogOut className="size-5 text-destructive" />
           </AlertDialogMedia>
-          <AlertDialogTitle>Log out of your account?</AlertDialogTitle>
+          <AlertDialogTitle>{t("auth.logOutOfAccount")}</AlertDialogTitle>
           <AlertDialogDescription>
-            You can always log back in anytime.
+            {t("auth.alwaysLogBackIn")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className={"text-white"}
             render={<Button variant="destructive" />}
@@ -42,7 +44,7 @@ export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
               onOpenChange(false);
             }}
           >
-            Logout
+            {t("auth.signOut")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

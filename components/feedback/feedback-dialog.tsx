@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { Star, Loader2, MessageSquare } from "lucide-react";
 import { feedbackSchema, type FeedbackSchema } from "@/schemas/feedback.schema";
 
@@ -27,6 +28,7 @@ interface FeedbackDialogProps {
 }
 
 export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
+  const t = useTranslations("feedback");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
 
@@ -61,14 +63,14 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
         throw new Error("Failed to submit feedback");
       }
 
-      toast.success("Thank you for your feedback!");
+      toast.success(t("successMessage"));
 
       // Reset and close
       handleReset();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to submit feedback");
+      toast.error(t("errorMessage"));
     } finally {
       setIsSubmitting(false);
     }
@@ -91,10 +93,10 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
-            Share your feedback
+            {t("title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            We value your thoughts! How can we make Eryx better for you?
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +104,7 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
           <div className="space-y-4">
             <div className="space-y-3">
               <Label className="text-xs font-medium text-center block">
-                Overall Rating
+                {t("rating")}
               </Label>
               <div className="flex justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -139,11 +141,11 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
                 htmlFor="comment"
                 className={`text-xs ${errors.comment ? "text-destructive" : ""}`}
               >
-                Your Comments
+                {t("comment")}
               </Label>
               <Textarea
                 id="comment"
-                placeholder="Tell us what you think..."
+                placeholder={t("commentPlaceholder")}
                 className={`min-h-[120px] resize-none rounded-lg text-sm ${
                   errors.comment ? "border-destructive ring-destructive" : ""
                 }`}
@@ -161,12 +163,12 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
                 htmlFor="feedback-email"
                 className={`text-xs ${errors.email ? "text-destructive" : ""}`}
               >
-                Email (Optional)
+                {t("email")}
               </Label>
               <Input
                 id="feedback-email"
                 type="email"
-                placeholder="email@example.com"
+                placeholder={t("emailPlaceholder")}
                 className={`h-10 rounded-lg text-sm ${
                   errors.email ? "border-destructive ring-destructive" : ""
                 }`}
@@ -183,7 +185,7 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
               disabled={isSubmitting}
               className="rounded-xl h-10"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               type="submit"
@@ -193,10 +195,10 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending
+                  {t("sending")}
                 </>
               ) : (
-                "Send Feedback"
+                t("send")
               )}
             </Button>
           </DialogFooter>

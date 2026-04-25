@@ -3,6 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "@/components/ui/sileo-toast";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatStream } from "@/hooks/useChatStream";
@@ -116,15 +117,15 @@ const SplitViewProvider = dynamic(
 //   );
 // }
 
-function ErrorState({ onRetry }: { onRetry: () => void }) {
+function ErrorState({ onRetry, t }: { onRetry: () => void; t: ReturnType<typeof useTranslations> }) {
   return (
     <div className="flex flex-col items-center justify-center h-dvh gap-4">
-      <p className="text-sm text-muted-foreground">Failed to load messages</p>
+      <p className="text-sm text-muted-foreground">{t("errors.description500")}</p>
       <button
         onClick={onRetry}
         className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
       >
-        Retry
+        {t("common.retry")}
       </button>
     </div>
   );
@@ -352,6 +353,7 @@ function VirtualizedMessageList({
 // =========================================
 
 function ChatPageInner() {
+  const t = useTranslations();
   const params = useParams();
   const chatId = params.id as string;
   const searchParams = useSearchParams();
@@ -421,13 +423,13 @@ function ChatPageInner() {
   // Subscribe to real-time message updates from other devices
   const handleNewMessage = React.useCallback((message: Message) => {
     if (message.role === "assistant") {
-      toast("New AI response", {
+      toast(t("chat.newAiResponse"), {
         description:
           message.content.slice(0, 100) +
           (message.content.length > 100 ? "..." : ""),
       });
     }
-  }, []);
+  }, [t]);
 
   useChatStream({
     chatId,
@@ -482,10 +484,10 @@ function ChatPageInner() {
           upgradeTo?: string;
         };
         if (error.code === "CREDIT_ERROR") {
-          toast.error("Out of credits", {
-            description: error.message || `You need more credits to continue.`,
+          toast.error(t("credits.outOfCredits"), {
+            description: error.message || t("credits.outOfCreditsDesc"),
             action: {
-              label: "Upgrade to Pro",
+              label: t("sidebar.upgradeToPro"),
               onClick: () =>
                 window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
             },
@@ -496,7 +498,7 @@ function ChatPageInner() {
     [sendUserMessage, webSearch, currentModel],
   );
 
-  if (isError) return <ErrorState onRetry={refetch} />;
+  if (isError) return <ErrorState onRetry={refetch} t={t} />;
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">

@@ -12,6 +12,7 @@ import {
   Pin,
   PinOff,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import {
@@ -44,6 +45,7 @@ export function ProjectHistoryItem({
   onUnpin,
   isArchived = false,
 }: ProjectHistoryItemProps) {
+  const t = useTranslations();
   const { closeMobileSidebar } = useSidebar();
   const isPinned = !!item.pinnedAt;
 
@@ -96,7 +98,7 @@ export function ProjectHistoryItem({
               onClick={() => onRename({ id: item.id, name: item.title })}
             >
               <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-              Rename
+              {t("common.edit")}
             </DropdownMenuItem>
             {isPinned ? (
               <DropdownMenuItem
@@ -104,7 +106,7 @@ export function ProjectHistoryItem({
                 onClick={handleUnpin}
               >
                 <PinOff className="h-3.5 w-3.5 text-muted-foreground" />
-                Unpin
+                {t("chat.unpinChat")}
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem
@@ -112,7 +114,7 @@ export function ProjectHistoryItem({
                 onClick={handlePin}
               >
                 <Pin className="h-3.5 w-3.5 text-muted-foreground" />
-                Pin
+                {t("chat.pinChat")}
               </DropdownMenuItem>
             )}
           </DropdownMenuGroup>
@@ -124,12 +126,12 @@ export function ProjectHistoryItem({
               {isArchived ? (
                 <>
                   <ArchiveRestore className="h-3.5 w-3.5 text-muted-foreground" />
-                  Restore
+                  {t("chat.unarchiveChat")}
                 </>
               ) : (
                 <>
                   <Archive className="h-3.5 w-3.5 text-muted-foreground" />
-                  Archive
+                  {t("chat.archiveChat")}
                 </>
               )}
             </DropdownMenuItem>
@@ -142,7 +144,7 @@ export function ProjectHistoryItem({
               onClick={() => onDelete({ id: item.id, name: item.title })}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              {t("common.delete")}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

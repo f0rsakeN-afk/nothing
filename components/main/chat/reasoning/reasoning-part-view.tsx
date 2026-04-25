@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, ReactNode, memo } from 'react';
+import React, { useRef, useEffect, ReactNode, memo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Minimize2, Maximize2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -91,6 +91,19 @@ export const ReasoningPartView: React.FC<ReasoningPartViewProps> = memo(
     const hasNonEmptyReasoning = text && !isEmptyContent(text);
     const isExpanded = expandedOverride ?? autoExpanded;
 
+    const toggleExpanded = useCallback(() => {
+      if (!isThinking && setIsExpanded) {
+        setIsExpanded(!isExpanded);
+      }
+    }, [isThinking, isExpanded, setIsExpanded]);
+
+    const toggleFullscreen = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (setIsFullscreen) {
+        setIsFullscreen(!isFullscreen);
+      }
+    }, [isFullscreen, setIsFullscreen]);
+
     // Avoid "close then open" flicker when providers emit back-to-back reasoning parts.
     // We only auto-collapse after reasoning stays complete for a moment.
     useEffect(() => {
@@ -130,7 +143,7 @@ export const ReasoningPartView: React.FC<ReasoningPartViewProps> = memo(
         <div className={cn('bg-accent', 'border border-border/80 rounded-lg overflow-hidden')}>
           {/* Header - Always visible */}
           <div
-            onClick={() => !isThinking && setIsExpanded?.(!isExpanded)}
+            onClick={toggleExpanded}
             className={cn(
               'flex items-center justify-between py-2 px-2.5',
               !isThinking && 'cursor-pointer hover:bg-muted/50 transition-colors',
@@ -173,10 +186,7 @@ export const ReasoningPartView: React.FC<ReasoningPartViewProps> = memo(
 
               {(isThinking || isExpanded) && setIsFullscreen && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFullscreen(!isFullscreen);
-                  }}
+                  onClick={toggleFullscreen}
                   className="p-0.5 hover:bg-muted rounded text-muted-foreground transition-colors"
                   aria-label={isFullscreen ? 'Minimize' : 'Maximize'}
                 >

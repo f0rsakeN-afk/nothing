@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { OAuthButtonGroup } from "@stackframe/stack";
 import { Separator } from "@/components/ui/separator";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,8 @@ interface AuthDialogProps {
 }
 
 export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
+  const t = useTranslations();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton className="sm:max-w-[400px] p-0 overflow-hidden">
@@ -38,16 +41,16 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
             </span>
             <div className="h-4 w-px bg-border/60" />
             <span className="text-[12px] text-muted-foreground font-medium">
-              AI Assistant
+              {t("auth.aiAssistant")}
             </span>
           </div>
 
           {/* Heading */}
           <h2 className="text-[18px] font-semibold text-foreground tracking-tight text-center leading-snug mb-1.5">
-            Welcome back
+            {t("auth.welcomeBack")}
           </h2>
           <p className="text-[13px] text-muted-foreground text-center leading-relaxed px-2">
-            Sign in to continue to your workspace
+            {t("auth.signInToContinue")}
           </p>
         </div>
 
@@ -60,13 +63,13 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         <div className="px-8 pb-7 pt-0">
           <Separator className="mb-4" />
           <p className="text-[11px] text-muted-foreground/60 text-center leading-relaxed">
-            By continuing, you agree to our{" "}
+            {t("auth.byContinuingAgree")}{" "}
             <a href="/legal/terms" target="_blank" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">
-              Terms of Service
+              {t("sidebar.termsOfService")}
             </a>{" "}
             and{" "}
             <a href="/legal/policy" target="_blank" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">
-              Privacy Policy
+              {t("sidebar.privacyPolicy")}
             </a>
           </p>
         </div>

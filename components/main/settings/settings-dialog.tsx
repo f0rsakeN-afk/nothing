@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   Settings,
   Palette,
@@ -38,40 +39,7 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const TABS = [
-  {
-    id: "general",
-    label: "General",
-    description: "Conversations, language & behaviour",
-    icon: Settings,
-  },
-  {
-    id: "appearance",
-    label: "Appearance",
-    description: "Theme, display & motion",
-    icon: Palette,
-  },
-  {
-    id: "ai",
-    label: "AI Preferences",
-    description: "Model, response style & memory",
-    icon: Bot,
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    description: "Email and in-app alerts",
-    icon: Bell,
-  },
-  {
-    id: "privacy",
-    label: "Privacy",
-    description: "Data, exports & account",
-    icon: ShieldCheck,
-  },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
+type TabId = "general" | "appearance" | "ai" | "notifications" | "privacy";
 
 // ---------------------------------------------------------------------------
 // Skeletons
@@ -186,6 +154,7 @@ function MobileSettingsDrawer({
   isOpen,
   onOpenChange,
 }: MobileSettingsDrawerProps) {
+  const t = useTranslations("settings");
   const [activeSection, setActiveSection] = React.useState<TabId | null>(null);
 
   React.useEffect(() => {
@@ -200,8 +169,16 @@ function MobileSettingsDrawer({
     setActiveSection(null);
   }, []);
 
+  const tabs = [
+    { id: "general" as const, label: t("general"), description: t("generalDesc"), icon: Settings },
+    { id: "appearance" as const, label: t("appearance"), description: t("appearanceDesc"), icon: Palette },
+    { id: "ai" as const, label: t("aiPreferences"), description: t("aiPreferencesDesc"), icon: Bot },
+    { id: "notifications" as const, label: t("notifications"), description: t("notificationsDesc"), icon: Bell },
+    { id: "privacy" as const, label: t("privacy"), description: t("privacyDesc"), icon: ShieldCheck },
+  ];
+
   const activeTab = activeSection
-    ? TABS.find((t) => t.id === activeSection)
+    ? tabs.find((t) => t.id === activeSection)
     : null;
 
   return (
@@ -221,7 +198,7 @@ function MobileSettingsDrawer({
               </DrawerTitle>
             </div>
           ) : (
-            <DrawerTitle className="text-[14px]">Settings</DrawerTitle>
+            <DrawerTitle className="text-[14px]">{t("title")}</DrawerTitle>
           )}
         </DrawerHeader>
 
@@ -234,12 +211,15 @@ function MobileSettingsDrawer({
         ) : (
           <ScrollArea className="flex-1 min-h-0">
             <div className="py-2 pb-4">
-              {TABS.map((tab, i) => (
+              {tabs.map((tab, i) => (
                 <MobileSettingRow
                   key={tab.id}
-                  {...tab}
+                  id={tab.id}
+                  label={tab.label}
+                  description={tab.description}
+                  icon={tab.icon}
                   onSelect={handleSelect}
-                  isLast={i === TABS.length - 1}
+                  isLast={i === tabs.length - 1}
                 />
               ))}
             </div>
@@ -263,11 +243,20 @@ function DesktopSettingsDialog({
   isOpen,
   onOpenChange,
 }: DesktopSettingsDialogProps) {
+  const t = useTranslations("settings");
   const [activeTab, setActiveTab] = React.useState<TabId>("general");
 
   const handleTabChange = React.useCallback((value: string) => {
     setActiveTab(value as TabId);
   }, []);
+
+  const tabs = [
+    { id: "general" as const, label: t("general"), icon: Settings },
+    { id: "appearance" as const, label: t("appearance"), icon: Palette },
+    { id: "ai" as const, label: t("aiPreferences"), icon: Bot },
+    { id: "notifications" as const, label: t("notifications"), icon: Bell },
+    { id: "privacy" as const, label: t("privacy"), icon: ShieldCheck },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -276,7 +265,7 @@ function DesktopSettingsDialog({
         showCloseButton
       >
         <DialogHeader className="sr-only">
-          <DialogTitle>Settings</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         <Tabs
@@ -290,10 +279,10 @@ function DesktopSettingsDialog({
             className="w-44 shrink-0 border-r border-border/50 rounded-none h-full! flex flex-col justify-start p-2 gap-0.5"
           >
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 px-2 py-2 mb-2.5">
-              Settings
+              {t("title")}
             </p>
             <div className="flex flex-col space-y-2">
-              {TABS.map(({ id, label, icon: Icon }) => (
+              {tabs.map(({ id, label, icon: Icon }) => (
                 <TabsTrigger
                   key={id}
                   value={id}
@@ -308,7 +297,7 @@ function DesktopSettingsDialog({
 
           <ScrollArea className="flex-1 hide-scrollbar">
             <div className="p-5">
-              {TABS.map(({ id }) => (
+              {tabs.map(({ id }) => (
                 <TabsContent key={id} value={id}>
                   <SectionContent id={id} />
                 </TabsContent>

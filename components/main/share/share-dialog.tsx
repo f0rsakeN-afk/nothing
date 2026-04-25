@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Copy, Check, Globe, Lock, Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,6 +26,7 @@ export function ShareDialog({
   onShare,
   isOwner = true,
 }: ShareDialogProps) {
+  const t = useTranslations("share");
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isShared, setIsShared] = useState(selectedVisibilityType === "public");
@@ -154,6 +156,10 @@ export function ShareDialog({
     onOpenChange(false);
   }, [onOpenChange]);
 
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
+
   if (!chatId || !isOwner) {
     return null;
   }
@@ -164,12 +170,10 @@ export function ShareDialog({
         <div className="px-6 pt-6 pb-4">
           <DialogHeader className="space-y-1 pb-0">
             <DialogTitle className="text-lg font-semibold tracking-tight">
-              Share chat
+              {t("title")}
             </DialogTitle>
             <p className="text-[13px] text-muted-foreground pt-1">
-              {isShared
-                ? "Link is active. Anyone with the link can view this chat."
-                : "Create a public link to share this chat."}
+              {isShared ? t("linkActive") : t("linkInactive")}
             </p>
           </DialogHeader>
         </div>
@@ -203,12 +207,12 @@ export function ShareDialog({
                 {copied ? (
                   <span className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5" />
-                    Copied
+                    {t("copied")}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5">
                     <Copy className="h-3.5 w-3.5" />
-                    Copy
+                    {t("copy")}
                   </span>
                 )}
               </Button>
@@ -219,7 +223,7 @@ export function ShareDialog({
           {isFetchingShare && (
             <div className="flex items-center justify-center py-4">
               <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 border-t-primary animate-spin" />
-              <span className="ml-2 text-sm text-muted-foreground">Loading share info...</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t("loading")}</span>
             </div>
           )}
 
@@ -251,10 +255,10 @@ export function ShareDialog({
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-medium">
-                {isLoading ? "Updating..." : isShared ? "Link is active" : "Link is inactive"}
+                {isLoading ? t("updating") : isShared ? t("linkActiveBtn") : t("linkInactiveBtn")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {isShared ? "Click to deactivate link" : "Click to create public link"}
+                {isShared ? t("clickToDeactivate") : t("clickToCreate")}
               </p>
             </div>
             <div
@@ -273,7 +277,7 @@ export function ShareDialog({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Password protection</span>
+                  <span className="text-sm font-medium">{t("passwordProtection")}</span>
                 </div>
                 <button
                   type="button"
@@ -298,12 +302,12 @@ export function ShareDialog({
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password (optional)"
+                    placeholder={t("passwordPlaceholder")}
                     className="pr-10"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={togglePasswordVisibility}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -312,9 +316,7 @@ export function ShareDialog({
               )}
 
               <p className="text-xs text-muted-foreground">
-                {passwordEnabled
-                  ? "Viewers will need this password to access the chat"
-                  : "Optionally add a password to restrict access"}
+                {passwordEnabled ? t("passwordRequired") : t("passwordOptional")}
               </p>
             </div>
           )}

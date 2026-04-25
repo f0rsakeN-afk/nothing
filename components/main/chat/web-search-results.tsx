@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useState, useMemo } from "react";
+import React, { memo, useState, useMemo, useCallback } from "react";
 import { Globe, ArrowUpRight, Search, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -222,6 +222,21 @@ export const WebSearchResults = memo(function WebSearchResults({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
 
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
+
+  const openAllResults = useCallback(() => {
+    setSheetOpen(true);
+  }, []);
+
+  const handleViewAllKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.stopPropagation();
+      setSheetOpen(true);
+    }
+  }, []);
+
   if (!results || results.length === 0) {
     return null;
   }
@@ -233,7 +248,7 @@ export const WebSearchResults = memo(function WebSearchResults({
       {/* Compact header bar - clickable toggle */}
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={toggleExpanded}
         className={cn(
           "flex items-center justify-between w-full",
           "px-4 py-2.5 rounded-t-lg",
@@ -268,16 +283,8 @@ export const WebSearchResults = memo(function WebSearchResults({
               role="button"
               tabIndex={0}
               className="h-6 px-2 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSheetOpen(true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.stopPropagation();
-                  setSheetOpen(true);
-                }
-              }}
+              onClick={openAllResults}
+              onKeyDown={handleViewAllKeyDown}
             >
               View all
               <ArrowUpRight className="w-3 h-3" />

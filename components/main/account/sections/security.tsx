@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Lock, Trash2, AlertTriangle } from "lucide-react";
@@ -40,6 +41,7 @@ interface SecuritySectionProps {
 export const SecuritySection = React.memo(function SecuritySection({
   accountData,
 }: SecuritySectionProps) {
+  const t = useTranslations("account");
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
@@ -61,17 +63,17 @@ export const SecuritySection = React.memo(function SecuritySection({
     <div className="space-y-5">
       <div>
         <h3 className="text-[13px] font-semibold text-foreground mb-0.5">
-          Security
+          {t("securityTitle")}
         </h3>
         <p className="text-[12px] text-muted-foreground">
-          Manage your password, sessions, and account security.
+          {t("securitySubtitle")}
         </p>
       </div>
 
       {/* Two-factor authentication - managed via StackAuth */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Two-factor authentication
+          {t("twoFactorAuth")}
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -81,7 +83,7 @@ export const SecuritySection = React.memo(function SecuritySection({
                 Two-factor authentication
               </p>
               <p className="text-[12px] text-muted-foreground mt-0.5">
-                Managed via{" "}
+                {t("twoFactorAuthDesc")}{" "}
                 <a
                   href="https://app.stackauth.com"
                   target="_blank"
@@ -99,7 +101,7 @@ export const SecuritySection = React.memo(function SecuritySection({
             className="h-7 text-[12px] shrink-0"
             onClick={() => window.open("https://app.stackauth.com", "_blank")}
           >
-            Manage
+            {t("manage")}
           </Button>
         </div>
       </div>
@@ -107,16 +109,16 @@ export const SecuritySection = React.memo(function SecuritySection({
       {/* Active sessions - managed via StackAuth */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Active sessions
+          {t("activeSessions")}
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-3">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[13px] font-medium text-foreground">
-                Session management
+                {t("sessionManagement")}
               </p>
               <p className="text-[12px] text-muted-foreground mt-0.5">
-                Managed via{" "}
+                {t("twoFactorAuthDesc")}{" "}
                 <a
                   href="https://app.stackauth.com"
                   target="_blank"
@@ -145,11 +147,10 @@ export const SecuritySection = React.memo(function SecuritySection({
           <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-foreground">
-              Delete account
+              {t("deleteAccount")}
             </p>
             <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">
-              Permanently deactivate your account. Your data will be retained for
-              30 days before permanent deletion. Contact support to restore.
+              {t("deleteAccountWarning")}
             </p>
           </div>
         </div>
@@ -159,7 +160,7 @@ export const SecuritySection = React.memo(function SecuritySection({
           className="h-7 text-[12px] border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
           onClick={() => setDeleteDialogOpen(true)}
         >
-          Delete account
+          {t("deleteAccount")}
         </Button>
       </div>
 
@@ -169,22 +170,20 @@ export const SecuritySection = React.memo(function SecuritySection({
             <AlertDialogMedia className="bg-destructive/10">
               <Trash2 className="size-5 text-destructive" />
             </AlertDialogMedia>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteAccountConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently deactivate your account. Your data will be
-              retained for 30 days before permanent deletion. Contact support
-              to restore your account within this period.
+              {t("deleteAccountConfirmDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="text-white"
               render={<Button variant="destructive" />}
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deactivating..." : "Delete account"}
+              {deleteMutation.isPending ? t("deactivating") : t("deleteAccount")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Mail, Clock } from "lucide-react";
 
 // ─── Inline brand icons ───────────────────────────────────────────────────────
@@ -40,16 +41,17 @@ const SOCIAL = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ContactInfo() {
+  const t = useTranslations("contact");
+
   return (
     <div className="flex flex-col gap-8 lg:py-2">
       {/* Hero */}
       <div>
         <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground">
-          We&apos;d love to hear from you
+          {t("title")}
         </h1>
         <p className="mt-3 text-base text-muted-foreground leading-relaxed max-w-sm">
-          Whether you have a question, a bug to report, or a product idea — we
-          read and reply to every message personally.
+          {t("description")}
         </p>
       </div>
 
@@ -63,7 +65,7 @@ export function ContactInfo() {
             <Mail className="w-4 h-4 text-foreground" />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Email</p>
+            <p className="text-xs text-muted-foreground">{t("email")}</p>
             <p className="text-sm font-medium text-foreground mt-0.5 group-hover:underline underline-offset-4">
               hello@example.com
             </p>
@@ -75,9 +77,9 @@ export function ContactInfo() {
             <Clock className="w-4 h-4 text-foreground" />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Response time</p>
+            <p className="text-xs text-muted-foreground">{t("responseTime")}</p>
             <p className="text-sm font-medium text-foreground mt-0.5">
-              Within 24 hours
+              {t("within24Hours")}
             </p>
           </div>
         </div>

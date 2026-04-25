@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import {
   SidebarGroup,
   SidebarMenu,
@@ -10,15 +11,27 @@ import {
 import { cn } from "@/lib/utils";
 import { TABS, type TabId } from "./data";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 interface SidebarTabsProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
 }
 
+const TAB_KEYS = {
+  chats: "chatExtended.chats",
+  projects: "chatExtended.projects",
+  archive: "chatExtended.archive",
+} as const;
+
 export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
+  const t = useTranslations();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  const handleTabClick = useCallback((tabId: TabId) => {
+    onTabChange(tabId);
+  }, [onTabChange]);
 
   if (isCollapsed) {
     return (
@@ -27,9 +40,9 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
           {TABS.map((tab) => (
             <SidebarMenuItem key={tab.id}>
               <SidebarMenuButton
-                tooltip={tab.label}
+                tooltip={t(TAB_KEYS[tab.id])}
                 isActive={activeTab === tab.id}
-                onClick={() => onTabChange(tab.id)}
+                onClick={() => handleTabClick(tab.id)}
                 className="text-sidebar-foreground/60 hover:text-sidebar-foreground data-[active=true]:text-sidebar-foreground data-[active=true]:bg-sidebar-accent"
               >
                 <tab.icon className="h-4 w-4 shrink-0" />
@@ -49,7 +62,7 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className={cn(
                 "relative flex flex-col items-center gap-1 rounded-md py-2 text-[11px] font-medium transition-colors duration-150",
                 isActive
@@ -65,7 +78,7 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
                 />
               )}
               <tab.icon className="relative z-10 h-3.5 w-3.5" />
-              <span className="relative z-10 font-semibold tracking-wider">{tab.label}</span>
+              <span className="relative z-10 font-semibold tracking-wider">{t(TAB_KEYS[tab.id])}</span>
             </button>
           );
         })}

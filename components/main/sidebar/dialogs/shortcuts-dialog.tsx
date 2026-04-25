@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Keyboard } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -87,63 +88,12 @@ const Section = React.memo(function Section({
   );
 });
 
-// ── Data ──────────────────────────────────────────────────────────────────
+// ── Data (translation keys) ───────────────────────────────────────────────
 
-const SECTIONS = [
-  {
-    title: "Navigation",
-    shortcuts: [
-      {
-        label: "Search chats",
-        keys: [
-          ["⌘", "K"],
-          ["Ctrl", "K"],
-        ],
-      },
-      {
-        label: "Open settings",
-        keys: [
-          ["⌘", ","],
-          ["Ctrl", ","],
-        ],
-      },
-      {
-        label: "Open account",
-        keys: [
-          ["⌘", "⇧", "A"],
-          ["Ctrl", "⇧", "A"],
-        ],
-      },
-      {
-        label: "Open feedback",
-        keys: [
-          ["⌘", "⇧", "F"],
-          ["Ctrl", "⇧", "F"],
-        ],
-      },
-    ],
-  },
-  {
-    title: "Interface",
-    shortcuts: [
-      {
-        label: "Toggle sidebar",
-        keys: [
-          ["⌘", "B"],
-          ["Ctrl", "B"],
-        ],
-      },
-      { label: "Keyboard shortcuts", keys: [["?"]] },
-    ],
-  },
-  {
-    title: "Chat",
-    shortcuts: [
-      { label: "Send message", keys: [["Enter"]] },
-      { label: "New line", keys: [["⇧", "Enter"]] },
-      { label: "Clear input", keys: [["Esc"]] },
-    ],
-  },
+const SECTION_KEYS = [
+  { titleKey: "shortcuts.navigation", shortcuts: ["shortcuts.searchChats", "shortcuts.openSettings", "shortcuts.openAccount", "shortcuts.openFeedback"] },
+  { titleKey: "shortcuts.interface", shortcuts: ["shortcuts.toggleSidebar", "shortcuts.title"] },
+  { titleKey: "shortcuts.chat", shortcuts: ["shortcuts.sendMessage", "shortcuts.newLine", "shortcuts.clearInput"] },
 ] as const;
 
 // ── Dialog ────────────────────────────────────────────────────────────────
@@ -157,6 +107,8 @@ export const ShortcutsDialog = React.memo(function ShortcutsDialog({
   open,
   onOpenChange,
 }: ShortcutsDialogProps) {
+  const t = useTranslations();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -171,10 +123,10 @@ export const ShortcutsDialog = React.memo(function ShortcutsDialog({
             </div>
             <div>
               <DialogTitle className="text-[14px] font-semibold text-foreground leading-none">
-                Keyboard Shortcuts
+                {t("shortcuts.title")}
               </DialogTitle>
               <p className="text-[12px] text-muted-foreground mt-1">
-                Speed up your workflow with these shortcuts.
+                {t("shortcuts.speedUpWorkflow")}
               </p>
             </div>
           </div>
@@ -182,13 +134,21 @@ export const ShortcutsDialog = React.memo(function ShortcutsDialog({
 
         {/* Shortcuts */}
         <div className="px-5 py-4 space-y-4">
-          {SECTIONS.map((section) => (
-            <Section key={section.title} title={section.title}>
-              {section.shortcuts.map((shortcut, i) => (
+          {SECTION_KEYS.map((section) => (
+            <Section key={section.titleKey} title={t(section.titleKey)}>
+              {section.shortcuts.map((shortcutKey, i) => (
                 <ShortcutRow
-                  key={shortcut.label}
-                  label={shortcut.label}
-                  keys={shortcut.keys}
+                  key={shortcutKey}
+                  label={t(shortcutKey)}
+                  keys={shortcutKey === "shortcuts.searchChats" ? [["⌘", "K"], ["Ctrl", "K"]] :
+                        shortcutKey === "shortcuts.openSettings" ? [["⌘", ","], ["Ctrl", ","]] :
+                        shortcutKey === "shortcuts.openAccount" ? [["⌘", "⇧", "A"], ["Ctrl", "⇧", "A"]] :
+                        shortcutKey === "shortcuts.openFeedback" ? [["⌘", "⇧", "F"], ["Ctrl", "⇧", "F"]] :
+                        shortcutKey === "shortcuts.toggleSidebar" ? [["⌘", "B"], ["Ctrl", "B"]] :
+                        shortcutKey === "shortcuts.title" ? [["?"]] :
+                        shortcutKey === "shortcuts.sendMessage" ? [["Enter"]] :
+                        shortcutKey === "shortcuts.newLine" ? [["⇧", "Enter"]] :
+                        [["Esc"]]}
                   isLast={i === section.shortcuts.length - 1}
                 />
               ))}

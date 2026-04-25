@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useCallback } from "react";
 import { Search, Loader2, ArrowRight, Clock, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { SendButton } from "./send-button";
 import { FilePreviews } from "./file-previews";
@@ -23,7 +24,6 @@ export const ChatInput = React.memo(function ChatInput({
   value,
   onChange,
   onSubmit,
-  placeholder = "Ask anything...",
   className,
   isLoading = false,
   onOpenMemory,
@@ -40,12 +40,15 @@ export const ChatInput = React.memo(function ChatInput({
 }: ChatInputProps & {
   style?: ResponseStyle;
 }) {
+  const t = useTranslations();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [files, setFiles] = React.useState<Attachment[]>([]);
   const [focused, setFocused] = React.useState(false);
   const user = useUser();
   const { data: servers = [] } = useServers(user?.id);
+
+  const placeholder = t('chat.typeMessage');
 
   // Memoized handlers for focus/blur to prevent child re-renders
   const handleFocus = React.useCallback(() => {
@@ -221,13 +224,13 @@ export const ChatInput = React.memo(function ChatInput({
                     <div className="flex items-center justify-between px-4 py-2 border-b border-border/40">
                       <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
-                        Recent
+                        {t("home.recent")}
                       </span>
                       <button
                         onClick={clearRecentSearches}
                         className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Clear
+                        {t("home.clear")}
                       </button>
                     </div>
                     {recentSearches.map((search, i) => (
@@ -259,7 +262,7 @@ export const ChatInput = React.memo(function ChatInput({
                       {showRecent && (
                         <div className="px-4 py-1.5 border-b border-border/40">
                           <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                            Suggestions
+                            {t("home.suggestions")}
                           </span>
                         </div>
                       )}

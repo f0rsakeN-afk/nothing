@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, memo, useRef } from 'react';
+import { useState, memo, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,15 +39,15 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
     handleClose();
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setTitle('');
     setContent('');
     setCategory('');
     setFileName(null);
     onClose();
-  };
+  }, [onClose]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -79,11 +79,23 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, [title]);
 
-  const removeFile = () => {
+  const removeFile = useCallback(() => {
     setFileName(null);
-  };
+  }, []);
+
+  const triggerFileInput = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleCategorySelect = useCallback((cat: string) => {
+    setCategory(cat);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    handleClose();
+  }, [handleClose]);
 
   const isEditing = !!memory;
 
@@ -141,7 +153,7 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
             ) : (
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={triggerFileInput}
                 className="w-full p-4 border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-center gap-1 opacity-60">
@@ -161,7 +173,7 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
               <button
                 key={cat}
                 type="button"
-                onClick={() => setCategory(cat)}
+                onClick={() => handleCategorySelect(cat)}
                 className={cn(
                   "px-3 py-1.5 rounded-full text-sm",
                   category === cat
@@ -174,7 +186,7 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
             ))}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleCloseModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={!content.trim()}>

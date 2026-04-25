@@ -1,29 +1,21 @@
 import type { Metadata } from "next";
-//import { Inter, JetBrains_Mono } from "next/font/google";
-// import { Plus_Jakarta_Sans } from "next/font/google";
 import { Plus_Jakarta_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import "../styles/hide-scrollbar.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
-import MainLayout from "./mainLayout";
 import { Toaster } from "@/components/ui/sileo-toast";
 import { StackProviderWrapper } from "@/components/providers/stack-provider-wrapper";
 import { CookieConsentProvider } from "@/hooks/use-cookie-consent";
 import { CookieConsentBanner } from "@/components/main/cookie-consent-banner";
 import { UmamiScript } from "@/components/analytics/umami";
-//import { PageTransitionProvider } from "@/components/shared/page-transition-provider";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+import { cookies } from "next/headers";
+import { Providers } from "./providers";
+import { routing } from "@/routing";
 
-// const inter = Inter({
-//   variable: "--font-inter",
-//   subsets: ["latin"],
-//   display: "swap",
-// });
-
-// const jetbrainsMono = JetBrains_Mono({
-//   variable: "--font-jetbrains",
-//   subsets: ["latin"],
-//   display: "swap",
-// });
+// Force dynamic rendering so cookie is read on every request
+export const dynamic = "force-dynamic";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -92,14 +84,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  // Get locale from cookie (for localePrefix: "never")
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get("NEXT_LOCALE")?.value;
+  const locale = routing.locales.includes(localeCookie as typeof routing.locales[number])
+    ? localeCookie
+    : routing.defaultLocale;
+
+  const messages = await getMessages();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
       className={`${plusJakartaSans.variable} ${sourceSerif.variable} [--font-code:var(--font-sans)] h-full antialiased scroll-smooth`}
     >
@@ -107,13 +108,20 @@ export default function RootLayout({
         <CookieConsentProvider>
           <StackProviderWrapper>
             <ThemeProvider defaultTheme="dark" attribute="class">
-              <Toaster position="top-center" />
-              <MainLayout>{children}</MainLayout>
-              <UmamiScript
-                websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || ""}
-                src={process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL || "https://analytics.eryx.ai/script.js"}
-              />
-              <CookieConsentBanner />
+              <NextIntlClientProvider locale={locale} messages={messages}>
+                <Providers>
+                  <Toaster position="top-center" />
+                  {children}
+                  <UmamiScript
+                    websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || ""}
+                    src={
+                      process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ||
+                      "https://analytics.eryx.ai/script.js"
+                    }
+                  />
+                  <CookieConsentBanner />
+                </Providers>
+              </NextIntlClientProvider>
             </ThemeProvider>
           </StackProviderWrapper>
         </CookieConsentProvider>

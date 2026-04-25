@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,28 +42,19 @@ const INITIAL_ERRORS: FormErrors = {
 };
 const MESSAGE_MAX = 2000;
 
-const TOPICS = [
-  { value: "general", label: "General Inquiry" },
-  { value: "support", label: "Technical Support" },
-  { value: "sales", label: "Sales" },
-  { value: "partnership", label: "Partnership" },
-  { value: "billing", label: "Billing" },
-  { value: "other", label: "Other" },
-] as const;
-
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(form: FormData): FormErrors {
+function validate(form: FormData, errors: { nameError: string; emailError: string; topicError: string; messageError: string }): FormErrors {
   const e: FormErrors = { name: "", email: "", topic: "", message: "" };
   if (!form.name.trim() || form.name.trim().length < 2)
-    e.name = "Name must be at least 2 characters.";
+    e.name = errors.nameError;
   if (!form.email.trim() || !EMAIL_RE.test(form.email))
-    e.email = "Enter a valid email address.";
-  if (!form.topic) e.topic = "Please select a topic.";
+    e.email = errors.emailError;
+  if (!form.topic) e.topic = errors.topicError;
   if (!form.message.trim() || form.message.trim().length < 20)
-    e.message = "Message must be at least 20 characters.";
+    e.message = errors.messageError;
   return e;
 }
 
@@ -88,23 +80,33 @@ function RequiredMark() {
 
 // ─── Success state ────────────────────────────────────────────────────────────
 
-function SuccessView({ onReset }: { onReset: () => void }) {
+function SuccessView({
+  onReset,
+  messageSent,
+  messageSentDesc,
+  sendAnotherMessage,
+}: {
+  onReset: () => void;
+  messageSent: string;
+  messageSentDesc: string;
+  sendAnotherMessage: string;
+}) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 gap-4">
       <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
         <CheckCircle className="w-6 h-6 text-foreground" />
       </div>
       <div>
-        <p className="text-base font-semibold text-foreground">Message sent</p>
+        <p className="text-base font-semibold text-foreground">{messageSent}</p>
         <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-          Thanks for reaching out. We&apos;ll get back to you within 24 hours.
+          {messageSentDesc}
         </p>
       </div>
       <button
         onClick={onReset}
         className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground   mt-2"
       >
-        Send another message
+        {sendAnotherMessage}
       </button>
     </div>
   );
@@ -113,10 +115,20 @@ function SuccessView({ onReset }: { onReset: () => void }) {
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export function ContactForm() {
+  const t = useTranslations("contact");
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FormErrors>(INITIAL_ERRORS);
   const [status, setStatus] = useState<Status>("idle");
   const [globalError, setGlobalError] = useState("");
+
+  const TOPICS = [
+    { value: "general", label: t("generalInquiry") },
+    { value: "support", label: t("technicalSupport") },
+    { value: "sales", label: t("sales") },
+    { value: "partnership", label: t("partnership") },
+    { value: "billing", label: t("billing") },
+    { value: "other", label: t("other") },
+  ] as const;
 
   const handleChange = useCallback(
     (field: keyof Pick<FormData, "name" | "email" | "message">) =>
@@ -136,7 +148,12 @@ export function ContactForm() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      const errs = validate(form);
+      const errs = validate(form, {
+        nameError: t("nameError"),
+        emailError: t("emailError"),
+        topicError: t("topicError"),
+        messageError: t("messageError"),
+      });
       if (hasErrors(errs)) {
         setErrors(errs);
         return;
@@ -150,9 +167,7 @@ export function ContactForm() {
         setStatus("success");
       } catch {
         setStatus("error");
-        setGlobalError(
-          "Something went wrong. Please try again or email us directly.",
-        );
+        setGlobalError(t("globalError"));
       }
     },
     [form],
@@ -169,7 +184,15 @@ export function ContactForm() {
   const charsLeft = MESSAGE_MAX - form.message.length;
   const charsNearMax = charsLeft <= 200;
 
-  if (status === "success") return <SuccessView onReset={handleReset} />;
+  if (status === "success")
+    return (
+      <SuccessView
+        onReset={handleReset}
+        messageSent={t("messageSent")}
+        messageSentDesc={t("messageSentDesc")}
+        sendAnotherMessage={t("sendAnotherMessage")}
+      />
+    );
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
@@ -177,12 +200,12 @@ export function ContactForm() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="name">
-            Name <RequiredMark />
+            {t("name")} <RequiredMark />
           </Label>
           <Input
             id="name"
             type="text"
-            placeholder="Alex Johnson"
+            placeholder={t("namePlaceholder")}
             value={form.name}
             onChange={handleChange("name")}
             disabled={isLoading}
@@ -194,12 +217,12 @@ export function ContactForm() {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email">
-            Email <RequiredMark />
+            {t("email")} <RequiredMark />
           </Label>
           <Input
             id="email"
             type="email"
-            placeholder="alex@example.com"
+            placeholder={t("emailPlaceholder")}
             value={form.email}
             onChange={handleChange("email")}
             disabled={isLoading}
@@ -213,7 +236,7 @@ export function ContactForm() {
       {/* Topic */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="topic">
-          Topic <RequiredMark />
+          {t("topic")} <RequiredMark />
         </Label>
         <Select
           value={form.topic}
@@ -225,7 +248,7 @@ export function ContactForm() {
             className="w-full"
             aria-invalid={!!errors.topic}
           >
-            <SelectValue placeholder="Select a topic…" />
+            <SelectValue placeholder={t("selectTopic")} />
           </SelectTrigger>
           <SelectContent>
             {TOPICS.map((t) => (
@@ -242,7 +265,7 @@ export function ContactForm() {
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <Label htmlFor="message">
-            Message <RequiredMark />
+            {t("message")} <RequiredMark />
           </Label>
           <span
             className={`text-xs tabular-nums   ${
@@ -254,7 +277,7 @@ export function ContactForm() {
         </div>
         <Textarea
           id="message"
-          placeholder="Tell us what's on your mind…"
+          placeholder={t("messagePlaceholder")}
           value={form.message}
           onChange={handleChange("message")}
           disabled={isLoading}
@@ -281,10 +304,10 @@ export function ContactForm() {
         {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Sending…
+            {t("sending")}
           </>
         ) : (
-          "Send message"
+          t("sendMessage")
         )}
       </Button>
     </form>

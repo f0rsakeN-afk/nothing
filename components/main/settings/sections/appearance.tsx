@@ -90,6 +90,11 @@ export function AppearanceSection({ settings: propSettings }: AppearanceSectionP
     mutation.mutate({ key, value });
   }, [mutation]);
 
+  const handleThemeSelect = useCallback((id: string) => {
+    setTheme(id);
+    onUpdate("theme", id);
+  }, [setTheme, onUpdate]);
+
   const displaySettings = localSettings || propSettings || settings;
 
   if ((!propSettings && isLoading) || !displaySettings) {
@@ -149,10 +154,7 @@ export function AppearanceSection({ settings: propSettings }: AppearanceSectionP
           {THEMES.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => {
-                setTheme(id);
-                onUpdate("theme", id);
-              }}
+              onClick={() => handleThemeSelect(id)}
               className={cn(
                 "flex flex-col items-center gap-2 rounded-lg border p-3 text-center transition-all",
                 theme === id

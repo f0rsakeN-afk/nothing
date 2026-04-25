@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   AlertDialog,
@@ -25,6 +26,7 @@ export default function DeleteProjectModal({
   onClose,
   project,
 }: DeleteProjectModalProps) {
+  const t = useTranslations();
   const deleteProject = useDeleteProject();
 
   const handleDelete = async () => {
@@ -46,23 +48,23 @@ export default function DeleteProjectModal({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Trash2 className="w-4 h-4 text-destructive" />
-            Delete Project
+            {t("project.deleteProject")}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This action is irreversible. All research, documents, and chat history associated with <span className="font-semibold text-foreground">&quot;{project?.name}&quot;</span> will be permanently deleted.
+            {t("project.deleteProjectActionConfirm", { project: project?.name || "" })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="flex items-center gap-3 p-3 border border-destructive/20 bg-destructive/5">
           <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
           <p className="text-[10px] font-medium text-destructive">
-            Warning: This project cannot be recovered after deletion.
+            {t("project.deleteProjectWarning")}
           </p>
         </div>
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting} className="h-9 px-4 text-xs font-medium">
-            Cancel
+            {t("common.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
@@ -76,10 +78,10 @@ export default function DeleteProjectModal({
             {isDeleting ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
-                Deleting...
+                {t("project.deleting")}
               </>
             ) : (
-              "Permanently Delete"
+              t("project.permanentlyDelete")
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

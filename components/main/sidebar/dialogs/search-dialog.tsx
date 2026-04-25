@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ async function searchChats(query: string): Promise<ChatsResponse> {
 }
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
+  const t = useTranslations();
   const [query, setQuery] = React.useState("");
   const router = useRouter();
 
@@ -88,8 +90,8 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
+    if (diffDays === 0) return t("sidebar.today");
+    if (diffDays === 1) return t("sidebar.yesterday");
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
@@ -106,14 +108,14 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Search Chats
+            {t("search.searchChats")}
           </DialogTitle>
         </DialogHeader>
 
         <div className="px-4 pb-2">
           <form onSubmit={handleSubmit}>
             <Input
-              placeholder="Search your chats..."
+              placeholder={t("search.placeholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
@@ -122,11 +124,11 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
           </form>
           {query.trim() ? (
             <p className="text-xs text-muted-foreground">
-              {chats.length} result{chats.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;
+              {t("search.results", { count: chats.length })}
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Search through your chat history
+              {t("search.searchChats")}
             </p>
           )}
         </div>
@@ -142,8 +144,8 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
               <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground">
                 {query.trim()
-                  ? `No chats found for "${query.trim()}"`
-                  : "No chats yet. Start a conversation!"}
+                  ? t("search.noResults")
+                  : t("chat.noChatsDesc")}
               </p>
             </div>
           ) : (
@@ -173,7 +175,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground/40 mt-0.5">
-                      {chat.messageCount} message{chat.messageCount !== 1 ? "s" : ""}
+                      {chat.messageCount} {chat.messageCount !== 1 ? t("chat.messageSent") : t("chat.messageSent")}
                     </p>
                   </div>
                 </button>

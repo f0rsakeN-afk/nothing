@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Bug, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sileo-toast";
 
@@ -38,6 +39,7 @@ const REPORT_REASONS = [
 ];
 
 export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
+  const t = useTranslations("report");
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [reason, setReason] = React.useState<string>("");
@@ -50,7 +52,7 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
     e.preventDefault();
 
     if (!reason || !description.trim()) {
-      toast.error("Please fill in all required fields.");
+      toast.error(t("fillAllFields"));
       return;
     }
 
@@ -64,14 +66,14 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to submit report");
+        throw new Error(data.error || t("errorMessage"));
       }
 
-      toast.success("Report submitted. Thank you!");
+      toast.success(t("successMessage"));
       handleClose();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to submit report",
+        error instanceof Error ? error.message : t("errorMessage"),
       );
     } finally {
       setIsSubmitting(false);
@@ -96,25 +98,24 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bug className="w-5 h-5 text-destructive" />
-            Report an Issue
+            {t("title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Help us improve by reporting bugs, performance issues, or
-            inappropriate content.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="space-y-2">
             <Label htmlFor="report-reason" className="text-xs font-medium">
-              Issue type <span className="text-destructive">*</span>
+              {t("issueType")} <span className="text-destructive">*</span>
             </Label>
             <Select value={reason} onValueChange={handleReasonChange}>
               <SelectTrigger
                 id="report-reason"
                 className="h-10 rounded-lg text-sm w-full"
               >
-                <SelectValue placeholder="Select issue type" />
+                <SelectValue placeholder={t("selectIssueType")} />
               </SelectTrigger>
               <SelectContent>
                 {REPORT_REASONS.map((r) => (
@@ -128,11 +129,11 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
 
           <div className="space-y-2">
             <Label htmlFor="report-description" className="text-xs font-medium">
-              Description <span className="text-destructive">*</span>
+              {t("descriptionLabel")} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="report-description"
-              placeholder="Describe the issue in detail. Include steps to reproduce if applicable."
+              placeholder={t("descriptionPlaceholder")}
               className="min-h-[120px] resize-none rounded-lg text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -147,7 +148,7 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
               disabled={isSubmitting}
               className="rounded-xl h-10"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               type="submit"
@@ -158,10 +159,10 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
+                  {t("submitting")}
                 </>
               ) : (
-                "Submit Report"
+                t("submit")
               )}
             </Button>
           </DialogFooter>

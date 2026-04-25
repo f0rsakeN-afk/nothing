@@ -1,6 +1,6 @@
 /**
- * Security & Auth Proxy
- * Adds security headers, auth redirect, and user header injection to all responses
+ * Security & Auth Proxy + i18n
+ * Adds security headers, auth redirect, locale detection, and user header injection to all responses
  */
 
 import { NextResponse } from "next/server";
@@ -8,12 +8,22 @@ import type { NextRequest } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import redis, { KEYS, TTL } from "@/lib/redis";
 import { validateCSRF, csrfErrorResponse } from "@/lib/csrf";
+import { routing } from "./routing";
 
 const PUBLIC_PATHS = ["/", "/home"];
 const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models"];
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // i18n: Redirect root to /home (localePrefix: "never" so no locale in URL)
+  if (pathname === "/") {
+    const response = NextResponse.redirect(
+      new URL("/home", request.url),
+    );
+    setSecurityHeaders(response);
+    return response;
+  }
 
   // Allow public paths
   if (PUBLIC_PATHS.includes(pathname)) {
@@ -154,9 +164,36 @@ export default async function proxy(request: NextRequest) {
   );
 
   if (!hasStackSession) {
+    const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
+    const targetLocale = localeCookie && routing.locales.includes(localeCookie as (typeof routing.locales)[number])
+      ? localeCookie
+      : routing.defaultLocale;
     const redirectUrl = new URL("/home", request.url);
     redirectUrl.searchParams.set("from", pathname);
     const response = NextResponse.redirect(redirectUrl);
+    setSecurityHeaders(response);
+    return response;
+  }
+
+  // i18n: Check if pathname starts with a valid locale prefix
+  const pathnameLocale = routing.locales.find(
+    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
+  );
+
+  // If no locale prefix, redirect to locale-prefixed path (preserve query params)
+  if (!pathnameLocale) {
+    // Extract query string from URL
+    const search = request.nextUrl.search;
+
+    // Try to get locale from cookie first
+    const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
+    const targetLocale = localeCookie && routing.locales.includes(localeCookie as (typeof routing.locales)[number])
+      ? localeCookie
+      : routing.defaultLocale;
+
+    const response = NextResponse.redirect(
+      new URL(`${pathname}${search}`, request.url),
+    );
     setSecurityHeaders(response);
     return response;
   }

@@ -48,14 +48,18 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
     return <File className="w-5 h-5 text-muted-foreground" />;
   };
 
-  const handleDeleteFile = () => {
+  const handleDeleteFile = useCallback(() => {
     if (!fileToDelete) return;
     deleteFile(fileToDelete.id, {
       onSuccess: () => {
         setFileToDelete(null);
       },
     });
-  };
+  }, [fileToDelete, deleteFile]);
+
+  const cancelDeleteFile = useCallback(() => {
+    setFileToDelete(null);
+  }, []);
 
   const uploadFileWithProgress = useCallback(
     async (
@@ -248,6 +252,14 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
     [handleFiles]
   );
 
+  const triggerFileUpload = useCallback(() => {
+    document.getElementById("file-upload-input")?.click();
+  }, []);
+
+  const openUploadDialog = useCallback(() => {
+    setDialogOpen(true);
+  }, []);
+
   return (
     <>
       <div className="flex-1 p-5 flex flex-col min-h-[300px]">
@@ -273,7 +285,7 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => document.getElementById("file-upload-input")?.click()}
+                onClick={triggerFileUpload}
               >
                 <input
                   id="file-upload-input"
@@ -347,7 +359,7 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
         ) : files.length === 0 && uploadingFiles.length === 0 ? (
           <div
             className="flex-1 mt-2 bg-muted/30 border border-border/60 rounded-xl flex flex-col items-center justify-center p-6 text-center shadow-inner cursor-pointer hover:bg-muted/60 transition-colors border-dashed"
-            onClick={() => setDialogOpen(true)}
+            onClick={openUploadDialog}
           >
             <div className="flex items-center justify-center mb-4 relative opacity-60">
               <FileText className="w-8 h-8 text-muted-foreground absolute -left-6 z-0 -rotate-12" />
@@ -391,7 +403,7 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
       </div>
 
       {fileToDelete && (
-        <Dialog open={!!fileToDelete} onOpenChange={() => setFileToDelete(null)}>
+        <Dialog open={!!fileToDelete} onOpenChange={cancelDeleteFile}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -404,7 +416,7 @@ export function ProjectFilesDropzone({ projectId }: ProjectFilesDropzoneProps) {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setFileToDelete(null)}>
+              <Button variant="outline" onClick={cancelDeleteFile}>
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleDeleteFile} disabled={isDeleting}>

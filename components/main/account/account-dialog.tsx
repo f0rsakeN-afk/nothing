@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import {
   User,
@@ -219,7 +220,12 @@ const SectionContent = React.memo(function SectionContent({ id, accountData, isL
 // ---------------------------------------------------------------------------
 
 interface MobileTabRowProps {
-  tab: (typeof TABS)[number];
+  tab: {
+    id: string;
+    label: string;
+    description: string;
+    icon: React.ComponentType<{ className?: string }>;
+  };
   isLast: boolean;
   onSelect: (id: TabId) => void;
 }
@@ -230,7 +236,7 @@ const MobileTabRow = React.memo(function MobileTabRow({
   onSelect,
 }: MobileTabRowProps) {
   const Icon = tab.icon;
-  const handleClick = React.useCallback(() => onSelect(tab.id), [tab.id, onSelect]);
+  const handleClick = React.useCallback(() => onSelect(tab.id as TabId), [tab.id, onSelect]);
 
   return (
     <button
@@ -259,6 +265,7 @@ const MobileAccountDrawer = React.memo(function MobileAccountDrawer({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("account");
   const [activeSection, setActiveSection] = React.useState<TabId | null>(null);
 
   const { data: accountData, isLoading } = useQuery({
@@ -274,8 +281,15 @@ const MobileAccountDrawer = React.memo(function MobileAccountDrawer({
   const handleSelect = React.useCallback((id: TabId) => setActiveSection(id), []);
   const handleBack = React.useCallback(() => setActiveSection(null), []);
 
+  const tabs = [
+    { id: "profile" as const, label: t("profile"), description: t("profileDesc"), icon: User },
+    { id: "plan" as const, label: t("plan"), description: t("planDesc"), icon: CreditCard },
+    { id: "usage" as const, label: t("usage"), description: t("usageDesc"), icon: BarChart2 },
+    { id: "security" as const, label: t("security"), description: t("securityDesc"), icon: ShieldCheck },
+  ];
+
   const activeTab = React.useMemo(
-    () => (activeSection ? TABS.find((t) => t.id === activeSection) : null),
+    () => (activeSection ? tabs.find((t) => t.id === activeSection) : null),
     [activeSection],
   );
 
@@ -307,8 +321,8 @@ const MobileAccountDrawer = React.memo(function MobileAccountDrawer({
         ) : (
           <ScrollArea className="flex-1 min-h-0">
             <div className="py-2 pb-4">
-              {TABS.map((tab, i) => (
-                <MobileTabRow key={tab.id} tab={tab} isLast={i === TABS.length - 1} onSelect={handleSelect} />
+              {tabs.map((tab, i) => (
+                <MobileTabRow key={tab.id} tab={tab} isLast={i === tabs.length - 1} onSelect={handleSelect} />
               ))}
             </div>
           </ScrollArea>
@@ -329,6 +343,7 @@ const DesktopAccountDialog = React.memo(function DesktopAccountDialog({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("account");
   const [activeTab, setActiveTab] = React.useState<TabId>("profile");
 
   const { data: accountData, isLoading } = useQuery({
@@ -339,11 +354,18 @@ const DesktopAccountDialog = React.memo(function DesktopAccountDialog({
 
   const handleTabChange = React.useCallback((v: string) => setActiveTab(v as TabId), []);
 
+  const tabs = [
+    { id: "profile" as const, label: t("profile"), icon: User },
+    { id: "plan" as const, label: t("plan"), icon: CreditCard },
+    { id: "usage" as const, label: t("usage"), icon: BarChart2 },
+    { id: "security" as const, label: t("security"), icon: ShieldCheck },
+  ];
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden" showCloseButton>
         <DialogHeader className="sr-only">
-          <DialogTitle>Account</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         <Tabs orientation="vertical" value={activeTab} onValueChange={handleTabChange} className="h-[560px]">
@@ -354,7 +376,7 @@ const DesktopAccountDialog = React.memo(function DesktopAccountDialog({
             <SidebarHeader data={accountData} isLoading={isLoading} />
 
             <div className="flex flex-col space-y-0.5 w-full">
-              {TABS.map(({ id, label, icon: Icon }) => (
+              {tabs.map(({ id, label, icon: Icon }) => (
                 <TabsTrigger key={id} value={id} className="text-[12.5px] h-8 px-2 rounded-md gap-2 w-full justify-start">
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   {label}
@@ -365,7 +387,7 @@ const DesktopAccountDialog = React.memo(function DesktopAccountDialog({
 
           <ScrollArea className="flex-1 hide-scrollbar">
             <div className="p-5">
-              {TABS.map(({ id }) => (
+              {tabs.map(({ id }) => (
                 <TabsContent key={id} value={id}>
                   <SectionContent id={id} accountData={accountData} isLoading={isLoading} />
                 </TabsContent>

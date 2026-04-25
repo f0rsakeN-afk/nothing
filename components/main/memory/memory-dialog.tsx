@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useMemories } from '@/hooks/use-memories';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ export function MemoryDialog({
   selectedMemories = [],
   onMemoriesSelect,
 }: MemoryDialogProps) {
+  const t = useTranslations("memory");
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newMemory, setNewMemory] = useState({ title: '', content: '' });
@@ -45,27 +47,27 @@ export function MemoryDialog({
   } = useMemories();
 
   // Reset local selection when dialog opens
-  const handleOpenChange = (open: boolean) => {
+  const handleOpenChange = useCallback((open: boolean) => {
     if (open) {
       setLocalSelected(selectedMemories);
       setSearchQuery('');
       setIsAdding(false);
     }
     onOpenChange(open);
-  };
+  }, [selectedMemories, onOpenChange]);
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       searchMemories(searchQuery);
     }
-  };
+  }, [searchQuery, searchMemories]);
 
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     setSearchQuery('');
-  };
+  }, []);
 
-  const handleAddMemory = async (e: React.FormEvent) => {
+  const handleAddMemory = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemory.content.trim()) return;
 
@@ -79,20 +81,20 @@ export function MemoryDialog({
     } catch (error) {
       const err = error as { code?: string; message?: string; upgradeTo?: string };
       if (err.code === 'MEMORY_LIMIT_REACHED' || err.code === 'MEMORY_NOT_AVAILABLE') {
-        toast.error(err.message || 'Memory limit reached', {
-          description: err.upgradeTo ? `Upgrade to ${err.upgradeTo} for more memories` : undefined,
+        toast.error(t("memoryLimitReached"), {
+          description: err.upgradeTo ? t("upgradeForMore", { plan: err.upgradeTo }) : undefined,
           action: err.upgradeTo ? {
-            label: `Upgrade to ${err.upgradeTo}`,
+            label: t("upgradeForMore", { plan: err.upgradeTo }),
             onClick: () => window.dispatchEvent(new CustomEvent('open-pricing-dialog')),
           } : undefined,
         });
       } else {
-        toast.error('Failed to add memory. Please try again.');
+        toast.error(t("failedToAddMemory"));
       }
     }
-  };
+  }, [newMemory, addMemory, t]);
 
-  const toggleMemorySelection = (memoryId: string) => {
+  const toggleMemorySelection = useCallback((memoryId: string) => {
     setLocalSelected((prev) => {
       if (prev.includes(memoryId)) {
         return prev.filter((id) => id !== memoryId);
@@ -100,20 +102,40 @@ export function MemoryDialog({
       if (prev.length >= 5) return prev;
       return [...prev, memoryId];
     });
-  };
+  }, []);
 
-  const handleConfirmSelection = () => {
+  const handleConfirmSelection = useCallback(() => {
     onMemoriesSelect?.(localSelected);
     onOpenChange(false);
-  };
+  }, [onMemoriesSelect, localSelected, onOpenChange]);
 
-  const formatDate = (date: Date) => {
+  const formatDate = useCallback((date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     }).format(new Date(date));
-  };
+  }, []);
+
+  const startAddingMemory = useCallback(() => {
+    setIsAdding(true);
+  }, []);
+
+  const cancelAddingMemory = useCallback(() => {
+    setIsAdding(false);
+  }, []);
+
+  const clearAllSelected = useCallback(() => {
+    setLocalSelected([]);
+  }, []);
+
+  const deleteMemoryById = useCallback((memoryId: string) => {
+    deleteMemory(memoryId);
+  }, [deleteMemory]);
+
+  const closeDialog = useCallback(() => {
+    handleOpenChange(false);
+  }, [handleOpenChange]);
 
   // Determine which memories to display
   const displayedMemories = searchQuery.trim() && searchResults
@@ -130,7 +152,7 @@ export function MemoryDialog({
             <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
               <Search className="h-3 w-3 text-primary" />
             </div>
-            {selectionMode ? 'Select Context' : 'Your Memory'}
+            {selectionMode ? t("selectContext") : t("title")}
           </DialogTitle>
         </DialogHeader>
 
@@ -143,28 +165,28 @@ export function MemoryDialog({
                   <Input
                     value={newMemory.title}
                     onChange={(e) => setNewMemory({ ...newMemory, title: e.target.value })}
-                    placeholder="Title (optional)"
+                    placeholder={t("titleOptional")}
                     className="flex-1"
                   />
                   <textarea
                     value={newMemory.content}
                     onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
-                    placeholder="What would you like to remember?"
+                    placeholder={t("whatToRemember")}
                     className="w-full min-h-[100px] p-3 rounded-lg border bg-background text-sm resize-none"
                   />
                   <div className="flex gap-2 justify-end">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsAdding(false)}>
-                      Cancel
+                    <Button type="button" variant="ghost" size="sm" onClick={cancelAddingMemory}>
+                      {t("cancel")}
                     </Button>
                     <Button type="submit" size="sm" disabled={!newMemory.content.trim() || isAddingMemory}>
-                      {isAddingMemory ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                      {isAddingMemory ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
                     </Button>
                   </div>
                 </form>
               ) : (
-                <Button onClick={() => setIsAdding(true)} variant="outline" className="w-full gap-2">
+                <Button onClick={startAddingMemory} variant="outline" className="w-full gap-2">
                   <Plus className="h-4 w-4" />
-                  Add Memory
+                  {t("addMemory")}
                 </Button>
               )}
             </>
@@ -174,16 +196,16 @@ export function MemoryDialog({
           {selectionMode && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {localSelected.length}/5 memories selected
+                {localSelected.length}/5 {t("memoriesSelected")}
               </span>
               {localSelected.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-xs h-7 px-2"
-                  onClick={() => setLocalSelected([])}
+                  onClick={clearAllSelected}
                 >
-                  Clear all
+                  {t("clearAll")}
                 </Button>
               )}
             </div>
@@ -195,7 +217,7 @@ export function MemoryDialog({
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search memories..."
+                placeholder={selectionMode ? t("searchToFilter") : t("searchMemories")}
                 className="flex-1"
               />
               <Button type="submit" size="icon" variant="secondary" disabled={isSearching || !searchQuery.trim()}>
@@ -221,11 +243,11 @@ export function MemoryDialog({
 
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
-              {searchQuery.trim() ? `${displayedMemories.length} results` : `${total} memories`}
+              {searchQuery.trim() ? `${displayedMemories.length} ${t("results")}` : `${total} ${t("totalMemories")}`}
             </span>
             {searchQuery.trim() && (
               <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={handleClearSearch}>
-                Clear search
+                {t("clearSearch")}
               </Button>
             )}
           </div>
@@ -234,15 +256,15 @@ export function MemoryDialog({
             {isLoading && displayedMemories.length === 0 ? (
               <div className="flex flex-col justify-center items-center h-[350px]">
                 <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mt-4">Loading memories...</p>
+                <p className="text-sm text-muted-foreground mt-4">{t("loadingMemories")}</p>
               </div>
             ) : displayedMemories.length === 0 ? (
               <div className="flex flex-col justify-center items-center h-[350px] py-12 px-4 border border-dashed rounded-lg bg-muted/50 m-1">
                 <Search className="h-12 w-12 mx-auto text-muted-foreground mb-3 opacity-50" />
-                <p className="font-medium">No memories found</p>
-                {searchQuery && <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>}
+                <p className="font-medium">{t("noMemoriesFound")}</p>
+                {searchQuery && <p className="text-xs text-muted-foreground mt-1">{t("tryDifferentSearch")}</p>}
                 {!searchQuery && (
-                  <p className="text-xs text-muted-foreground mt-1">Add memories to see them here</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("addMemoriesHint")}</p>
                 )}
               </div>
             ) : (
@@ -291,7 +313,7 @@ export function MemoryDialog({
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                deleteMemory(memory.id);
+                                deleteMemoryById(memory.id);
                               }}
                               className={cn(
                                 'h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10',
@@ -314,11 +336,11 @@ export function MemoryDialog({
 
         {selectionMode && (
           <DialogFooter className="pt-4 border-t">
-            <Button variant="outline" onClick={() => handleOpenChange(false)}>
-              Cancel
+            <Button variant="outline" onClick={closeDialog}>
+              {t("cancel")}
             </Button>
             <Button onClick={handleConfirmSelection} disabled={localSelected.length === 0}>
-              Use {localSelected.length} memory{localSelected.length !== 1 ? 's' : ''}
+              {t("use")} {localSelected.length} {localSelected.length !== 1 ? t("memories") : t("memory")}
             </Button>
           </DialogFooter>
         )}

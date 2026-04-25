@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   AlertDialog,
@@ -24,6 +25,8 @@ export function DeleteChatDialog({
   onOpenChange,
   title,
 }: DeleteChatDialogProps) {
+  const t = useTranslations();
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent size="sm">
@@ -31,22 +34,22 @@ export function DeleteChatDialog({
           <AlertDialogMedia className="bg-destructive/10">
             <Trash2 className="size-5 text-destructive" />
           </AlertDialogMedia>
-          <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+          <AlertDialogTitle>{t("chat.deleteConversation")}</AlertDialogTitle>
           <AlertDialogDescription>
             <span className="font-medium text-foreground">
               &ldquo;{title}&rdquo;
             </span>{" "}
-            will be permanently deleted. This action cannot be undone.
+            {t("chat.willBePermanentlyDeleted")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className={"text-white"}
             render={<Button variant="destructive" />}
             onClick={() => onOpenChange(false)}
           >
-            Delete
+            {t("chat.deleteChat")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

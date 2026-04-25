@@ -433,31 +433,58 @@ export const NotificationsButton = memo(function NotificationsButton() {
     [notificationMutation]
   );
 
-  const closeMenus = useCallback(() => {
+  const toggleFilter = useCallback(() => {
+    setFilterOpen((o) => !o);
+    setActionsOpen(false);
+  }, []);
+
+  const toggleActions = useCallback(() => {
+    setActionsOpen((o) => !o);
+    setFilterOpen(false);
+  }, []);
+
+  const closeAllMenus = useCallback(() => {
     setFilterOpen(false);
     setActionsOpen(false);
     setActiveMenuId(null);
   }, []);
 
-  const handleFilterSelect = useCallback((value: FilterType) => {
-    setFilter(value);
-    setFilterOpen(false);
-  }, []);
-
-  const handlePopoverOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        setView("inbox");
-        closeMenus();
-      }
-    },
-    [closeMenus]
-  );
+  const openSettings = useCallback(() => {
+    setView("settings");
+    closeAllMenus();
+  }, [closeAllMenus]);
 
   // Find the notification for the active menu
   const activeMenuNotification = activeMenuId
     ? notifications.find((n) => n.id === activeMenuId)
     : null;
+
+  const handleFilterSelect = useCallback(
+    (value: FilterType) => {
+      setFilter(value);
+      setFilterOpen(false);
+    },
+    []
+  );
+
+  const handleBulkAction = useCallback(
+    (action: "read-all" | "archive-read" | "archive-all" | "unarchive-all") => {
+      bulkMutation.mutate(action);
+    },
+    [bulkMutation]
+  );
+
+  const handlePopoverOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        setView("inbox");
+        closeAllMenus();
+      }
+    },
+    [closeAllMenus]
+  );
+
+  const closeMenus = closeAllMenus;
 
   return (
     <Popover onOpenChange={handlePopoverOpenChange}>
@@ -491,7 +518,7 @@ export const NotificationsButton = memo(function NotificationsButton() {
             {/* Header */}
             <div className="relative flex items-center justify-between border-b border-border px-3 py-2.5">
               <button
-                onClick={() => { setFilterOpen((o) => !o); setActionsOpen(false); }}
+                onClick={toggleFilter}
                 className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[13px] font-semibold text-foreground hover:bg-accent/60 transition-colors"
               >
                 {filterLabel}
@@ -500,14 +527,14 @@ export const NotificationsButton = memo(function NotificationsButton() {
 
               <div className="flex items-center gap-0.5">
                 <button
-                  onClick={() => { setActionsOpen((o) => !o); setFilterOpen(false); }}
+                  onClick={toggleActions}
                   className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-accent/60 hover:text-foreground transition-colors"
                   aria-label="More actions"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => { setView("settings"); closeMenus(); }}
+                  onClick={openSettings}
                   className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-accent/60 hover:text-foreground transition-colors"
                   aria-label="Notification preferences"
                 >
@@ -542,28 +569,28 @@ export const NotificationsButton = memo(function NotificationsButton() {
                     <MenuButton
                       icon={CheckCheck}
                       label="Mark all as read"
-                      onClick={() => bulkMutation.mutate("read-all")}
+                      onClick={() => handleBulkAction("read-all")}
                     />
                   )}
                   {filter !== "archived" && (
                     <MenuButton
                       icon={ArchiveRestore}
                       label="Archive read"
-                      onClick={() => bulkMutation.mutate("archive-read")}
+                      onClick={() => handleBulkAction("archive-read")}
                     />
                   )}
                   {filter === "archived" && (
                     <MenuButton
                       icon={ArchiveRestore}
                       label="Unarchive all"
-                      onClick={() => bulkMutation.mutate("unarchive-all")}
+                      onClick={() => handleBulkAction("unarchive-all")}
                     />
                   )}
                   {filter !== "archived" && (
                     <MenuButton
                       icon={Archive}
                       label="Archive all"
-                      onClick={() => bulkMutation.mutate("archive-all")}
+                      onClick={() => handleBulkAction("archive-all")}
                     />
                   )}
                 </div>

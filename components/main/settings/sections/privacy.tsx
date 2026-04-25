@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Download, Trash2, Cookie } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -160,6 +161,28 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
     }
   };
 
+  const openDeleteChatsDialog = useCallback(() => {
+    setDeleteChatsOpen(true);
+  }, []);
+
+  const openDeactivateDialog = useCallback(() => {
+    setDeactivateOpen(true);
+  }, []);
+
+  const updateAnalyticsConsent = useCallback(
+    (val: boolean) => {
+      cookieConsent.updateConsent({ ...cookieConsent.consent, analytics: val });
+    },
+    [cookieConsent]
+  );
+
+  const updatePersonalizationConsent = useCallback(
+    (val: boolean) => {
+      cookieConsent.updateConsent({ ...cookieConsent.consent, personalization: val });
+    },
+    [cookieConsent]
+  );
+
   const displaySettings = localSettings || propSettings || settings;
 
   if ((!propSettings && isLoading) || !displaySettings) {
@@ -279,9 +302,7 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
           >
             <Switch
               checked={cookieConsent.consent.analytics}
-              onCheckedChange={(val) =>
-                cookieConsent.updateConsent({ ...cookieConsent.consent, analytics: val })
-              }
+              onCheckedChange={updateAnalyticsConsent}
               size="sm"
             />
           </SettingRow>
@@ -291,9 +312,7 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
           >
             <Switch
               checked={cookieConsent.consent.personalization}
-              onCheckedChange={(val) =>
-                cookieConsent.updateConsent({ ...cookieConsent.consent, personalization: val })
-              }
+              onCheckedChange={updatePersonalizationConsent}
               size="sm"
             />
           </SettingRow>
@@ -347,7 +366,7 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
               variant="outline"
               size="sm"
               className="h-7 text-[12px] text-destructive border-destructive/30 hover:bg-destructive/5"
-              onClick={() => setDeleteChatsOpen(true)}
+              onClick={openDeleteChatsDialog}
             >
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
               Clear all
@@ -369,7 +388,7 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
             variant="destructive"
             size="sm"
             className="h-7 text-[12px] text-white"
-            onClick={() => setDeactivateOpen(true)}
+            onClick={openDeactivateDialog}
           >
             Deactivate
           </Button>

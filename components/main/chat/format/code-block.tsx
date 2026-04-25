@@ -65,6 +65,10 @@ export const CodeBlock = memo(function CodeBlock({
   const isDark = resolvedTheme === "dark";
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
+
   const lines = children.split("\n");
 
   return (
@@ -78,7 +82,7 @@ export const CodeBlock = memo(function CodeBlock({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={toggleExpanded}
               className="h-7 w-7 text-muted-foreground hover:text-foreground"
             >
               {isExpanded ? (

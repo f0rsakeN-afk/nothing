@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -63,6 +64,7 @@ function NavLink({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function MarketingHeader() {
+  const t = useTranslations("header");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -70,6 +72,13 @@ export function MarketingHeader() {
 
   const user = useUser();
   const app = useStackApp();
+
+  const NAV_LINKS = [
+    { label: t("pricing"), href: "/pricing" },
+    { label: t("changelog"), href: "/changelog" },
+    { label: t("status"), href: "/status" },
+    { label: t("contact"), href: "/contact" },
+  ] as const;
 
   return (
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md">
@@ -92,9 +101,9 @@ export function MarketingHeader() {
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
           {user ? (
-            <Button>Go to Home</Button>
+            <Button>{t("goToHome")}</Button>
           ) : (
-            <Button onClick={() => app.redirectToSignIn()}>Sign In</Button>
+            <Button onClick={() => app.redirectToSignIn()}>{t("signIn")}</Button>
           )}
         </div>
 
@@ -145,12 +154,12 @@ export function MarketingHeader() {
               <div className="flex flex-col gap-2 px-5 py-4">
                 <Button variant="outline" className="w-full">
                   <Link href="/login" onClick={closeSheet}>
-                    Sign in
+                    {t("signin")}
                   </Link>
                 </Button>
                 <Button className="w-full">
                   <Link href="/home" onClick={closeSheet}>
-                    Get started
+                    {t("getStarted")}
                   </Link>
                 </Button>
               </div>

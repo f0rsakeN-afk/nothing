@@ -12,13 +12,11 @@ export const routing = defineRouting({
     "en", // English (source of truth)
     "es", // Spanish
     "fr", // French
-    "de", // German
-    "zh", // Chinese (Simplified)
-    "ja", // Japanese
-    "pt", // Portuguese
-    "ar", // Arabic (RTL)
-    "ko", // Korean
+    "ne", // Nepali
     "hi", // Hindi
+    "it", // Italian
+    "ko", // Korean
+    "ja", // Japanese
   ] as const,
 
   // Default locale when no locale is detected
@@ -45,13 +43,11 @@ export const SUPPORTED_LOCALES: {
   { code: "en", name: "English", nativeName: "English", dir: "ltr", flag: "🇺🇸" },
   { code: "es", name: "Spanish", nativeName: "Español", dir: "ltr", flag: "🇪🇸" },
   { code: "fr", name: "French", nativeName: "Français", dir: "ltr", flag: "🇫🇷" },
-  { code: "de", name: "German", nativeName: "Deutsch", dir: "ltr", flag: "🇩🇪" },
-  { code: "zh", name: "Chinese", nativeName: "中文", dir: "ltr", flag: "🇨🇳" },
-  { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr", flag: "🇯🇵" },
-  { code: "pt", name: "Portuguese", nativeName: "Português", dir: "ltr", flag: "🇧🇷" },
-  { code: "ar", name: "Arabic", nativeName: "العربية", dir: "rtl", flag: "🇸🇦" },
+  { code: "ne", name: "Nepali", nativeName: "नेपाली", dir: "ltr", flag: "🇳🇵" },
+  { code: "hi", name: "Hindi", nativeName: "हिंदी", dir: "ltr", flag: "🇮🇳" },
+  { code: "it", name: "Italian", nativeName: "Italiano", dir: "ltr", flag: "🇮🇹" },
   { code: "ko", name: "Korean", nativeName: "한국어", dir: "ltr", flag: "🇰🇷" },
-  { code: "hi", name: "Hindi", nativeName: "हिन्दी", dir: "ltr", flag: "🇮🇳" },
+  { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr", flag: "🇯🇵" },
 ];
 
 /**

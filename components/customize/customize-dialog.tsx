@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   User,
@@ -41,41 +42,6 @@ interface CustomizeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const TONES = [
-  {
-    id: "professional",
-    label: "Professional",
-    desc: "Formal and direct.",
-    icon: User,
-  },
-  { id: "witty", label: "Witty", desc: "Dry humor & sharp.", icon: Zap },
-  { id: "flirty", label: "Flirty", desc: "Playful & warm.", icon: Heart },
-  {
-    id: "gen-z",
-    label: "Gen-Z",
-    desc: "No caps, high energy.",
-    icon: Sparkles,
-  },
-  {
-    id: "sarcastic",
-    label: "Sarcastic",
-    desc: "Totally useful. Not.",
-    icon: Ghost,
-  },
-  {
-    id: "supportive",
-    label: "Supportive",
-    desc: "Encouraging & kind.",
-    icon: MessageSquare,
-  },
-  {
-    id: "emoji-heavy",
-    label: "Emoji-heavy",
-    desc: "More stats, more 🚀.",
-    icon: Hash,
-  },
-] as const;
-
 async function fetchCustomize(): Promise<CustomizeSchema> {
   const res = await fetch("/api/customize");
   if (!res.ok) throw new Error("Failed to fetch customize");
@@ -96,6 +62,7 @@ export function CustomizeDialog({
   isOpen,
   onOpenChange,
 }: CustomizeDialogProps) {
+  const t = useTranslations("customize");
   const [hasInitialized, setHasInitialized] = useState(false);
   const queryClient = useQueryClient();
 
@@ -109,13 +76,23 @@ export function CustomizeDialog({
     mutationFn: updateCustomize,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customize"] });
-      toast.success("Personalization updated successfully!");
+      toast.success(t("successMessage"));
       onOpenChange(false);
     },
     onError: () => {
-      toast.error("Failed to update personalization");
+      toast.error(t("errorMessage"));
     },
   });
+
+  const TONES = [
+    { id: "professional", label: t("professional"), desc: t("professionalDesc"), icon: User },
+    { id: "witty", label: t("witty"), desc: t("wittyDesc"), icon: Zap },
+    { id: "flirty", label: t("flirty"), desc: t("flirtyDesc"), icon: Heart },
+    { id: "gen-z", label: t("genZ"), desc: t("genZDesc"), icon: Sparkles },
+    { id: "sarcastic", label: t("sarcastic"), desc: t("sarcasticDesc"), icon: Ghost },
+    { id: "supportive", label: t("supportive"), desc: t("supportiveDesc"), icon: MessageSquare },
+    { id: "emoji-heavy", label: t("emojiHeavy"), desc: t("emojiHeavyDesc"), icon: Hash },
+  ] as const;
 
   const {
     register,
@@ -171,10 +148,10 @@ export function CustomizeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="w-5 h-5 text-primary" />
-            Customize your AI
+            {t("title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Shape how Eryx interacts with you by personalizing your profile.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -187,13 +164,13 @@ export function CustomizeDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName" className="text-xs font-medium">
-                  First Name
+                  {t("firstName")}
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="firstName"
-                    placeholder="First name"
+                    placeholder={t("firstName")}
                     className="pl-9 h-11 rounded-xl"
                     {...register("firstName")}
                   />
@@ -201,11 +178,11 @@ export function CustomizeDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="text-xs font-medium">
-                  Last Name
+                  {t("lastName")}
                 </Label>
                 <Input
                   id="lastName"
-                  placeholder="Last name"
+                  placeholder={t("lastName")}
                   className="h-11 rounded-xl"
                   {...register("lastName")}
                 />
@@ -215,13 +192,13 @@ export function CustomizeDialog({
             {/* Preferred Name */}
             <div className="space-y-2">
               <Label htmlFor="preferredName" className="text-xs font-medium">
-                How should I call you?
+                {t("howShouldICall")}
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="preferredName"
-                  placeholder="Your name"
+                  placeholder={t("yourName")}
                   className={cn(
                     "pl-9 h-11 rounded-xl",
                     errors.preferredName &&
@@ -240,14 +217,14 @@ export function CustomizeDialog({
             {/* Interests */}
             <div className="space-y-2">
               <Label htmlFor="interests" className="text-xs font-medium">
-                Your Interests (Optional)
+                {t("interests")}
                 <span className="ml-2 text-[9px] text-muted-foreground font-normal">
-                  Helps with analogies
+                  {t("interestsHint")}
                 </span>
               </Label>
               <Input
                 id="interests"
-                placeholder="Reading, Tech, Music..."
+                placeholder={t("interestsPlaceholder")}
                 className={cn(
                   "h-11 rounded-xl text-sm",
                   errors.interests && "border-destructive ring-destructive",
@@ -258,7 +235,7 @@ export function CustomizeDialog({
 
             {/* Response Tone */}
             <div className="space-y-3">
-              <Label className="text-xs font-medium">Response Tone</Label>
+              <Label className="text-xs font-medium">{t("responseTone")}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {TONES.map((tone) => (
                   <button
@@ -300,7 +277,7 @@ export function CustomizeDialog({
 
             {/* Detail Level - Visual Demo */}
             <div className="space-y-3">
-              <Label className="text-xs font-medium">Knowledge Detail</Label>
+              <Label className="text-xs font-medium">{t("knowledgeDetail")}</Label>
               <div className="grid grid-cols-3 gap-3">
                 {(["concise", "balanced", "detailed"] as const).map((level) => (
                   <button
@@ -362,12 +339,9 @@ export function CustomizeDialog({
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted/30 border border-border/50 transition-all duration-300">
                 <Info className="w-3 h-3 text-muted-foreground shrink-0" />
                 <p className="text-[9px] text-muted-foreground leading-tight">
-                  {selectedDetail === "concise" &&
-                    "Get straight to the point with brief answers."}
-                  {selectedDetail === "balanced" &&
-                    "The perfect mix of explanation and code."}
-                  {selectedDetail === "detailed" &&
-                    "Deep dives with full context and examples."}
+                  {selectedDetail === "concise" && t("conciseDesc")}
+                  {selectedDetail === "balanced" && t("balancedDesc")}
+                  {selectedDetail === "detailed" && t("detailedDesc")}
                 </p>
               </div>
             </div>
@@ -381,7 +355,7 @@ export function CustomizeDialog({
               disabled={mutation.isPending}
               className="rounded-xl h-11"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               type="submit"
@@ -391,10 +365,10 @@ export function CustomizeDialog({
               {mutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
+                  {t("saving")}
                 </>
               ) : (
-                "Apply Changes"
+                t("applyChanges")
               )}
             </Button>
           </DialogFooter>

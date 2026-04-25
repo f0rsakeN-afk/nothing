@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, FolderPlus } from "lucide-react";
 import { toast } from "@/components/ui/sileo-toast";
+import { useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -28,6 +29,7 @@ export default function CreateProjectDialog({
   open,
   onClose,
 }: CreateProjectDialogProps) {
+  const t = useTranslations();
   const createProject = useCreateProject();
 
   const {
@@ -51,10 +53,10 @@ export default function CreateProjectDialog({
     } catch (error) {
       const err = error as { code?: string; message?: string; upgradeTo?: string };
       if (err.code === "PROJECT_LIMIT_REACHED") {
-        toast.error(err.message || "Project limit reached", {
-          description: err.upgradeTo ? `Upgrade to ${err.upgradeTo} for more projects` : undefined,
+        toast.error(err.message || t("project.projectLimitReached"), {
+          description: err.upgradeTo ? t("project.upgradeToForMoreProjects", { plan: err.upgradeTo }) : undefined,
           action: err.upgradeTo ? {
-            label: `Upgrade to ${err.upgradeTo}`,
+            label: t("sidebar.upgradeToPro"),
             onClick: () => {
               // Open pricing dialog - emit event or use a callback
               onClose(false);
@@ -63,7 +65,7 @@ export default function CreateProjectDialog({
           } : undefined,
         });
       } else {
-        toast.error("Failed to create project. Please try again.");
+        toast.error(t("project.failedToCreateProject"));
       }
     }
   };
@@ -74,11 +76,10 @@ export default function CreateProjectDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FolderPlus className="w-5 h-5 text-primary" />
-            Create New Project
+            {t("project.createNewProject")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Organize your technical research and system designs into a dedicated
-            workspace.
+            {t("project.createNewProjectDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,11 +95,11 @@ export default function CreateProjectDialog({
                 htmlFor="name"
                 className={`text-xs ${errors.name ? "text-destructive" : ""}`}
               >
-                Project Name
+                {t("project.projectName")}
               </Label>
               <Input
                 id="name"
-                placeholder="e.g., Cloud Infrastructure Audit"
+                placeholder={t("project.projectNamePlaceholder")}
                 className={`h-10 ${
                   errors.name ? "border-destructive ring-destructive" : ""
                 }`}
@@ -120,12 +121,11 @@ export default function CreateProjectDialog({
                   errors.description ? "text-destructive" : ""
                 }`}
               >
-                Description{" "}
-                <span className="font-normal opacity-70">(Optional)</span>
+                {t("project.projectDescriptionOptional")}
               </Label>
               <Textarea
                 id="description"
-                placeholder="The objective of this project is to..."
+                placeholder={t("project.projectObjectivePlaceholder")}
                 className={`min-h-[100px] resize-none text-sm ${
                   errors.description
                     ? "border-destructive ring-destructive"
@@ -150,7 +150,7 @@ export default function CreateProjectDialog({
               disabled={isSubmitting}
               className="h-9 px-4 text-xs font-medium"
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -160,10 +160,10 @@ export default function CreateProjectDialog({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
-                  Creating...
+                  {t("project.creating")}
                 </>
               ) : (
-                "Initialize Project"
+                t("project.initializeProject")
               )}
             </Button>
           </div>

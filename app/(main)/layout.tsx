@@ -9,7 +9,6 @@ import { ProjectDialogsProvider } from "@/components/main/sidebar/dialogs/projec
 import { AuthGuard } from "@/components/main/auth-guard";
 import { AuthStatusProvider } from "@/components/main/auth-status-provider";
 import { MobileHeader } from "@/components/main/layout/mobile-header";
-import "../../styles/hide-scrollbar.css";
 
 export default async function MainLayout({
   children,
@@ -27,9 +26,7 @@ export default async function MainLayout({
       <ProjectDialogsProvider>
         <AppSidebar />
         <SidebarInset className="min-h-0 overflow-hidden">
-          {/* Mobile top bar */}
           <MobileHeader />
-
           <InitUser />
           <AuthStatusProvider>
             <AuthGuard>{children}</AuthGuard>

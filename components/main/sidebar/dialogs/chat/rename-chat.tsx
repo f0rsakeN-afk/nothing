@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -27,6 +28,7 @@ export function RenameChatDialog({
   currentTitle,
   onRename,
 }: RenameChatDialogProps) {
+  const t = useTranslations();
   const [value, setValue] = React.useState(currentTitle);
 
   // Sync when dialog opens with a potentially new title
@@ -48,15 +50,15 @@ export function RenameChatDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Rename conversation</DialogTitle>
+          <DialogTitle>{t("chatExtended.renameConversation")}</DialogTitle>
           <DialogDescription>
-            Give this conversation a new name.
+            {t("chatExtended.renameConversationDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-1.5">
           <Label htmlFor="rename-input" className="text-xs font-medium">
-            Title
+            {t("chatExtended.renameChatTitle")}
           </Label>
           <Input
             id="rename-input"
@@ -74,10 +76,10 @@ export function RenameChatDialog({
             size="lg"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button size="lg" disabled={!value.trim()} onClick={handleSave}>
-            Save
+            {t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

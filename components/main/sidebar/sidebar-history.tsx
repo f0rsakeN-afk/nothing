@@ -9,6 +9,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ChatHistoryItem } from "./chat-history-item";
 import { ProjectHistoryItem } from "./project-history-item";
 import { useChatEvents } from "@/hooks/useChatEvents";
@@ -44,17 +45,17 @@ interface ChatItem {
   pinnedAt?: string | null;
 }
 
-function groupChatsByDate(chats: ChatItem[]) {
+function groupChatsByDate(chats: ChatItem[], t: ReturnType<typeof useTranslations>) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86400000);
   const weekAgo = new Date(today.getTime() - 7 * 86400000);
 
-  const groups: { label: string; items: ChatItem[] }[] = [
-    { label: "Today", items: [] },
-    { label: "Yesterday", items: [] },
-    { label: "Last 7 Days", items: [] },
-    { label: "Older", items: [] },
+  const groups: { labelKey: string; items: ChatItem[] }[] = [
+    { labelKey: "sidebar.today", items: [] },
+    { labelKey: "sidebar.yesterday", items: [] },
+    { labelKey: "sidebar.last7Days", items: [] },
+    { labelKey: "sidebar.older", items: [] },
   ];
 
   chats.forEach((chat) => {
@@ -83,17 +84,17 @@ function SidebarSkeleton({ type }: { type: "chats" | "projects" }) {
   );
 }
 
-function SidebarErrorState({ onRetry }: { onRetry: () => void }) {
+function SidebarErrorState({ onRetry, t }: { onRetry: () => void; t: ReturnType<typeof useTranslations> }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 gap-3">
       <p className="text-xs text-destructive tracking-wide font-semibold">
-        Failed to load
+        {t("sidebar.failedToLoad")}
       </p>
       <button
         onClick={onRetry}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
-        Retry
+        {t("common.retry")}
       </button>
     </div>
   );
@@ -101,13 +102,15 @@ function SidebarErrorState({ onRetry }: { onRetry: () => void }) {
 
 function SidebarEmptyState({
   type,
+  t,
 }: {
   type: "chats" | "projects" | "archive";
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const messages = {
-    chats: "No chats yet",
-    projects: "No projects yet",
-    archive: "No archived items",
+  const messages: Record<string, string> = {
+    chats: t("sidebar.noChatsYet"),
+    projects: t("sidebar.noProjectsYet"),
+    archive: t("sidebar.noArchivedItems"),
   };
 
   return (
@@ -124,6 +127,7 @@ function SidebarEmptyState({
 // =========================================
 
 export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
+  const t = useTranslations();
   const { openCreateProjectDialog, openRenameProject, openDeleteProject } =
     useProjectDialogs();
   // Subscribe to SSE events for real-time updates
@@ -168,7 +172,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await archiveChat(chatId);
     } catch (error) {
-      toast.error("Failed to archive chat");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -176,7 +180,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unarchiveChat(chatId);
     } catch (error) {
-      toast.error("Failed to restore chat");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -187,7 +191,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await shareChat(chatId, visibility);
     } catch (error) {
-      toast.error("Failed to update sharing settings");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -195,7 +199,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await pinChat(chatId);
     } catch (error) {
-      toast.error("Failed to pin chat");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -203,7 +207,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unpinChat(chatId);
     } catch (error) {
-      toast.error("Failed to unpin chat");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -214,7 +218,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await archiveProject.mutateAsync(project.id);
     } catch (error) {
-      toast.error("Failed to archive project");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -225,7 +229,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unarchiveProject.mutateAsync(project.id);
     } catch (error) {
-      toast.error("Failed to restore project");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -233,7 +237,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await pinProject.mutateAsync(project.id);
     } catch (error) {
-      toast.error("Failed to pin project");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -241,7 +245,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     try {
       await unpinProject.mutateAsync(project.id);
     } catch (error) {
-      toast.error("Failed to unpin project");
+      toast.error(t("sidebar.failedToLoad"));
     }
   };
 
@@ -258,7 +262,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     }
 
     if (!hasChats && !hasProjects) {
-      return <SidebarEmptyState type="archive" />;
+      return <SidebarEmptyState type="archive" t={t} />;
     }
 
     return (
@@ -267,7 +271,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
         {hasChats && (
           <SidebarGroup className="py-1 px-2">
             <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
-              Chats
+              {t("chatExtended.chats")}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0">
@@ -294,7 +298,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
         {hasProjects && (
           <SidebarGroup className="py-1 px-2">
             <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
-              Projects
+              {t("chatExtended.projects")}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0">
@@ -333,28 +337,28 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
 
   // Error state
   if (activeTab === "chats" && isChatsError) {
-    return <SidebarErrorState onRetry={refetchChats} />;
+    return <SidebarErrorState onRetry={refetchChats} t={t} />;
   }
 
   if (activeTab === "projects" && isProjectsError) {
-    return <SidebarErrorState onRetry={refetchProjects} />;
+    return <SidebarErrorState onRetry={refetchProjects} t={t} />;
   }
 
   // Empty state
   if (activeTab === "chats" && chats.length === 0) {
-    return <SidebarEmptyState type="chats" />;
+    return <SidebarEmptyState type="chats" t={t} />;
   }
 
   // Chats tab
   if (activeTab === "chats") {
-    const groups = groupChatsByDate(chats);
+    const groups = groupChatsByDate(chats, t);
 
     return (
       <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar">
         {groups.map((group) => (
-          <SidebarGroup key={group.label} className="py-1 px-2">
+          <SidebarGroup key={group.labelKey} className="py-1 px-2">
             <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
-              {group.label}
+              {t(group.labelKey)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0">
@@ -386,7 +390,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
     if (projects.length === 0) {
       return (
         <div className="min-h-0 flex-1 flex flex-col overflow-y-auto">
-          <SidebarEmptyState type="projects" />
+          <SidebarEmptyState type="projects" t={t} />
           <SidebarGroup className="py-2 px-2 mt-auto">
             <SidebarMenu>
               <SidebarMenuItem>
@@ -396,7 +400,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
                 >
                   <Plus className="h-4 w-4" />
                   <span className="text-[12px] font-semibold">
-                    Create Project
+                    {t("sidebar.createProject")}
                   </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -438,7 +442,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
               >
                 <Plus className="h-4 w-4" />
                 <span className="text-[12px] font-semibold">
-                  Create Project
+                  {t("sidebar.createProject")}
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>

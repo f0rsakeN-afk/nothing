@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import React from "react";
 import Link from "next/link";
 import { FolderOpen, Plus, Search, Library, Trash2, Brain, Blocks } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   SidebarGroup,
@@ -17,7 +18,7 @@ import { useUser } from "@stackframe/stack";
 
 type NavItem = {
   id: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string | null;
   primary: boolean;
@@ -28,7 +29,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   {
     id: "new-chat",
-    label: "New Chat",
+    labelKey: "nav.newChat",
     icon: Plus,
     href: "/home",
     primary: true,
@@ -37,25 +38,16 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "search",
-    label: "Search",
+    labelKey: "nav.search",
     icon: Search,
     href: null,
     primary: false,
     comingSoon: false,
     authOnly: true,
   },
-  // {
-  //   id: "context",
-  //   label: "Context",
-  //   icon: Library,
-  //   href: "/context",
-  //   primary: false,
-  //   comingSoon: false,
-  //   authOnly: true,
-  // },
   {
     id: "memory",
-    label: "Memory",
+    labelKey: "nav.memory",
     icon: Brain,
     href: "/memory",
     primary: false,
@@ -64,7 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "files",
-    label: "Files",
+    labelKey: "nav.files",
     icon: FolderOpen,
     href: "/files",
     primary: false,
@@ -73,14 +65,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "apps",
-    label: "Apps",
+    labelKey: "nav.apps",
     icon: Blocks,
     href: "/apps",
     primary: false,
     comingSoon: false,
     authOnly: true,
   },
-
 ];
 
 interface SidebarNavProps {
@@ -88,6 +79,7 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
+  const t = useTranslations();
   const { state, closeMobileSidebar } = useSidebar();
   const user = useUser();
   const isCollapsed = state === "collapsed";
@@ -101,11 +93,11 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
     <SidebarGroup className={cn("py-2", isCollapsed ? "px-1.5" : "px-2")}>
       <SidebarMenu className="gap-0.5">
         {visibleItems.map(
-          ({ id, label, icon: Icon, href, primary, comingSoon }) => (
+          ({ id, labelKey, icon: Icon, href, primary, comingSoon }) => (
             <SidebarMenuItem key={id}>
               <SidebarMenuButton
                 tooltip={
-                  comingSoon && isCollapsed ? `${label} — Coming soon` : label
+                  comingSoon && isCollapsed ? `${t(labelKey)} — ${t("nav.comingSoon")}` : t(labelKey)
                 }
                 render={href ? <Link href={href} /> : undefined}
                 onClick={() => {
@@ -125,11 +117,11 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
                 {!isCollapsed && (
                   <>
                     <span className="text-[13px] flex-1 font-semibold tracking-wider">
-                      {label}
+                      {t(labelKey)}
                     </span>
                     {comingSoon && (
                       <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground/40 shrink-0">
-                        Soon
+                        {t("nav.comingSoon")}
                       </span>
                     )}
                   </>

@@ -75,5 +75,5 @@ export async function getMessages(locale: string) {
  * Check if locale is RTL
  */
 export function isRTL(locale: Locale): boolean {
-  return locale === "ar"; // Arabic is the only RTL locale for now
+  return false; // No RTL locales currently supported (en, es, fr are all LTR)
 }

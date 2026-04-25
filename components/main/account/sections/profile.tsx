@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Lock, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,6 +92,8 @@ function ProfileSkeleton() {
 export const ProfileSection = React.memo(function ProfileSection({
   accountData,
 }: ProfileSectionProps) {
+  const t = useTranslations("account");
+
   if (!accountData) {
     return <ProfileSkeleton />;
   }
@@ -116,10 +119,10 @@ export const ProfileSection = React.memo(function ProfileSection({
     <div className="space-y-5">
       <div>
         <h3 className="text-[13px] font-semibold text-foreground mb-0.5">
-          Profile
+          {t("profileTitle")}
         </h3>
         <p className="text-[12px] text-muted-foreground">
-          Manage your public identity and account details.
+          {t("profileSubtitle")}
         </p>
       </div>
 
@@ -130,26 +133,26 @@ export const ProfileSection = React.memo(function ProfileSection({
         </div>
         <Button variant="ghost" size="sm" className="h-6 text-[11px] text-muted-foreground px-2 gap-1">
           <Camera className="h-3 w-3" />
-          Edit photo
+          {t("editPhoto")}
         </Button>
       </div>
 
       {/* Fields */}
       <div className="space-y-3">
-        <Field label="Display name">
+        <Field label={t("displayName")}>
           <div className="border border-border rounded-lg px-3 py-2 text-[13px] text-foreground bg-background">
-            {profile?.name || "Not set"}
+            {profile?.name || t("notSet")}
           </div>
         </Field>
 
-        <Field label="Email">
+        <Field label={t("email")}>
           <div className="border border-border rounded-lg px-3 py-2 text-[13px] text-muted-foreground bg-background flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <Lock className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{profile?.email || "Not available"}</span>
+              <span className="truncate">{profile?.email || t("notAvailable")}</span>
             </div>
             <span className="inline-flex items-center rounded-full bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-600 dark:text-green-400 shrink-0">
-              Verified
+              {t("verified")}
             </span>
           </div>
         </Field>
@@ -157,7 +160,7 @@ export const ProfileSection = React.memo(function ProfileSection({
 
       {/* Member since */}
       <p className="text-[11px] text-muted-foreground/60">
-        Member since {memberSince}
+        {t("memberSince", { date: memberSince })}
       </p>
     </div>
   );

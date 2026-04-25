@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ function PlanSkeleton() {
 export const PlanSection = React.memo(function PlanSection({
   accountData,
 }: PlanSectionProps) {
+  const t = useTranslations("account");
   const router = useRouter();
 
   const checkoutMutation = useMutation({
@@ -138,10 +140,10 @@ export const PlanSection = React.memo(function PlanSection({
     <div className="space-y-5">
       <div>
         <h3 className="text-[13px] font-semibold text-foreground mb-0.5">
-          Plan
+          {t("planTitle")}
         </h3>
         <p className="text-[12px] text-muted-foreground">
-          Your current plan and credit usage.
+          {t("planSubtitle")}
         </p>
       </div>
 
@@ -157,7 +159,7 @@ export const PlanSection = React.memo(function PlanSection({
             {plan?.displayName || "Free Plan"} Plan
           </p>
           <p className="text-[12px] text-muted-foreground">
-            {plan?.credits?.toLocaleString() || 0} credits remaining
+            {t("creditsRemaining", { count: plan?.credits?.toLocaleString() || 0 })}
           </p>
         </div>
         <Button
@@ -169,10 +171,10 @@ export const PlanSection = React.memo(function PlanSection({
           {checkoutMutation.isPending ? (
             <>
               <Loader2 className="w-3 h-3 animate-spin mr-1" />
-              Redirecting...
+              {t("redirecting")}
             </>
           ) : (
-            "Upgrade"
+            t("upgrade")
           )}
         </Button>
       </div>
@@ -180,7 +182,7 @@ export const PlanSection = React.memo(function PlanSection({
       {/* Credits usage */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Credits used
+          {t("creditsUsed")}
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 p-3.5 space-y-2">
           <div className="h-2 rounded-full bg-border overflow-hidden">
@@ -203,13 +205,13 @@ export const PlanSection = React.memo(function PlanSection({
       {/* Usage breakdown */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Usage breakdown
+          {t("usageBreakdown")}
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
           {[
-            { label: "Chats", used: usage?.chats || 0, limit: plan?.limits?.chats },
-            { label: "Projects", used: usage?.projects || 0, limit: plan?.limits?.projects },
-            { label: "Messages", used: usage?.messages || 0, limit: plan?.limits?.messages },
+            { label: t("chats"), used: usage?.chats || 0, limit: plan?.limits?.chats },
+            { label: t("projects"), used: usage?.projects || 0, limit: plan?.limits?.projects },
+            { label: t("messages"), used: usage?.messages || 0, limit: plan?.limits?.messages },
           ].map(({ label, used, limit }) => (
             <div
               key={label}
@@ -237,7 +239,7 @@ export const PlanSection = React.memo(function PlanSection({
       {/* Included features */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Included features
+          {t("includedFeatures")}
         </p>
         <div className="grid grid-cols-2 gap-2">
           {(plan?.features || []).map((f) => (

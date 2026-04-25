@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Kbd } from '@/components/ui/kbd';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,103 +37,104 @@ interface ShortcutGroup {
 }
 
 export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcutsDialogProps) {
+  const t = useTranslations("shortcuts");
   const shortcutGroups: ShortcutGroup[] = [
     {
-      title: 'Global Navigation',
+      title: t("navigation"),
       icon: <Search className="h-4 w-4" />,
       shortcuts: [
         {
           keys: ['⌘', 'K'],
-          description: 'Open command menu',
-          context: 'Global',
+          description: t("openCommandMenu"),
+          context: t("global"),
         },
         {
           keys: ['Ctrl', 'Shift', 'N'],
-          description: 'New chat',
-          context: 'Global',
+          description: t("newChat"),
+          context: t("global"),
         },
         {
           keys: ['⌘', 'B'],
-          description: 'Toggle sidebar',
-          context: 'Global',
+          description: t("toggleSidebar"),
+          context: t("global"),
         },
         {
           keys: ['?'],
-          description: 'Show keyboard shortcuts',
-          context: 'Global',
+          description: t("showShortcuts"),
+          context: t("global"),
         },
       ],
     },
     {
-      title: 'Chat Interface',
+      title: t("interface"),
       icon: <MessageSquare className="h-4 w-4" />,
       shortcuts: [
         {
           keys: ['↵'],
-          description: 'Send message',
-          context: 'Chat Input',
+          description: t("sendMessage"),
+          context: t("chatInput"),
         },
         {
           keys: ['Shift', '↵'],
-          description: 'New line in message',
-          context: 'Chat Input',
+          description: t("newLine"),
+          context: t("chatInput"),
         },
         {
           keys: ['Esc'],
-          description: 'Cancel streaming / Close dialog',
-          context: 'Chat Input',
+          description: t("cancelStreaming"),
+          context: t("chatInput"),
         },
       ],
     },
     {
-      title: 'Chat Actions',
+      title: t("chat"),
       icon: <History className="h-4 w-4" />,
       shortcuts: [
         {
           keys: ['⌘', 'N'],
-          description: 'New chat',
-          context: 'Sidebar',
+          description: t("newChat"),
+          context: t("sidebar"),
         },
         {
           keys: ['⌘', 'T'],
-          description: 'Rename chat',
-          context: 'Sidebar',
+          description: t("renameChat"),
+          context: t("sidebar"),
         },
         {
           keys: ['⌘', 'D'],
-          description: 'Delete chat',
-          context: 'Sidebar',
+          description: t("deleteChat"),
+          context: t("sidebar"),
         },
         {
           keys: ['⌘', 'S'],
-          description: 'Share chat',
-          context: 'Sidebar',
+          description: t("shareChat"),
+          context: t("sidebar"),
         },
       ],
     },
     {
-      title: 'Navigation',
+      title: t("navigation"),
       icon: <ArrowLeft className="h-4 w-4" />,
       shortcuts: [
         {
           keys: ['↑'],
-          description: 'Previous chat in history',
-          context: 'Chat List',
+          description: t("previousChat"),
+          context: t("chatList"),
         },
         {
           keys: ['↓'],
-          description: 'Next chat in history',
-          context: 'Chat List',
+          description: t("nextChat"),
+          context: t("chatList"),
         },
         {
           keys: ['←'],
-          description: 'Collapse sidebar',
-          context: 'Sidebar',
+          description: t("collapseSidebar"),
+          context: t("sidebar"),
         },
         {
           keys: ['→'],
-          description: 'Expand sidebar',
-          context: 'Sidebar',
+          description: t("expandSidebar"),
+          context: t("sidebar"),
         },
       ],
     },
@@ -144,9 +146,9 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Kbd className="text-sm">?</Kbd>
-            Keyboard Shortcuts
+            {t("title")}
           </DialogTitle>
-          <DialogDescription>All available keyboard shortcuts in Eryx</DialogDescription>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
@@ -195,7 +197,7 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
 
         <div className="flex justify-center pt-4 border-t">
           <div className="text-xs text-muted-foreground text-center">
-            Press <Kbd className="text-xs">Esc</Kbd> to close this dialog
+            {t("pressEscToClose")}
           </div>
         </div>
       </DialogContent>

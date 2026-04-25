@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Pin, Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import {
@@ -43,7 +43,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
   const isArchived = !!project?.archivedAt;
 
-  const handleRename = async () => {
+  const handleRename = useCallback(async () => {
     if (!project || !renameName.trim()) return;
     try {
       await updateProject.mutateAsync({
@@ -55,9 +55,9 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     } catch (error) {
       console.error("Failed to rename project:", error);
     }
-  };
+  }, [project, renameName, renameDesc, updateProject]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!project) return;
     try {
       await deleteProject.mutateAsync(project.id);
@@ -65,25 +65,43 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
     } catch (error) {
       console.error("Failed to delete project:", error);
     }
-  };
+  }, [project, deleteProject, router]);
 
-  const handleArchive = async () => {
+  const handleArchive = useCallback(async () => {
     if (!project) return;
     try {
       await archiveProject.mutateAsync(project.id);
     } catch (error) {
       console.error("Failed to archive project:", error);
     }
-  };
+  }, [project, archiveProject]);
 
-  const handleUnarchive = async () => {
+  const handleUnarchive = useCallback(async () => {
     if (!project) return;
     try {
       await unarchiveProject.mutateAsync(project.id);
     } catch (error) {
       console.error("Failed to unarchive project:", error);
     }
-  };
+  }, [project, unarchiveProject]);
+
+  const openRenameDialog = useCallback(() => {
+    setRenameName(project?.name || "");
+    setRenameDesc(project?.description || "");
+    setRenameOpen(true);
+  }, [project]);
+
+  const openDeleteDialog = useCallback(() => {
+    setDeleteOpen(true);
+  }, []);
+
+  const closeRenameDialog = useCallback(() => {
+    setRenameOpen(false);
+  }, []);
+
+  const closeDeleteDialog = useCallback(() => {
+    setDeleteOpen(false);
+  }, []);
 
   if (!project) return null;
 
@@ -100,7 +118,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               <DropdownMenuItem className="gap-2" disabled>
                 <Pin className="w-4 h-4 text-muted-foreground" /> Pin project
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2" onClick={() => { setRenameName(project.name); setRenameDesc(project.description); setRenameOpen(true); }}>
+              <DropdownMenuItem className="gap-2" onClick={openRenameDialog}>
                 <Pencil className="w-4 h-4 text-muted-foreground" /> Rename
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -120,7 +138,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive gap-2"
-                onClick={() => setDeleteOpen(true)}
+                onClick={openDeleteDialog}
               >
                 <Trash2 className="w-4 h-4" /> Delete
               </DropdownMenuItem>
@@ -161,7 +179,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRenameOpen(false)}>
+            <Button variant="ghost" onClick={closeRenameDialog}>
               Cancel
             </Button>
             <Button onClick={handleRename} disabled={!renameName.trim() || updateProject.isPending}>
@@ -182,7 +200,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+            <Button variant="ghost" onClick={closeDeleteDialog}>
               Cancel
             </Button>
             <Button

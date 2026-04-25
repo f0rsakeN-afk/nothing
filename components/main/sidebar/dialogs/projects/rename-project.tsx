@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Edit3 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -30,6 +31,7 @@ export default function RenameProjectModal({
   onClose,
   project,
 }: RenameProjectModalProps) {
+  const t = useTranslations();
   const updateProject = useUpdateProject();
 
   const {
@@ -75,10 +77,10 @@ export default function RenameProjectModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Edit3 className="w-4 h-4 text-primary" />
-            Rename Project
+            {t("project.renameProject")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Update the identity and scope of your project workspace.
+            {t("project.renameProjectDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,11 +96,11 @@ export default function RenameProjectModal({
                 htmlFor="rename-name"
                 className={`text-xs ${errors.name ? "text-destructive" : ""}`}
               >
-                New Project Name
+                {t("project.newProjectName")}
               </Label>
               <Input
                 id="rename-name"
-                placeholder="Enter project name..."
+                placeholder={t("project.enterProjectName")}
                 className={`h-10 ${
                   errors.name ? "border-destructive ring-destructive" : ""
                 }`}
@@ -120,11 +122,11 @@ export default function RenameProjectModal({
                   errors.description ? "text-destructive" : ""
                 }`}
               >
-                New Description <span className="font-normal opacity-70">(Optional)</span>
+                {t("project.newDescriptionOptional")}
               </Label>
               <Textarea
                 id="rename-description"
-                placeholder="The objective of this project is to..."
+                placeholder={t("project.projectObjectivePlaceholder")}
                 className={`min-h-[100px] resize-none text-sm ${
                   errors.description ? "border-destructive ring-destructive" : ""
                 }`}
@@ -147,7 +149,7 @@ export default function RenameProjectModal({
               disabled={isSubmitting}
               className="h-9 px-4 text-xs font-medium"
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -157,10 +159,10 @@ export default function RenameProjectModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
-                  Saving...
+                  {t("project.saving")}
                 </>
               ) : (
-                "Save Changes"
+                t("project.saveChanges")
               )}
             </Button>
           </div>

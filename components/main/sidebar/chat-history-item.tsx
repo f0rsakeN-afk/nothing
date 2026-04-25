@@ -17,6 +17,7 @@ import {
   FolderOpen,
   FolderPlus,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import {
@@ -84,11 +85,13 @@ function DeleteChatDialog({
   onOpenChange,
   title,
   onConfirm,
+  t,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   onConfirm: () => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -97,18 +100,18 @@ function DeleteChatDialog({
           <AlertDialogMedia className="bg-destructive/10">
             <Trash2 className="size-5 text-destructive" />
           </AlertDialogMedia>
-          <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+          <AlertDialogTitle>{t("chat.deleteChat")}</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="font-medium text-foreground">&ldquo;{title}&rdquo;</span> will be permanently deleted.
+            <span className="font-medium text-foreground">&ldquo;{title}&rdquo;</span> {t("chat.deleteChatConfirm")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             render={<Button variant="destructive" />}
             onClick={onConfirm}
           >
-            Delete
+            {t("common.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -125,11 +128,13 @@ function RenameChatDialog({
   onOpenChange,
   currentTitle,
   onRename,
+  t,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentTitle: string;
   onRename: (title: string) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const [value, setValue] = React.useState(currentTitle);
 
@@ -147,12 +152,12 @@ function RenameChatDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Rename conversation</DialogTitle>
-          <DialogDescription>Give this conversation a new name.</DialogDescription>
+          <DialogTitle>{t("chatExtended.renameConversation")}</DialogTitle>
+          <DialogDescription>{t("chatExtended.renameConversationDesc")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-1.5">
-          <Label htmlFor="rename-input" className="text-xs font-medium">Title</Label>
+          <Label htmlFor="rename-input" className="text-xs font-medium">{t("settings.displayName")}</Label>
           <Input
             id="rename-input"
             value={value}
@@ -165,10 +170,10 @@ function RenameChatDialog({
 
         <DialogFooter>
           <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button size="lg" disabled={!value.trim()} onClick={handleSave}>
-            Save
+            {t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -185,11 +190,13 @@ function ProjectSelectDialog({
   onOpenChange,
   chatId,
   currentProjectId,
+  t,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   chatId: string;
   currentProjectId: string | null | undefined;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const { data: projectsData, isLoading } = useProjects();
   const projects = projectsData?.projects || [];
@@ -211,7 +218,7 @@ function ProjectSelectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[320px]">
         <DialogHeader>
-          <DialogTitle>Move to Project</DialogTitle>
+          <DialogTitle>{t("chatExtended.moveToProject")}</DialogTitle>
         </DialogHeader>
         <div className="pt-2 space-y-1 max-h-[300px] overflow-y-auto">
           {isLoading ? (
@@ -223,13 +230,13 @@ function ProjectSelectDialog({
           ) : projects.length === 0 ? (
             <div className="py-6 text-center">
               <FolderOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">No projects yet</p>
+              <p className="text-sm text-muted-foreground">{t("sidebar.noProjectsYet")}</p>
               <Link
                 href="/project"
                 className="text-xs text-primary hover:underline mt-1 inline-block"
                 onClick={() => onOpenChange(false)}
               >
-                Create a project
+                {t("sidebar.createProject")}
               </Link>
             </div>
           ) : (
@@ -245,7 +252,7 @@ function ProjectSelectDialog({
                 disabled={isUpdating}
               >
                 <FolderOpen className="h-4 w-4" />
-                <span className="text-sm">No project</span>
+                <span className="text-sm">{t("chatExtended.noProject")}</span>
               </button>
               <div className="h-px bg-border/60 my-1" />
               {projects.map((project) => (
@@ -285,29 +292,18 @@ function ProjectSelectDialog({
 
 type ExportFormat = 'pdf' | 'docx' | 'md' | 'txt';
 
-function formatLabel(fmt: ExportFormat): string {
-  return { pdf: 'PDF', docx: 'Word Document', md: 'Markdown', txt: 'Plain Text' }[fmt];
-}
-
-function formatDescription(fmt: ExportFormat): string {
-  return {
-    pdf: 'Best for printing or sharing read-only documents',
-    docx: 'Editable document for Microsoft Word or Google Docs',
-    md: 'Lightweight format, great for developers',
-    txt: 'Plain text, works in any text editor',
-  }[fmt];
-}
-
 function DownloadChatDialog({
   open,
   onOpenChange,
   chatId,
   title,
+  t,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   chatId: string;
   title: string;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const [selectedFormat, setSelectedFormat] = React.useState<ExportFormat | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -327,7 +323,7 @@ function DownloadChatDialog({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 413) {
-          throw new Error('Chat is too large to export. Try a shorter chat.');
+          throw new Error(t("download.chatTooLarge"));
         }
         throw new Error(data.error || 'Export failed');
       }
@@ -358,9 +354,9 @@ function DownloadChatDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[360px]">
         <DialogHeader>
-          <DialogTitle>Download conversation</DialogTitle>
+          <DialogTitle>{t("download.title")}</DialogTitle>
           <DialogDescription>
-            Choose a format to download <span className="font-medium text-foreground">&ldquo;{title}&rdquo;</span>
+            {t("common.confirm")} <span className="font-medium text-foreground">&ldquo;{title}&rdquo;</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -394,8 +390,8 @@ function DownloadChatDialog({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{formatLabel(fmt)}</p>
-                <p className="text-xs text-muted-foreground">{formatDescription(fmt)}</p>
+                <p className="text-sm font-medium">{t(`download.format${fmt.charAt(0).toUpperCase() + fmt.slice(1)}` as any)}</p>
+                <p className="text-xs text-muted-foreground">{t(`download.${fmt}Desc` as any)}</p>
               </div>
             </button>
           ))}
@@ -403,7 +399,7 @@ function DownloadChatDialog({
 
         <DialogFooter className="pt-2">
           <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -426,6 +422,7 @@ export function ChatHistoryItem({
   onUnpin,
   isArchived = false,
 }: ChatHistoryItemProps) {
+  const t = useTranslations();
   const { prefetchOnHover } = useChatPrefetch();
   const { closeMobileSidebar } = useSidebar();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -507,12 +504,12 @@ export function ChatHistoryItem({
               {isPinned ? (
                 <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handleUnpin}>
                   <PinOff className="h-3.5 w-3.5 text-muted-foreground" />
-                  Unpin
+                  {t("chat.unpinChat")}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handlePin}>
                   <Pin className="h-3.5 w-3.5 text-muted-foreground" />
-                  Pin
+                  {t("chat.pinChat")}
                 </DropdownMenuItem>
               )}
 
@@ -522,7 +519,7 @@ export function ChatHistoryItem({
                 onClick={() => window.open(`/chat/${item.id}`, "_blank")}
               >
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                Open in new tab
+                {t("chatExtended.openInNewTab")}
               </DropdownMenuItem>
 
               {/* Rename */}
@@ -531,7 +528,7 @@ export function ChatHistoryItem({
                 onClick={() => { setRenameEver(true); setRenameOpen(true); }}
               >
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                Rename
+                {t("common.edit")}
               </DropdownMenuItem>
 
               {/* Add to Project */}
@@ -540,7 +537,7 @@ export function ChatHistoryItem({
                 onClick={() => setProjectOpen(true)}
               >
                 <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
-                Move to Project
+                {t("chatExtended.moveToProject")}
               </DropdownMenuItem>
 
               {/* Share */}
@@ -549,19 +546,19 @@ export function ChatHistoryItem({
                 onClick={() => { setShareEver(true); setShareOpen(true); }}
               >
                 <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                Share
+                {t("common.share")}
               </DropdownMenuItem>
 
               {/* Archive/Unarchive */}
               {isArchived ? (
                 <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handleUnarchive}>
                   <ArchiveRestore className="h-3.5 w-3.5 text-muted-foreground" />
-                  Restore
+                  {t("chat.unarchiveChat")}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem className="gap-2.5 text-[13px] cursor-pointer" onClick={handleArchive}>
                   <Archive className="h-3.5 w-3.5 text-muted-foreground" />
-                  Archive
+                  {t("chat.archiveChat")}
                 </DropdownMenuItem>
               )}
 
@@ -571,7 +568,7 @@ export function ChatHistoryItem({
                 onClick={() => { setDownloadEver(true); setDownloadOpen(true); }}
               >
                 <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                Download
+                {t("common.download")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -582,7 +579,7 @@ export function ChatHistoryItem({
                 onClick={() => { setDeleteEver(true); setDeleteOpen(true); }}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete
+                {t("common.delete")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
@@ -595,6 +592,7 @@ export function ChatHistoryItem({
           onOpenChange={setDeleteOpen}
           title={item.title}
           onConfirm={handleDelete}
+          t={t}
         />
       )}
       {renameEver && (
@@ -603,6 +601,7 @@ export function ChatHistoryItem({
           onOpenChange={setRenameOpen}
           currentTitle={item.title}
           onRename={handleRename}
+          t={t}
         />
       )}
       {downloadEver && (
@@ -611,6 +610,7 @@ export function ChatHistoryItem({
           onOpenChange={setDownloadOpen}
           chatId={item.id}
           title={item.title}
+          t={t}
         />
       )}
       {shareEver && (
@@ -630,6 +630,7 @@ export function ChatHistoryItem({
         onOpenChange={setProjectOpen}
         chatId={item.id}
         currentProjectId={item.projectId}
+        t={t}
       />
     </>
   );

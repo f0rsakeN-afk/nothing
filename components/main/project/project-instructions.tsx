@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +28,7 @@ export function ProjectInstructions({ projectId, instruction }: ProjectInstructi
     setValue(instruction || "");
   }, [instruction]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       await updateProject.mutateAsync({
         id: projectId,
@@ -40,7 +40,11 @@ export function ProjectInstructions({ projectId, instruction }: ProjectInstructi
       console.error("Failed to save instructions:", error);
       toast.error("Failed to save instructions");
     }
-  };
+  }, [updateProject, projectId, value]);
+
+  const closeDialog = useCallback(() => {
+    setOpen(false);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -77,7 +81,7 @@ export function ProjectInstructions({ projectId, instruction }: ProjectInstructi
             onChange={(e) => setValue(e.target.value)}
           />
           <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={updateProject.isPending}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Cookie, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,28 +55,36 @@ export function CookieConsentBanner() {
 
   if (!visible || hasConsented) return null;
 
-  const handleAccept = () => {
+  const handleAccept = useCallback(() => {
     acceptAll();
     setVisible(false);
-  };
+  }, [acceptAll]);
 
-  const handleReject = () => {
+  const handleReject = useCallback(() => {
     rejectAll();
     setVisible(false);
-  };
+  }, [rejectAll]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     updateConsent(consent);
     setVisible(false);
-  };
+  }, [updateConsent, consent]);
 
-  const handleManage = () => {
+  const handleManage = useCallback(() => {
     setExpanded(true);
-  };
+  }, []);
 
-  const handleToggle = (category: keyof CookieConsent) => {
-    updateConsent({ ...consent, [category]: !consent[category] });
-  };
+  const toggleAnalytics = useCallback(() => {
+    updateConsent({ ...consent, analytics: !consent.analytics });
+  }, [updateConsent, consent]);
+
+  const togglePersonalization = useCallback(() => {
+    updateConsent({ ...consent, personalization: !consent.personalization });
+  }, [updateConsent, consent]);
+
+  const hideExpanded = useCallback(() => {
+    setExpanded(false);
+  }, []);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
@@ -109,7 +117,7 @@ export function CookieConsentBanner() {
                     </div>
                     <CookieToggle
                       checked={consent.analytics}
-                      onChange={() => handleToggle("analytics")}
+                      onChange={toggleAnalytics}
                       label=""
                     />
                   </div>
@@ -123,7 +131,7 @@ export function CookieConsentBanner() {
                     </div>
                     <CookieToggle
                       checked={consent.personalization}
-                      onChange={() => handleToggle("personalization")}
+                      onChange={togglePersonalization}
                       label=""
                     />
                   </div>
@@ -134,7 +142,7 @@ export function CookieConsentBanner() {
                     variant="outline"
                     size="sm"
                     className="flex-1 h-9 text-xs"
-                    onClick={() => setExpanded(false)}
+                    onClick={hideExpanded}
                   >
                     Cancel
                   </Button>

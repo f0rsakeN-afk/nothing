@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   Dialog,
@@ -14,34 +15,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const FORMATS = [
-  {
-    id: "md",
-    label: "Markdown",
-    ext: ".md",
-    description: "Best for developers",
-  },
-  {
-    id: "pdf",
-    label: "PDF",
-    ext: ".pdf",
-    description: "Ready to share or print",
-  },
-  {
-    id: "docx",
-    label: "Word",
-    ext: ".docx",
-    description: "Editable in Word / Docs",
-  },
-  {
-    id: "txt",
-    label: "Plain text",
-    ext: ".txt",
-    description: "Simple and universal",
-  },
-] as const;
-
-type FormatId = (typeof FORMATS)[number]["id"];
+interface Format {
+  id: string;
+  labelKey: string;
+  ext: string;
+  descKey: string;
+}
 
 interface DownloadChatDialogProps {
   open: boolean;
@@ -54,7 +33,15 @@ export function DownloadChatDialog({
   onOpenChange,
   title,
 }: DownloadChatDialogProps) {
-  const [selected, setSelected] = React.useState<FormatId>("md");
+  const t = useTranslations();
+  const [selected, setSelected] = React.useState<string>("md");
+
+  const FORMATS: Format[] = [
+    { id: "md", labelKey: "download.formatMd", ext: ".md", descKey: "download.mdDesc" },
+    { id: "pdf", labelKey: "download.formatPdf", ext: ".pdf", descKey: "download.pdfDesc" },
+    { id: "docx", labelKey: "download.formatDocx", ext: ".docx", descKey: "download.docxDesc" },
+    { id: "txt", labelKey: "download.formatTxt", ext: ".txt", descKey: "download.txtDesc" },
+  ];
 
   const handleDownload = () => {
     // wire up to backend later
@@ -65,7 +52,7 @@ export function DownloadChatDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Download conversation</DialogTitle>
+          <DialogTitle>{t("download.title")}</DialogTitle>
           <DialogDescription>
             Choose a format to export &ldquo;{title}&rdquo;.
           </DialogDescription>
@@ -87,13 +74,13 @@ export function DownloadChatDialog({
                 <Check className="absolute top-2.5 right-2.5 h-3 w-3 text-primary" />
               )}
               <span className="text-[13px] font-semibold text-foreground">
-                {fmt.label}
+                {t(fmt.labelKey)}
               </span>
               <span className="text-[10px] text-muted-foreground font-mono">
                 {fmt.ext}
               </span>
               <span className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
-                {fmt.description}
+                {t(fmt.descKey)}
               </span>
             </button>
           ))}
@@ -105,10 +92,10 @@ export function DownloadChatDialog({
             size="lg"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button size="lg" onClick={handleDownload}>
-            Download
+            {t("common.download")}
           </Button>
         </DialogFooter>
       </DialogContent>

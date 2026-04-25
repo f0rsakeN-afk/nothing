@@ -1,5 +1,8 @@
+"use client";
+
 import { LegalSection } from "@/components/plain/legal/legal-section";
 import { LegalToc } from "@/components/plain/legal/legal-toc";
+import { useTranslations } from "next-intl";
 
 function TermsJsonLd() {
   const jsonLd = {
@@ -57,6 +60,8 @@ const sections = [
 ];
 
 export default function TermsPage() {
+  const t = useTranslations("legal");
+
   return (
     <>
       <TermsJsonLd />
@@ -68,7 +73,7 @@ export default function TermsPage() {
             <aside className="hidden lg:block">
               <div className="sticky top-20">
                 <p className="text-xs font-semibold uppercase tracking-widest  text-primary mb-4 px-2">
-                  Contents
+                  {t("contents")}
                 </p>
                 <LegalToc items={sections} />
               </div>
@@ -78,7 +83,7 @@ export default function TermsPage() {
             <main className="min-w-0">
               <div className="mb-8 pb-8 border-b border-border">
                 <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground">
-                  Terms of Service
+                  {t("termsOfService")}
                 </h1>
                 <p className="mt-3 text-base text-muted-foreground leading-relaxed max-w-xl">
                   These Terms of Service govern your access to and use of Eryx.
@@ -92,7 +97,7 @@ export default function TermsPage() {
 
               <details className="mb-8 p-4 rounded-lg border border-border bg-muted/30">
                 <summary className="font-medium text-sm cursor-pointer select-none">
-                  Quick Summary — What You Need to Know
+                  {t("quickSummary")}
                 </summary>
                 <div className="mt-3 text-sm text-muted-foreground space-y-2">
                   <p>

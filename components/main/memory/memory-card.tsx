@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { Trash2, Calendar, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -27,12 +27,20 @@ function MemoryCardComponent({ memory, onEdit, onDelete }: MemoryCardProps) {
     }).format(new Date(date));
   };
 
+  const handleEdit = useCallback(() => {
+    onEdit(memory);
+  }, [onEdit, memory]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(memory.id);
+  }, [onDelete, memory.id]);
+
   return (
     <div className="p-4 rounded-lg border bg-card relative group">
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-4 right-4">
         <Button
           type="button"
-          onClick={() => onEdit(memory)}
+          onClick={handleEdit}
           className="h-7 w-7"
           variant={"ghost"}
         >
@@ -41,7 +49,7 @@ function MemoryCardComponent({ memory, onEdit, onDelete }: MemoryCardProps) {
         <Button
           type="button"
           variant={"destructive"}
-          onClick={() => onDelete(memory.id)}
+          onClick={handleDelete}
           className="h-7 w-7"
         >
           <Trash2 className="h-3.5 w-3.5" />

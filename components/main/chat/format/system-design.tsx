@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -605,6 +605,23 @@ export const SystemDesignDiagram = memo(function SystemDesignDiagram({
   const isSplit =
     splitView?.splitView?.rawData === data;
 
+  const toggleSplitView = useCallback(() => {
+    if (!splitView) return;
+    if (isSplit) {
+      splitView.closeSplitView();
+    } else {
+      splitView.openSplitView({
+        title: parsed.title,
+        description: parsed.description,
+        rawData: data,
+      });
+    }
+  }, [splitView, isSplit, parsed]);
+
+  const openFullscreen = useCallback(() => {
+    setFullscreen(true);
+  }, []);
+
   return (
     <>
       {/* ── Inline card ─────────────────────────────────────── */}
@@ -630,15 +647,7 @@ export const SystemDesignDiagram = memo(function SystemDesignDiagram({
             {/* Split button — only shown when context is available */}
             {splitView && (
               <button
-                onClick={() =>
-                  isSplit
-                    ? splitView.closeSplitView()
-                    : splitView.openSplitView({
-                        title: parsed.title,
-                        description: parsed.description,
-                        rawData: data,
-                      })
-                }
+                onClick={toggleSplitView}
                 className={cn(
                   "flex items-center gap-1.5",
                   "text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-colors",
@@ -653,7 +662,7 @@ export const SystemDesignDiagram = memo(function SystemDesignDiagram({
             )}
 
             <button
-              onClick={() => setFullscreen(true)}
+              onClick={openFullscreen}
               className={cn(
                 "flex items-center gap-1.5",
                 "text-[11px] font-medium text-muted-foreground hover:text-foreground",

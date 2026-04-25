@@ -146,41 +146,44 @@
 //     </footer>
 //   );
 // }
-import Link from "next/link";
+"use client";
 
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowUpRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 export function Footer() {
+  const t = useTranslations("footer");
+
   const navigation = [
-    { name: "Product", href: "/#feature-modern-teams" },
-    { name: "About Us", href: "/about" },
-    { name: "Pricing", href: "/pricing" },
-    { name: "FAQ", href: "/faq" },
-    { name: "Contact", href: "/contact" },
+    { name: t("product"), href: "/#feature-modern-teams" },
+    { name: t("aboutUs"), href: "/about" },
+    { name: t("pricing"), href: "/pricing" },
+    { name: t("faq"), href: "/faq" },
+    { name: t("contact"), href: "/contact" },
   ];
 
   const social = [
-    { name: "Xwitter", href: "https://x.com/ausrobdev" },
-    { name: "LinkedIn", href: "#" },
+    { name: t("twitter"), href: "https://x.com/ausrobdev" },
+    { name: t("linkedin"), href: "#" },
   ];
 
-  const legal = [{ name: "Privacy Policy", href: "/privacy" }];
+  const legal = [{ name: t("privacyPolicy"), href: "/privacy" }];
 
   return (
     <footer className="flex flex-col items-center gap-14 py-28">
       <div className="container space-y-3 text-center">
         <h2 className="text-2xl font-semibold font-display tracking-tight md:text-4xl lg:text-5xl">
-          Start your free trial today
+          {t("startYourFreeTrial")}
         </h2>
         <p className="text-muted-foreground mx-auto max-w-xl leading-snug text-balance">
-          Eryx is the all-in-one platform for designing, visualizing, and
-          exploring complex systems with AI-powered insights.
+          {t("eryxDescription")}
         </p>
         <div>
           <Button size="lg" className="mt-4">
-            Get Started
+            {t("getStarted")}
           </Button>
         </div>
       </div>

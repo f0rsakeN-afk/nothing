@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import {
   ChevronUp,
   Settings,
@@ -19,6 +20,7 @@ import {
   Keyboard,
   LogIn,
   Bug,
+  Globe,
 } from "lucide-react";
 
 import {
@@ -34,6 +36,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -49,9 +55,12 @@ import { ReportDialog } from "@/components/report/report-dialog";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import { useStackApp, useUser } from "@stackframe/stack";
 import { useQuery } from "@tanstack/react-query";
+import { routing } from "@/routing";
 
 export function AppSidebarFooter() {
+  const t = useTranslations();
   const router = useRouter();
+  const pathname = usePathname();
   const { state } = useSidebar();
   const user = useUser();
   const app = useStackApp();
@@ -84,6 +93,28 @@ export function AppSidebarFooter() {
   const toggleTheme = React.useCallback(() => {
     setTheme(theme === "light" ? "dark" : "light");
   }, [theme, setTheme]);
+
+  const switchLocale = React.useCallback((locale: string) => {
+    // Set cookie for persistence
+    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+
+    // Update user settings in database
+    fetch("/api/settings/locale", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: locale }),
+    }).catch(() => {});
+
+    // Full page reload to force re-render with new locale
+    window.location.reload();
+  }, []);
+
+  const createLocaleHandler = React.useCallback(
+    (locale: string) => () => {
+      switchLocale(locale);
+    },
+    [switchLocale],
+  );
 
   const openSettings = React.useCallback(() => setSettingsOpen(true), []);
   const openAccount = React.useCallback(() => setAccountOpen(true), []);
@@ -158,7 +189,7 @@ export function AppSidebarFooter() {
                 onClick={openPricing}
                 className="h-9 w-full border-sidebar-border bg-transparent text-[13px] font-semibold tracking-wide text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground  "
               >
-                Upgrade
+                {t("sidebar.upgrade")}
               </Button>
             )}
           </>
@@ -172,7 +203,7 @@ export function AppSidebarFooter() {
             )}
           >
             <LogIn className="h-4 w-4 shrink-0" />
-            {!isCollapsed && "Eryx AI"}
+            {!isCollapsed && t("ai.title")}
           </Button>
         )}
         {user && (
@@ -210,35 +241,35 @@ export function AppSidebarFooter() {
             >
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 px-2 py-1.5">
-                  Account & Details
+                  {t("sidebar.accountDetails")}
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openAccount}
                 >
                   <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                  Account
+                  {t("sidebar.accountDetails")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openSettings}
                 >
                   <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-                  Settings
+                  {t("sidebar.settings")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openCustomize}
                 >
                   <Wand2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  Customize AI
+                  {t("sidebar.customizeAi")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openShortcuts}
                 >
                   <Keyboard className="h-3.5 w-3.5 text-muted-foreground" />
-                  Keyboard shortcuts
+                  {t("sidebar.keyboardShortcuts")}
                   <span className="ml-auto text-[10px] text-muted-foreground/50 font-mono">
                     ?
                   </span>
@@ -252,22 +283,88 @@ export function AppSidebarFooter() {
                   ) : (
                     <Sun className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
-                  {theme === "light" ? "Dark mode" : "Light mode"}
+                  {theme === "light" ? t("sidebar.darkMode") : t("sidebar.lightMode")}
                 </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="gap-2.5 text-[13px] cursor-pointer">
+                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                    {t("settings.language")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="min-w-[140px]">
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("en")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageEn")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("es")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageEs")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("fr")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageFr")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("ne")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageNe")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("hi")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageHi")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("it")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageIt")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("ko")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageKo")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2.5 text-[13px] cursor-pointer"
+                        onClick={createLocaleHandler("ja")}
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t("settings.languageJa")}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
               </DropdownMenuGroup>
 
               <DropdownMenuSeparator />
 
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 px-2 py-1.5">
-                  Upgrade Plan
+                  {t("sidebar.upgradePlan")}
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openPricing}
                 >
                   <Crown className="h-3.5 w-3.5 text-muted-foreground" />
-                  Upgrade to Pro
+                  {t("sidebar.upgradeToPro")}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
 
@@ -279,21 +376,21 @@ export function AppSidebarFooter() {
                   onClick={goToLanding}
                 >
                   <Home className="h-3.5 w-3.5 text-muted-foreground" />
-                  Landing Page
+                  {t("sidebar.landingPage")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openTerms}
                 >
                   <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                  Terms of Service
+                  {t("sidebar.termsOfService")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openPolicy}
                 >
                   <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                  Privacy Policy
+                  {t("sidebar.privacyPolicy")}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
 
@@ -305,14 +402,14 @@ export function AppSidebarFooter() {
                   onClick={openFeedback}
                 >
                   <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                  Send Feedback
+                  {t("sidebar.sendFeedback")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="gap-2.5 text-[13px] cursor-pointer"
                   onClick={openReport}
                 >
                   <Bug className="h-3.5 w-3.5 text-muted-foreground" />
-                  Report Issue
+                  {t("errors.reportIssue")}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
 
@@ -324,7 +421,7 @@ export function AppSidebarFooter() {
                 onClick={openLogout}
               >
                 <LogOut className="h-3.5 w-3.5" />
-                Sign out
+                {t("auth.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
