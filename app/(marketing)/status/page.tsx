@@ -1,5 +1,28 @@
 import { Metadata } from "next";
-import { StatusContent } from "@/components/marketing/status/status-client";
+import dynamic from "next/dynamic";
+
+function StatusLoading() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex justify-center">
+        <div className="h-10 w-56 bg-muted rounded-full" />
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-card border border-border rounded-xl p-4">
+            <div className="h-3 w-16 bg-muted rounded mb-3" />
+            <div className="h-6 w-20 bg-muted rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const StatusContent = dynamic(
+  () => import("@/components/marketing/status/status-client").then((m) => m.StatusContent),
+  { loading: StatusLoading },
+);
 
 export const metadata: Metadata = {
   title: "System Status | Eryx",

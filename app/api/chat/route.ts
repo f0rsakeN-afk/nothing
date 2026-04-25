@@ -76,7 +76,7 @@ async function getChatFileContents(
   const cacheKey = KEYS.chatFileContents(chatId);
 
   // Try cache first
-  let fileMap: Map<string, { name: string; content: string; tokenCount: number }>;
+  let fileMap: Map<string, { name: string; content: string; tokenCount: number }> | undefined;
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {

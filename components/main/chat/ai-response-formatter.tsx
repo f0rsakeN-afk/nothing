@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useContext,
   useMemo,
+  useEffect,
   useRef,
 } from "react";
 import dynamic from "next/dynamic";
@@ -29,10 +30,32 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MediaContext, detectMediaType, type MediaItem } from "./media-context";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
-import { CodeBlock } from "./format/code-block";
+
+// Detect if content contains math patterns
+function hasMathContent(content: string): boolean {
+  return content.includes("$") || content.includes("\\(") || content.includes("\\[") || content.includes("$$");
+}
+
+// Lazy-load math plugins only when needed
+const mathPluginsCache: { remarkPlugins: any[]; rehypePlugins: any[] } | null = null;
+async function getMathPlugins() {
+  if (mathPluginsCache) return mathPluginsCache;
+
+  const [remarkMath, rehypeKatex] = await Promise.all([
+    import("remark-math").then(m => m.default),
+    import("rehype-katex").then(m => m.default),
+  ]);
+
+  return {
+    remarkPlugins: [remarkGfm, remarkMath],
+    rehypePlugins: [rehypeKatex],
+  };
+}
+
+const CodeBlock = dynamic(
+  () => import("./format/code-block").then((m) => ({ default: m.CodeBlock })),
+  { ssr: false },
+);
 
 const MediaModal = dynamic(
   () => import("./media-modal").then((m) => ({ default: m.MediaModal })),
@@ -864,6 +887,7 @@ export const AiResponseFormatter = memo(function AiResponseFormatter({
   className,
 }: AiResponseFormatterProps) {
   const [activeMedia, setActiveMedia] = useState<MediaItem | null>(null);
+  const [mathPlugins, setMathPlugins] = useState<{ remarkPlugins: any[]; rehypePlugins: any[] } | null>(null);
 
   const openMedia = useCallback((item: MediaItem) => setActiveMedia(item), []);
   const closeMedia = useCallback(() => setActiveMedia(null), []);
@@ -873,15 +897,39 @@ export const AiResponseFormatter = memo(function AiResponseFormatter({
   // Must be called before any early returns to maintain hook order
   const completedContent = useMemo(() => remend(content), [content]);
 
+  // Lazy-load math plugins only when content contains math patterns
+  useEffect(() => {
+    if (!hasMathContent(content)) return;
+
+    let cancelled = false;
+    (async () => {
+      const [remarkMath, rehypeKatex] = await Promise.all([
+        import("remark-math").then(m => m.default),
+        import("rehype-katex").then(m => m.default),
+      ]);
+
+      if (!cancelled) {
+        setMathPlugins({
+          remarkPlugins: [remarkGfm, remarkMath],
+          rehypePlugins: [rehypeKatex],
+        });
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [content]);
+
   // Bail early for empty content — avoids react-markdown overhead
   if (!content?.trim()) return null;
+
+  const plugins = mathPlugins || { remarkPlugins: [remarkGfm], rehypePlugins: [] };
 
   return (
     <MediaContext.Provider value={ctxValue}>
       <div className={cn("min-w-0 px-2 text-justify font-medium", className)}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
+          remarkPlugins={plugins.remarkPlugins}
+          rehypePlugins={plugins.rehypePlugins}
           components={mdComponents}
         >
           {completedContent}
