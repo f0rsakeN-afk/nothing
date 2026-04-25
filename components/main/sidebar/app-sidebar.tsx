@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 
 import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebarHeader } from "./sidebar-header";
@@ -9,10 +10,14 @@ import { SidebarNav } from "./sidebar-nav";
 import { SidebarTabs } from "./sidebar-tabs";
 import { SidebarHistory } from "./sidebar-history";
 import { AppSidebarFooter } from "./sidebar-footer";
-import { SearchDialog } from "./dialogs/search-dialog";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import { type TabId } from "./data";
 import { useUser } from "@stackframe/stack";
+
+const SearchDialog = dynamic(
+  () => import("./dialogs/search-dialog").then((mod) => mod.SearchDialog),
+  { ssr: false }
+);
 
 export function AppSidebar() {
   const router = useRouter();

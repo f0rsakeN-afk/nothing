@@ -75,12 +75,13 @@ function getPlans(): CachedPlans {
 
 export async function GET(request: NextRequest) {
   try {
+    // Auth is optional - only needed to show user's current plan
     const user = await validateAuth(request);
 
     // Get static plan data (cached in memory, ~0 overhead)
     const { plans } = getPlans();
 
-    // Determine current plan
+    // Determine current plan - only if authenticated
     let currentPlan = "free";
 
     if (user) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Zap, ArrowUpRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,8 +10,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { PricingDialog } from "../sidebar/dialogs/pricing/pricing-dialog";
 import { useCreditsStream } from "@/hooks/useCreditsStream";
+
+const PricingDialog = dynamic(
+  () => import("../sidebar/dialogs/pricing/pricing-dialog").then((mod) => mod.PricingDialog),
+  { ssr: false }
+);
 
 interface CreditsData {
   credits: {

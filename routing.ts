@@ -14,9 +14,6 @@ export const routing = defineRouting({
     "fr", // French
     "ne", // Nepali
     "hi", // Hindi
-    "it", // Italian
-    "ko", // Korean
-    "ja", // Japanese
   ] as const,
 
   // Default locale when no locale is detected
@@ -45,9 +42,6 @@ export const SUPPORTED_LOCALES: {
   { code: "fr", name: "French", nativeName: "Français", dir: "ltr", flag: "🇫🇷" },
   { code: "ne", name: "Nepali", nativeName: "नेपाली", dir: "ltr", flag: "🇳🇵" },
   { code: "hi", name: "Hindi", nativeName: "हिंदी", dir: "ltr", flag: "🇮🇳" },
-  { code: "it", name: "Italian", nativeName: "Italiano", dir: "ltr", flag: "🇮🇹" },
-  { code: "ko", name: "Korean", nativeName: "한국어", dir: "ltr", flag: "🇰🇷" },
-  { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr", flag: "🇯🇵" },
 ];
 
 /**

@@ -1,32 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@stackframe/stack";
+import dynamic from "next/dynamic";
 import GridIllustration from "@/components/ui/grid-illustration";
 import IntegrationBox from "@/components/ui/integrationBox";
 
 import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
+import { LogIn, ArrowRight } from "lucide-react";
+
+const AuthDialog = dynamic(
+  () => import("@/components/main/sidebar/dialogs/auth/auth-dialog").then((mod) => mod.AuthDialog),
+  { ssr: false }
+);
 
 export default function Hero() {
-  const textVariants = {
-    hidden: {
-      opacity: 0,
-      filter: "blur(20px)",
-    },
-    visible: {
-      opacity: 1,
-      filter: "blur(0px)",
-    },
-  };
+  const user = useUser();
+  const router = useRouter();
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   return (
     <>
-      <section className="relative">
+      <section className="relative w-full">
         {/* Background Dots */}
         <div className="absolute inset-0 mx-auto max-w-7xl bg-dot-light-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] dark:bg-dot-dark-black lg:[mask-image:radial-gradient(ellipse_at_left,transparent_20%,black)]"></div>
 
-        <div className="relative mx-auto max-w-7xl px-6 py-20">
+        <div className="relative w-full max-w-7xl mx-auto px-6 py-20">
           {/* Top Grid Illustration */}
           <div className="absolute inset-0 w-full">
             <GridIllustration />
@@ -34,59 +35,40 @@ export default function Hero() {
 
           <div className="relative my-20 flex max-w-6xl flex-col items-center px-6 lg:items-start">
             {/* Title */}
-            <motion.div
-              className="text-center text-[30px] font-display leading-none font-bold sm:text-[3.5rem] sm:leading-tight lg:text-left"
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{
-                duration: 0.4,
-                ease: [0.4, 0, 0.2, 1],
-                delay: 0.2,
-              }}
-            >
+            <div className="text-center text-[30px] font-display leading-none font-semibold sm:text-[3rem] sm:leading-tight lg:text-left">
               <h1 className="bg-linear-to-b from-neutral-700 to-neutral-900 bg-clip-text text-transparent dark:from-neutral-50 dark:to-neutral-300 font-poppins">
-                Design Systems
+                AI Chat That Actually Gets You
                 <br />
-                Visualize Architecture
+                Memory That Never Forgets
               </h1>
-            </motion.div>
+            </div>
 
             {/* Description */}
-            <motion.div
-              className="my-4 max-w-sm text-center sm:my-6 sm:max-w-md lg:text-left"
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{
-                duration: 0.6,
-                ease: [0.4, 0, 0.2, 1],
-                delay: 0.4,
-              }}
-            >
+            <div className="my-4 max-w-sm text-center sm:my-6 sm:max-w-md lg:text-left">
               <p className="text-base text-muted-foreground sm:text-lg font-medium text-justify">
-                Eryx combines intelligent search with system design
-                visualization, helping you explore, understand, and build
-                scalable architectures with clarity.
+                Chat with AI that remembers your projects, understands your codebase,
+                and builds on context not just the current conversation.
               </p>
-            </motion.div>
+            </div>
 
             {/* Button */}
-            <motion.div
-              className="z-10 rounded-xl p-[2px]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.6,
-              }}
-            >
-              <Link href="/signup" className="">
-                <Button className=" font-semibold cursor-pointer">
-                  Create Account Today <LogIn />
+            <div className="z-10 rounded-xl p-[2px]">
+              {user ? (
+                <Button
+                  onClick={() => router.push("/home")}
+                  className="font-semibold cursor-pointer"
+                >
+                  Go to Dashboard <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
-              </Link>
-            </motion.div>
+              ) : (
+                <Button
+                  onClick={() => setAuthDialogOpen(true)}
+                  className="font-semibold cursor-pointer"
+                >
+                  Create Account Today <LogIn className="ml-2 w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Bottom Grid Illustration */}
@@ -95,15 +77,11 @@ export default function Hero() {
           </div>
 
           {/* Hero Integrations */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-          >
-            <IntegrationBox />
-          </motion.div>
+          <IntegrationBox />
         </div>
       </section>
+
+      <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </>
   );
 }

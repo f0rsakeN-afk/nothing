@@ -25,6 +25,8 @@
     "@magicui": "https://magicui.design/r/{name}",
     "@diceui": "https://diceui.com/r/{name}.json",
     "@spectrumui": "https://ui.spectrumhq.in/r/{name}.json",
-    "@odysseyui": "https://www.odysseyui.com/r/{name}.json"
+    "@odysseyui": "https://www.odysseyui.com/r/{name}.json",
+    "@unlumen-ui": "https://ui.unlumen.com/r/{name}.json",
+    "@animate-ui": "https://animate-ui.com/r/{name}.json"
   }
 }

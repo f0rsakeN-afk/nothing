@@ -5,11 +5,11 @@ import { PanelLeft } from "lucide-react";
 
 import {
   SidebarHeader,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { SidebarToggleIcon } from "@/src/components/unlumen-ui/sidebar-toggle-icon";
 
 export function AppSidebarHeader() {
   const { state, toggleSidebar } = useSidebar();
@@ -69,7 +69,13 @@ export function AppSidebarHeader() {
         )}
 
         {!isCollapsed && (
-          <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
+          <button
+            onClick={toggleSidebar}
+            className="h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center rounded-md"
+            aria-label="Close sidebar"
+          >
+            <SidebarToggleIcon isOpen={false} />
+          </button>
         )}
       </div>
     </SidebarHeader>

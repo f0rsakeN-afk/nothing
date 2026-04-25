@@ -15,7 +15,7 @@ import { useServers } from "@/hooks/use-mcp-servers";
 import { useUser } from "@stackframe/stack";
 import { useChatSuggestions } from "@/hooks/use-chat-suggestions";
 import { useSound } from "@/hooks/use-sound";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import type { Attachment, ChatInputProps } from "@/types/chat-input";
 //import { Textarea } from "@/components/ui/textarea";
 import type { ResponseStyle } from "./more-options-popover";
@@ -48,7 +48,7 @@ export const ChatInput = React.memo(function ChatInput({
   const user = useUser();
   const { data: servers = [] } = useServers(user?.id);
 
-  const placeholder = t('chat.typeMessage');
+  const placeholder = t("chat.typeMessage");
 
   // Memoized handlers for focus/blur to prevent child re-renders
   const handleFocus = React.useCallback(() => {
@@ -185,9 +185,9 @@ export const ChatInput = React.memo(function ChatInput({
       {/* Input container */}
       <div
         className={cn(
-          "relative flex flex-col rounded-2xl border",
-          "bg-background duration-300 ease-out",
-          focused ? "border-foreground/20" : "border-border shadow-xs",
+          "relative flex flex-col rounded-3xl! border border-input!",
+          "bg-background ease-out",
+          focused ? "border-foreground/20" : " shadow-xs",
         )}
       >
         <textarea

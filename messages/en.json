@@ -40,7 +40,8 @@
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
-    "info": "Info"
+    "info": "Info",
+    "unlimited": "Unlimited"
   },
   "footer": {
     "startYourFreeTrial": "Start your free trial today",
@@ -712,6 +713,8 @@
     "memory": "Memory",
     "files": "Files",
     "apps": "Apps",
+    "about": "About",
+    "contact": "Contact",
     "comingSoon": "Coming soon"
   },
   "sidebar": {

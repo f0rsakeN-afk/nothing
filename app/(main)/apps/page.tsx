@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useUser } from "@stackframe/stack";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,11 @@ import { getTransportType } from "@/components/apps/catalog-data";
 import { ServiceIcon } from "@/components/apps/service-icon";
 import { getMcpCatalogIcon } from "@/lib/mcp/catalog-icons";
 
+const AuthDialog = dynamic(
+  () => import("@/components/main/sidebar/dialogs/auth/auth-dialog").then((mod) => mod.AuthDialog),
+  { ssr: false }
+);
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface CustomServerForm {
@@ -100,6 +106,10 @@ export default function AppsPage() {
   }, [searchParams]);
 
   const handleTabChange = useCallback((tab: "browse" | "my-servers") => {
+    if (tab === "my-servers" && !user) {
+      setAuthDialogOpen(true);
+      return;
+    }
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "my-servers") {
       params.set("tab", "my-servers");
@@ -107,7 +117,7 @@ export default function AppsPage() {
       params.delete("tab");
     }
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [router, pathname, searchParams]);
+  }, [router, pathname, searchParams, user]);
 
   // Filter state
   const [search, setSearch] = useState("");
@@ -122,6 +132,9 @@ export default function AppsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
+
+  // Auth dialog state
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   // Tool management state
   const [expandedToolsId, setExpandedToolsId] = useState<string | null>(null);
@@ -206,6 +219,10 @@ export default function AppsPage() {
   // ─── Actions ────────────────────────────────────────────────────────────────
 
   const handleAdd = async (item: CatalogItem) => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
     setAddingUrl(item.url);
     try {
       if (item.auth === "apikey") {
@@ -241,6 +258,10 @@ export default function AppsPage() {
   };
 
   const handleCustomAdd = async () => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
     if (!customForm.name.trim() || !customForm.url.trim()) return;
     const lower = customForm.url.toLowerCase();
     const body: Record<string, unknown> = {
@@ -512,6 +533,10 @@ export default function AppsPage() {
   };
 
   const handleCustomOpen = () => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
     setShowCustomDialog(true);
   };
 
@@ -542,17 +567,26 @@ export default function AppsPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="my-servers"
-                    className="data-active:bg-transparent data-active:shadow-none data-active:after:opacity-100 px-3 flex items-center gap-2 hide-scrollbar"
+                    disabled={!user}
+                    className="data-active:bg-transparent data-active:shadow-none data-active:after:opacity-100 px-3 flex items-center gap-2 hide-scrollbar disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={!user ? "Sign in to view your apps" : undefined}
                   >
                     My Apps
-                    <span
-                      className={cn(
-                        "text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full",
-                        servers.length === 0 && "invisible"
-                      )}
-                    >
-                      {servers.length}
-                    </span>
+                    {!user && (
+                      <span className="text-[10px] font-medium text-muted-foreground/50">
+                        (sign in)
+                      </span>
+                    )}
+                    {user && (
+                      <span
+                        className={cn(
+                          "text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full",
+                          servers.length === 0 && "invisible"
+                        )}
+                      >
+                        {servers.length}
+                      </span>
+                    )}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -1070,6 +1104,8 @@ export default function AppsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }

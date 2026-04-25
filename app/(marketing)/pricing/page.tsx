@@ -11,7 +11,17 @@ export const metadata: Metadata = {
   alternates: { canonical: "/pricing" },
 };
 
-export default function PricingPage() {
+async function fetchPlansData() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const res = await fetch(`${baseUrl}/api/polar/plans`, {
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) throw new Error("Failed to fetch plans");
+  return res.json();
+}
+
+export default async function PricingPage() {
+  const data = await fetchPlansData();
   return (
     <>
       <Script
@@ -76,7 +86,7 @@ export default function PricingPage() {
 
         {/* ── Dynamic Pricing (Client Component) ───────────────── */}
         <section className="pb-16">
-          <PricingClient />
+          <PricingClient data={data} />
         </section>
 
         {/* ── Bottom CTA ────────────────────────────────────────── */}

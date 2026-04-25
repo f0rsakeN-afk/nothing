@@ -1,9 +1,9 @@
 'use client';
 
 import React, { memo, useState, useCallback, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Copy, Check, Pencil, X, Loader2, Globe, AlertCircle, Check as CheckIcon, Sparkles, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AiResponseFormatter } from "./ai-response-formatter";
 import { MessageActions } from "./message-actions";
 import { MCPToolResultCard } from "./mcp-tool-result-card";
 import { BorderTrail } from "@/components/ui/border-trail";
@@ -12,6 +12,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WebSearchResults } from "./web-search-results";
 import { Steps, StepsItem, StepsContent, StepsBar } from "@/components/odysseyui/steps";
 import { AILoader } from "./ai-loader";
+
+const AiResponseFormatter = dynamic(
+  () => import("./ai-response-formatter").then((mod) => mod.AiResponseFormatter),
+  { ssr: false }
+);
 import {
   Collapsible,
   CollapsibleContent,

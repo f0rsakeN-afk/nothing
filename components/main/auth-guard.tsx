@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useAuthStatusContext } from "./auth-status-provider";
 
-const PUBLIC_ROUTES = ["/", "/home"];
+const PUBLIC_ROUTES = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

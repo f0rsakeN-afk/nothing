@@ -40,7 +40,8 @@
     "success": "Éxito",
     "error": "Error",
     "warning": "Advertencia",
-    "info": "Información"
+    "info": "Información",
+    "unlimited": "Ilimitado"
   },
   "footer": {
     "startYourFreeTrial": "Comienza tu prueba gratuita hoy",
@@ -284,6 +285,7 @@
     "languageEs": "Español",
     "languageFr": "Francés",
     "languageNe": "Nepali",
+    "languageHi": "Hindi",
     "general": "General",
     "generalDesc": "Conversaciones, idioma y comportamiento",
     "aiPreferences": "Preferencias de IA",
@@ -734,6 +736,8 @@
     "memory": "Memoria",
     "files": "Archivos",
     "apps": "Aplicaciones",
+    "about": "Acerca de",
+    "contact": "Contacto",
     "comingSoon": "Próximamente"
   },
   "sidebar": {

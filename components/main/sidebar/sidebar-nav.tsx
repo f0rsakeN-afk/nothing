@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import React from "react";
 import Link from "next/link";
-import { FolderOpen, Plus, Search, Library, Trash2, Brain, Blocks } from "lucide-react";
+import { FolderOpen, Plus, Search, Library, Trash2, Brain, Blocks, FileText, ShieldCheck, Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -24,6 +24,7 @@ type NavItem = {
   primary: boolean;
   comingSoon: boolean;
   authOnly: boolean;
+  unauthOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -70,7 +71,47 @@ const NAV_ITEMS: NavItem[] = [
     href: "/apps",
     primary: false,
     comingSoon: false,
-    authOnly: true,
+    authOnly: false,
+  },
+  {
+    id: "terms",
+    labelKey: "sidebar.termsOfService",
+    icon: FileText,
+    href: "/legal/terms",
+    primary: false,
+    comingSoon: false,
+    authOnly: false,
+    unauthOnly: true,
+  },
+  {
+    id: "privacy",
+    labelKey: "sidebar.privacyPolicy",
+    icon: ShieldCheck,
+    href: "/legal/policy",
+    primary: false,
+    comingSoon: false,
+    authOnly: false,
+    unauthOnly: true,
+  },
+  {
+    id: "about",
+    labelKey: "nav.about",
+    icon: Info,
+    href: "/about",
+    primary: false,
+    comingSoon: false,
+    authOnly: false,
+    unauthOnly: true,
+  },
+  {
+    id: "contact",
+    labelKey: "nav.contact",
+    icon: FileText,
+    href: "/contact",
+    primary: false,
+    comingSoon: false,
+    authOnly: false,
+    unauthOnly: true,
   },
 ];
 
@@ -85,7 +126,11 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
   const isCollapsed = state === "collapsed";
 
   const visibleItems = useMemo(
-    () => NAV_ITEMS.filter(({ authOnly }) => !authOnly || user),
+    () => NAV_ITEMS.filter((item) => {
+      if (item.authOnly) return !!user;
+      if (item.unauthOnly) return !user;
+      return true;
+    }),
     [user],
   );
 

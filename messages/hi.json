@@ -40,7 +40,8 @@
     "success": "सफल",
     "error": "त्रुटि",
     "warning": "चेतावनी",
-    "info": "जानकारी"
+    "info": "जानकारी",
+    "unlimited": "असीमित"
   },
   "footer": {
     "startYourFreeTrial": "आज ही अपना निःशुल्क परीक्षण शुरू करें",
@@ -712,6 +713,8 @@
     "memory": "मेमोरी",
     "files": "फ़ाइलें",
     "apps": "ऐप्स",
+    "about": "हमारे बारे में",
+    "contact": "संपर्क करें",
     "comingSoon": "जल्द आ रहा है"
   },
   "sidebar": {

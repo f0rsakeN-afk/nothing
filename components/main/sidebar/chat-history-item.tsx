@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Archive,
   ArchiveRestore,
@@ -49,8 +50,12 @@ import { cn } from "@/lib/utils";
 import { useChatPrefetch } from "@/hooks/use-chat-prefetch";
 import { useProjects } from "@/hooks/use-projects";
 import { updateChat } from "@/services/chat.service";
-import { ShareDialog } from "@/components/main/share/share-dialog";
 import type { Project } from "@/types/project";
+
+const ShareDialog = dynamic(
+  () => import("@/components/main/share/share-dialog").then((mod) => mod.ShareDialog),
+  { ssr: false }
+);
 
 interface HistoryItem {
   id: string;

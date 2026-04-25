@@ -10,52 +10,57 @@ import { cn } from "@/lib/utils";
 
 const categories = [
   {
-    title: "Support",
+    title: "General",
     questions: [
       {
-        question: "How do I update my account without breaking my laptop?",
+        question: "What makes Eryx different from ChatGPT or Claude?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Unlike generic AI assistants, Eryx maintains memory across your conversations and projects. It learns your codebase, your preferences, and your context — so every conversation picks up where you left off, not from scratch.",
       },
       {
-        question: "Is support free, or do I need to Google everything?",
+        question: "How does the memory feature work?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Eryx stores conversation context and project details securely. When you return, it automatically retrieves relevant history so you never have to re-explain your work. You can also manually add notes and context to specific projects.",
       },
       {
-        question: "Are you going to be subsumed by AI?",
+        question: "Can I use Eryx for technical research?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Yes. Eryx supports real-time web search with cited sources, code analysis, GitHub integration, and more. Get answers backed by verifiable sources — not just confident hallucinations.",
       },
     ],
   },
   {
-    title: "Your account",
+    title: "Account & Billing",
     questions: [
       {
-        question: "Is support free, or do I need to Google everything?",
+        question: "Can I try Eryx for free?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Absolutely. The free plan includes unlimited chat with short-term memory, real-time search, and basic project organization. No credit card required.",
       },
       {
-        question: "Are you going to be subsumed by AI?",
+        question: "How do I upgrade or cancel my subscription?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Upgrade or cancel anytime from your account settings. Changes take effect immediately, and you'll be billed only for the current period.",
+      },
+      {
+        question: "Is my data secure?",
+        answer:
+          "Your conversations and data are encrypted in transit and at rest. We never train our AI models on user data, and you can export or delete your information at any time.",
       },
     ],
   },
   {
-    title: "Other questions",
+    title: "Integrations",
     questions: [
       {
-        question: "Is support free, or do I need to Google everything?",
+        question: "What apps does Eryx connect to?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Eryx integrates with GitHub, Slack, Notion, Linear, and more. Connect your tools to surface relevant information directly in your chats.",
       },
       {
-        question: "Are you going to be subsumed by AI?",
+        question: "Is there an API available?",
         answer:
-          "Lorem ipsum dolor sit amet consectetur adipisicing elit. Minus voluptates deserunt officia temporibus dignissimos.",
+          "Pro and Enterprise plans include API access, allowing you to build custom workflows and embed Eryx's capabilities into your own products.",
       },
     ],
   },
@@ -71,16 +76,16 @@ export const FAQ = ({
   className2?: string;
 }) => {
   return (
-    <section className={cn("px-2 xl:px-0 py-28 lg:py-32 flex items-center justify-center mx-auto max-w-7xl", className)}>
+    <section id="faq" className={cn("px-2 xl:px-0 py-28 lg:py-32 flex items-center justify-center w-full", className)}>
       <div className="container max-w-5xl ">
         <div className={cn("mx-auto grid gap-16 lg:grid-cols-2", className2)}>
           <div className="space-y-4">
             {headerTag === "h1" ? (
-              <h1 className="text-2xl font-display tracking-tight md:text-4xl lg:text-5xl">
+              <h1 className="text-2xl font-semibold font-display tracking-tight md:text-4xl lg:text-5xl">
                 Got Questions?
               </h1>
             ) : (
-              <h2 className="text-2xl font-display tracking-tight md:text-4xl lg:text-5xl">
+              <h2 className="text-2xl font-semibold font-display tracking-tight md:text-4xl lg:text-5xl">
                 Got Questions?
               </h2>
             )}
@@ -93,7 +98,7 @@ export const FAQ = ({
             </p>
           </div>
 
-          <div className="grid gap-6 text-start">
+          <div className="grid gap-6 text-start min-w-0">
             {categories.map((category, categoryIndex) => (
               <div key={category.title} className="">
                 <h3 className="text-muted-foreground border-b py-4">

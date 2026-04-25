@@ -2,11 +2,16 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Copy, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { AiResponseFormatter } from '@/components/main/chat/ai-response-formatter';
 import { forkChat } from '@/services/chat.service';
+
+const AiResponseFormatter = dynamic(
+  () => import('@/components/main/chat/ai-response-formatter').then((mod) => mod.AiResponseFormatter),
+  { ssr: false }
+);
 
 interface SharedChatViewerProps {
   chatId: string;

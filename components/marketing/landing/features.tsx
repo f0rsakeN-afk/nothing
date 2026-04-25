@@ -5,18 +5,19 @@ import { ChevronRight } from "lucide-react";
 
 import { DashedLine } from "@/components/ui/dashed-line";
 import { Card, CardContent } from "@/components/ui/card";
+import { ClippedCircle } from "@/src/components/unlumen-ui/clipped-circle";
 
 const items = [
   {
-    title: "AI-powered system design",
+    title: "Conversational memory",
     image: "/features/triage-card.svg",
   },
   {
-    title: "Interactive architecture diagrams",
+    title: "Real-time web search",
     image: "/features/cycle-card.svg",
   },
   {
-    title: "Real-time intelligent search",
+    title: "Project workspaces",
     image: "/features/overview-card.svg",
   },
 ];
@@ -25,9 +26,9 @@ export const Features = () => {
   return (
     <section
       id="feature-modern-teams"
-      className="px-2 xl:px-0 pb-28 lg:pb-32 mx-auto max-w-7xl"
+      className="px-2 xl:px-0 pb-28 lg:pb-32 mx-auto w-full"
     >
-      <div className="container">
+      <div className="container mx-auto">
         {/* Top dashed line with text */}
         <div className="relative flex items-center justify-center">
           <DashedLine className="text-muted-foreground" />
@@ -38,19 +39,19 @@ export const Features = () => {
 
         {/* Content */}
         <div className="mx-auto mt-10 grid max-w-5xl items-center gap-3 md:gap-0 lg:mt-24 lg:grid-cols-2">
-          <h2 className="text-2xl tracking-tight font-display md:text-4xl lg:text-5xl">
-            Built for developers who think in systems
+          <h2 className="text-2xl font-semibold tracking-tight font-display md:text-4xl lg:text-5xl">
+            Built for conversations that matter
           </h2>
           <p className="text-muted-foreground leading-snug text-justify">
-            Eryx combines intelligent search with system design visualization,
-            helping you explore complex architectures, understand them clearly,
-            and build with confidence.
+            Eryx remembers who you are, what you&apos;re working on, and what you&apos;ve discussed —
+            across every chat, every project, every time.
           </p>
         </div>
 
         {/* Features Card */}
-        <Card className="mt-8 rounded-3xl md:mt-12 lg:mt-20">
-          <CardContent className="flex p-0 max-md:flex-col">
+        <Card className="mt-8 rounded-3xl md:mt-12 lg:mt-20 max-w-5xl mx-auto w-full relative overflow-hidden">
+          <ClippedCircle circleSize={500} />
+          <CardContent className="flex p-0 max-md:flex-col relative z-10">
             {items.map((item, i) => (
               <div key={i} className="flex flex-1 max-md:flex-col">
                 <div className="flex-1 p-4 pe-0! md:p-6">

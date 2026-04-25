@@ -4,6 +4,7 @@ import { Features } from "@/components/marketing/landing/features";
 import { ResourceAllocation } from "@/components/marketing/landing/resource-allocation";
 import { FAQ } from "@/components/marketing/landing/faq";
 import { Pricing } from "@/components/marketing/landing/pricing";
+import { IntegrationsSection } from "@/components/marketing/landing/integrations";
 
 export const metadata: Metadata = {
   title: "About | Eryx",
@@ -31,6 +32,7 @@ export default function MarketingPage() {
       <div className="flex flex-col space-y-20">
         <Hero />
         <Features />
+        <IntegrationsSection />
         <ResourceAllocation />
         <Pricing />
         <FAQ />

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Globe, Link2 } from "lucide-react";
 import {
   Popover,
@@ -16,8 +17,12 @@ import { cn } from "@/lib/utils";
 import { useServers } from "@/hooks/use-mcp-servers";
 import { useUser } from "@stackframe/stack";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { AppsDialog } from "./apps-dialog";
 import type { ServerItem } from "@/components/apps";
+
+const AppsDialog = dynamic(
+  () => import("./apps-dialog").then((mod) => mod.AppsDialog),
+  { ssr: false }
+);
 
 interface ChatActionsMenuProps {
   onFileSelect: () => void;

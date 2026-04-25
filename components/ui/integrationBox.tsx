@@ -1,7 +1,7 @@
 "use client";
 
 import { JSX, useCallback, useEffect, useState } from "react";
-import { motion, useAnimation } from "framer-motion";
+import { motion, useAnimation } from "motion/react";
 import {
   BrainIcon,
   MonitorCog,
@@ -104,6 +104,7 @@ export default function IntegrationBox() {
   const textControls = useAnimation();
 
   const animateUpDown = useCallback(async () => {
+    if (!isAnimating) return;
     while (true) {
       await controls.start({
         y: [0, 20, 0],
@@ -118,12 +119,17 @@ export default function IntegrationBox() {
         transition: { duration: 1, times: [0, 0.5, 1] },
       });
     }
-  }, [controls, textControls]);
+  }, [isAnimating, controls, textControls]);
 
   useEffect(() => {
-    animateUpDown();
-    const frame = requestAnimationFrame(() => setIsAnimating(true));
-    return () => cancelAnimationFrame(frame);
+    const frame = requestAnimationFrame(() => {
+      setIsAnimating(true);
+      animateUpDown();
+    });
+    return () => {
+      setIsAnimating(false);
+      cancelAnimationFrame(frame);
+    };
   }, [animateUpDown]);
 
   const pathVariants = {

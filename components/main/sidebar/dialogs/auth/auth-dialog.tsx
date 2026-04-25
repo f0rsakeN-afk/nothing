@@ -4,10 +4,7 @@ import Image from "next/image";
 import { OAuthButtonGroup } from "@stackframe/stack";
 import { Separator } from "@/components/ui/separator";
 import { useTranslations } from "next-intl";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface AuthDialogProps {
   open: boolean;
@@ -19,9 +16,12 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton className="sm:max-w-[400px] p-0 overflow-hidden">
+      <DialogContent
+        showCloseButton
+        className="sm:max-w-[400px] p-0 overflow-hidden"
+      >
         {/* Gradient header band */}
-        <div className="relative flex flex-col items-center px-8 pt-10 pb-6 bg-gradient-to-b from-primary/5 via-primary/[0.03] to-transparent">
+        <div className="relative flex flex-col items-center px-8 pt-10 pb-6 bg-linear-to-b from-primary/5 via-primary/[0.03] to-transparent">
           {/* Logo mark */}
           <div className="relative w-12 h-12 mb-4">
             <Image
@@ -29,7 +29,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
               alt="Eryx"
               width={48}
               height={48}
-              className="object-contain"
+              className="object-contain dark:invert"
               priority
             />
           </div>
@@ -64,11 +64,19 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
           <Separator className="mb-4" />
           <p className="text-[11px] text-muted-foreground/60 text-center leading-relaxed">
             {t("auth.byContinuingAgree")}{" "}
-            <a href="/legal/terms" target="_blank" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">
+            <a
+              href="/legal/terms"
+              target="_blank"
+              className="underline underline-offset-2 hover:text-foreground/80 transition-colors"
+            >
               {t("sidebar.termsOfService")}
             </a>{" "}
             and{" "}
-            <a href="/legal/policy" target="_blank" className="underline underline-offset-2 hover:text-foreground/80 transition-colors">
+            <a
+              href="/legal/policy"
+              target="_blank"
+              className="underline underline-offset-2 hover:text-foreground/80 transition-colors"
+            >
               {t("sidebar.privacyPolicy")}
             </a>
           </p>

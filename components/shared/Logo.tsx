@@ -10,6 +10,7 @@ export default function Logo() {
         height={30}
         width={30}
         priority
+        className="dark:invert"
       />
     </Link>
   );

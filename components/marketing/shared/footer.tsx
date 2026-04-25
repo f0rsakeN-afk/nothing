@@ -148,29 +148,45 @@
 // }
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useUser } from "@stackframe/stack";
+import dynamic from "next/dynamic";
 import { ArrowUpRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+const AuthDialog = dynamic(
+  () => import("@/components/main/sidebar/dialogs/auth/auth-dialog").then((mod) => mod.AuthDialog),
+  { ssr: false }
+);
+
 export function Footer() {
   const t = useTranslations("footer");
+  const user = useUser();
+  const router = useRouter();
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const navigation = [
-    { name: t("product"), href: "/#feature-modern-teams" },
+    { name: t("product"), href: "/about#feature-modern-teams" },
     { name: t("aboutUs"), href: "/about" },
-    { name: t("pricing"), href: "/pricing" },
-    { name: t("faq"), href: "/faq" },
+    { name: t("pricing"), href: "/about#pricing" },
+    { name: "Changelog", href: "/changelog" },
+    { name: "Status", href: "/status" },
     { name: t("contact"), href: "/contact" },
   ];
 
   const social = [
-    { name: t("twitter"), href: "https://x.com/ausrobdev" },
-    { name: t("linkedin"), href: "#" },
+    { name: t("twitter"), href: "https://x.com/eryxai" },
+    { name: t("linkedin"), href: "https://linkedin.com/company/eryxai" },
   ];
 
-  const legal = [{ name: t("privacyPolicy"), href: "/privacy" }];
+  const legal = [
+    { name: t("privacyPolicy"), href: "/legal/policy" },
+    { name: "Terms of Service", href: "/legal/terms" },
+  ];
 
   return (
     <footer className="flex flex-col items-center gap-14 py-28">
@@ -182,9 +198,15 @@ export function Footer() {
           {t("eryxDescription")}
         </p>
         <div>
-          <Button size="lg" className="mt-4">
-            {t("getStarted")}
-          </Button>
+          {user ? (
+            <Button size="lg" className="mt-4" onClick={() => router.push("/home")}>
+              Go to Dashboard
+            </Button>
+          ) : (
+            <Button size="lg" className="mt-4" onClick={() => setAuthDialogOpen(true)}>
+              {t("getStarted")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -254,7 +276,7 @@ export function Footer() {
             </linearGradient>
           </defs>
         </svg>
-      </div> */}
+      </div>  */}
     </footer>
   );
 }

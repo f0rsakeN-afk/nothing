@@ -10,8 +10,8 @@ import redis, { KEYS, TTL } from "@/lib/redis";
 import { validateCSRF, csrfErrorResponse } from "@/lib/csrf";
 import { routing } from "./routing";
 
-const PUBLIC_PATHS = ["/", "/home"];
-const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models"];
+const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog"];
+const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models", "/api/mcp", "/api/polar/plans"];
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

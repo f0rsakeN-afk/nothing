@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils";
 
 const topItems = [
   {
-    title: "AI-generated system designs.",
+    title: "Remembers everything.",
     description:
-      "Transform your ideas into structured architectures with intelligent, real-time system design generation.",
+      "Eryx keeps context across all your chats — no need to re-explain your project every time.",
     images: [
       {
         src: "/resource-allocation/templates.webp",
-        alt: "Issue template interface",
+        alt: "Memory interface",
         width: 495,
         height: 186,
       },
@@ -21,9 +21,9 @@ const topItems = [
     fade: [""],
   },
   {
-    title: "All your tools, unified.",
+    title: "Search the web, cited.",
     description:
-      "Search, design, and visualize systems in one place no need to switch between multiple platforms.",
+      "Get real-time answers with sources — no more guessing if the AI made it up.",
     images: [
       { src: "/logos/jira.svg", alt: "Jira logo", width: 48, height: 48 },
       { src: "/logos/excel.svg", alt: "Excel logo", width: 48, height: 48 },
@@ -62,13 +62,13 @@ const topItems = [
 
 const bottomItems = [
   {
-    title: "Archive old designs.",
+    title: "Organize with projects.",
     description:
-      "Keep your past system architectures organized and easily accessible for reference or iteration.",
+      "Group related chats together — keep your research, code reviews, and brainstorms separate.",
     images: [
       {
         src: "/resource-allocation/graveyard.webp",
-        alt: "Graveyard interface",
+        alt: "Project interface",
         width: 305,
         height: 280,
       },
@@ -78,13 +78,13 @@ const bottomItems = [
     fade: ["bottom"],
   },
   {
-    title: "Collaborate in real-time.",
+    title: "Share or export anytime.",
     description:
-      "Discuss and refine your system designs with teammates directly within Eryx’s interactive interface.",
+      "Download your conversations, share a link, or embed insights anywhere.",
     images: [
       {
         src: "/resource-allocation/discussions.webp",
-        alt: "Task discussions interface",
+        alt: "Share interface",
         width: 320,
         height: 103,
       },
@@ -94,13 +94,13 @@ const bottomItems = [
     fade: [""],
   },
   {
-    title: "Stay updated instantly.",
+    title: "Works where you work.",
     description:
-      "Receive notifications on changes, AI insights, and search results to keep your projects on track.",
+      "Integrations with the tools you already use — GitHub, Slack, Notion, and more.",
     images: [
       {
         src: "/resource-allocation/notifications.webp",
-        alt: "Notifications interface",
+        alt: "Integrations interface",
         width: 305,
         height: 280,
       },
@@ -115,32 +115,26 @@ export const ResourceAllocation = () => {
   return (
     <section
       id="resource-allocation"
-      className="px-2 xl:px-0 overflow-hidden pb-28 lg:pb-32 mx-auto max-w-6xl"
+      className="px-2 xl:px-0 overflow-hidden pb-28 lg:pb-32 mx-auto w-full"
     >
-      <div className="">
-        <h2 className="container font-display text-center text-3xl tracking-tight text-balance sm:text-4xl md:text-5xl lg:text-6xl">
-          Streamline your system design and execution
+      <div className="max-w-7xl mx-auto px-6">
+        <h2 className="font-display text-center text-3xl font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl lg:text-6xl">
+          From first message to finished project
         </h2>
 
-        <div className="mt-8 md:mt-12 lg:mt-20">
-          <DashedLine
-            orientation="horizontal"
-            className="container scale-x-105"
-          />
+        <div className="mt-8 md:mt-12 lg:mt-20 space-y-8 md:space-y-12">
+          <DashedLine orientation="horizontal" />
 
           {/* Top Features Grid - 2 items */}
-          <div className="relative container flex max-md:flex-col">
+          <div className="relative flex max-md:flex-col gap-8">
             {topItems.map((item, i) => (
               <Item key={i} item={item} isLast={i === topItems.length - 1} />
             ))}
           </div>
-          <DashedLine
-            orientation="horizontal"
-            className="container max-w-7xl scale-x-110"
-          />
+          <DashedLine orientation="horizontal" />
 
           {/* Bottom Features Grid - 3 items */}
-          <div className="relative container grid max-w-7xl md:grid-cols-3">
+          <div className="relative grid md:grid-cols-3 gap-8">
             {bottomItems.map((item, i) => (
               <Item
                 key={i}
@@ -151,10 +145,7 @@ export const ResourceAllocation = () => {
             ))}
           </div>
         </div>
-        <DashedLine
-          orientation="horizontal"
-          className="container max-w-7xl scale-x-110"
-        />
+        <DashedLine orientation="horizontal" />
       </div>
     </section>
   );
@@ -170,9 +161,8 @@ const Item = ({ item, isLast, className }: ItemProps) => {
   return (
     <div
       className={cn(
-        "relative flex flex-col justify-between px-0 py-6 md:px-6 md:py-8",
+        "relative flex flex-col justify-between py-6 md:py-8",
         className,
-        item.className,
       )}
     >
       <div className="title-container text-balance">
