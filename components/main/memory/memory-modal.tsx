@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Upload, FileText, X, File, FileCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useHaptics } from '@/hooks/use-web-haptics';
 
 export interface MemoryItem {
   id: string;
@@ -26,6 +27,7 @@ interface MemoryModalProps {
 const PRESET_CATEGORIES = ['work', 'personal', 'projects', 'ideas', 'important'];
 
 function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModalProps) {
+  const { trigger } = useHaptics();
   const [title, setTitle] = useState(memory?.title || '');
   const [content, setContent] = useState(memory?.content || '');
   const [category, setCategory] = useState(memory?.category || '');
@@ -35,17 +37,19 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
+    trigger("success");
     onSubmit({ title, content, category });
     handleClose();
   };
 
   const handleClose = useCallback(() => {
+    trigger("nudge");
     setTitle('');
     setContent('');
     setCategory('');
     setFileName(null);
     onClose();
-  }, [onClose]);
+  }, [onClose, trigger]);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

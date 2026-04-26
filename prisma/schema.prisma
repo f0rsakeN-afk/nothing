@@ -368,8 +368,6 @@ enum KnowledgeDetail {
 
 model Customize {
   id              String          @id @default(cuid())
-  firstName       String          @default("")
-  lastName        String          @default("")
   name            String          @default("")
   interest        String[]
   responseTone    String
@@ -402,6 +400,7 @@ model Settings {
   analytics        Boolean  @default(true)
   usageData        Boolean  @default(false)
   crashReports     Boolean  @default(true)
+  hapticsEnabled   Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

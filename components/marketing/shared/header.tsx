@@ -83,7 +83,7 @@ export function MarketingHeader() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto h-16 flex items-center justify-between gap-6">
           <Logo />
 
           {/* Desktop nav */}

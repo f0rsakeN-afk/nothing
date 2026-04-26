@@ -33,12 +33,10 @@ export async function GET(request: NextRequest) {
     const preferences = await getUserPreferences(prismaUser.id, prismaUser.email);
 
     return NextResponse.json({
-      firstName: preferences.firstName,
-      lastName: preferences.lastName,
-      preferredName: preferences.name,
-      responseTone: preferences.tone,
-      detailLevel: preferences.detailLevel.toLowerCase(),
-      interests: preferences.interests.join(", ") || "",
+      preferredName: preferences.name || "",
+      responseTone: preferences.tone || "professional",
+      detailLevel: (preferences.detailLevel || "balanced").toLowerCase(),
+      interests: (preferences.interests || []).join(", ") || "",
     });
   } catch (error) {
     console.error("Get customize error:", error);
@@ -73,7 +71,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { firstName, lastName, preferredName, responseTone, detailLevel, interests } = parsed.data;
+    const { preferredName, responseTone, detailLevel, interests } = parsed.data;
 
     // Map detailLevel to enum value
     const knowledgeDetail = detailLevel?.toUpperCase() as "CONCISE" | "BALANCED" | "DETAILED";
@@ -81,21 +79,25 @@ export async function PATCH(request: NextRequest) {
       ? interests.split(",").map((s) => s.trim()).filter(Boolean)
       : [];
 
+    // Fetch existing customize for seeding
+    const existingCustomize = await prisma.customize.findUnique({
+      where: { userId: prismaUser.id },
+    });
+
+    // Seed from existing customize or email fallback
+    const seededPreferredName = preferredName ?? existingCustomize?.name ?? prismaUser.email?.split("@")[0] ?? "User";
+
     const customize = await prisma.customize.upsert({
       where: { userId: prismaUser.id },
       create: {
         userId: prismaUser.id,
-        firstName: firstName || "",
-        lastName: lastName || "",
-        name: preferredName || prismaUser.email?.split("@")[0] || "User",
+        name: seededPreferredName,
         responseTone: responseTone || "professional",
         knowledgeDetail: (knowledgeDetail as "CONCISE" | "BALANCED" | "DETAILED") || "BALANCED",
         interest: interestArray,
       },
       update: {
-        ...(firstName !== undefined && { firstName }),
-        ...(lastName !== undefined && { lastName }),
-        ...(preferredName !== undefined && { name: preferredName }),
+        name: seededPreferredName,
         ...(responseTone !== undefined && { responseTone }),
         ...(detailLevel !== undefined && { knowledgeDetail: knowledgeDetail as "CONCISE" | "BALANCED" | "DETAILED" }),
         ...(interests !== undefined && { interest: interestArray }),
@@ -107,8 +109,6 @@ export async function PATCH(request: NextRequest) {
     await invalidateAccountCache(prismaUser.id);
 
     return NextResponse.json({
-      firstName: customize.firstName || "",
-      lastName: customize.lastName || "",
       preferredName: customize.name,
       responseTone: customize.responseTone,
       detailLevel: customize.knowledgeDetail.toLowerCase(),

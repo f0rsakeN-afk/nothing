@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useHaptics } from "@/hooks/use-web-haptics";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,7 @@ const REPORT_REASONS = [
 export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
   const t = useTranslations("report");
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [reason, setReason] = React.useState<string>("");
   const handleReasonChange = (value: string | null) => {
@@ -69,9 +71,11 @@ export function ReportDialog({ isOpen, onOpenChange }: ReportDialogProps) {
         throw new Error(data.error || t("errorMessage"));
       }
 
+      trigger("success");
       toast.success(t("successMessage"));
       handleClose();
     } catch (error) {
+      trigger("error");
       toast.error(
         error instanceof Error ? error.message : t("errorMessage"),
       );

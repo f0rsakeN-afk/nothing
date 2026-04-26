@@ -9,8 +9,6 @@ export interface PromptConfig {
   tone?: "formal" | "casual" | "friendly" | "technical" | "concise" | "detailed" | "balanced";
   detailLevel?: "CONCISE" | "BALANCED" | "DETAILED";
   userName?: string;
-  userFirstName?: string;
-  userLastName?: string;
   userInterests?: string[];
   projectName?: string;
   projectInstruction?: string;
@@ -147,12 +145,8 @@ CORE PRINCIPLES:
 - When uncertain, say so rather than guessing`);
 
   // Build user context from available name info
-  if (config.userFirstName || config.userLastName || config.userName) {
-    const displayName = config.userFirstName || config.userName || "";
-    const fullName = [config.userFirstName, config.userLastName].filter(Boolean).join(" ") || displayName;
-    if (fullName) {
-      parts.push(`User's name: ${fullName}`);
-    }
+  if (config.userName) {
+    parts.push(`User's name: ${config.userName}`);
     if (config.userInterests && config.userInterests.length > 0) {
       parts.push(`User interests: ${config.userInterests.join(", ")}`);
     }

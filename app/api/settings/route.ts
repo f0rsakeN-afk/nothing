@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   analytics: true,
   usageData: false,
   crashReports: true,
+  hapticsEnabled: true,
 };
 
 export async function GET(request: NextRequest) {
@@ -125,6 +126,7 @@ export async function PATCH(request: NextRequest) {
           analytics: data.analytics ?? DEFAULT_SETTINGS.analytics,
           usageData: data.usageData ?? DEFAULT_SETTINGS.usageData,
           crashReports: data.crashReports ?? DEFAULT_SETTINGS.crashReports,
+          hapticsEnabled: data.hapticsEnabled ?? DEFAULT_SETTINGS.hapticsEnabled,
         },
       });
     }
@@ -150,6 +152,7 @@ export async function PATCH(request: NextRequest) {
       analytics: settings.analytics,
       usageData: settings.usageData,
       crashReports: settings.crashReports,
+      hapticsEnabled: settings.hapticsEnabled,
     });
   } catch (error) {
     console.error("Update settings error:", error);

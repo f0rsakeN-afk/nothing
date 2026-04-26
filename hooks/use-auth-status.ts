@@ -24,9 +24,8 @@ export function useAuthStatus() {
   return useQuery({
     queryKey: ["auth-status"],
     queryFn: fetchAuthStatus,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     retry: 1,
-    placeholderData: (prev: AuthStatus | undefined) => prev,
   });
 }

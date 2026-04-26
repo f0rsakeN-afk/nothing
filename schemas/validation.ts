@@ -48,8 +48,6 @@ export const updatePreferencesSchema = z.object({
 
 // Customize schemas
 export const customizeSchema = z.object({
-  firstName: z.string().max(50),
-  lastName: z.string().max(50),
   preferredName: z.string().min(1).max(50),
   responseTone: z.enum(["professional", "witty", "flirty", "gen-z", "sarcastic", "supportive", "emoji-heavy"]),
   detailLevel: z.enum(["concise", "balanced", "detailed"]),
@@ -77,6 +75,7 @@ export const settingsSchema = z.object({
   analytics: z.boolean().optional(),
   usageData: z.boolean().optional(),
   crashReports: z.boolean().optional(),
+  hapticsEnabled: z.boolean().optional(),
 });
 
 export const updateSettingsSchema = settingsSchema.partial();

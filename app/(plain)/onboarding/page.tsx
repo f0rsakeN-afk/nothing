@@ -172,12 +172,15 @@ export default function OnboardingPage() {
       const response = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         // Invalidate auth status cache so home page sees updated seenOnboarding
-        queryClient.invalidateQueries({ queryKey: ["auth-status"] });
+        await queryClient.invalidateQueries({ queryKey: ["auth-status"] });
+        // Force immediate refetch
+        await queryClient.refetchQueries({ queryKey: ["auth-status"] });
         // Save profession to cookie for persistence (localStorage can be cleared)
         if (formData.profession) {
           document.cookie = `eryx_profession=${formData.profession}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
@@ -185,7 +188,8 @@ export default function OnboardingPage() {
         }
         router.push("/home");
       } else {
-        console.error("Onboarding failed");
+        const text = await response.text();
+        console.error("Onboarding failed:", response.status, text);
         router.push("/home");
       }
     } catch (error) {

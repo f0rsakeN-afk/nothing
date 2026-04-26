@@ -14,6 +14,7 @@ interface AccountData {
     name: string;
     displayName: string;
     credits: number;
+    totalCredits: number;
     limits: {
       chats: string | number;
       projects: string | number;
@@ -132,9 +133,10 @@ export const PlanSection = React.memo(function PlanSection({
   const plan = accountData?.plan;
   const usage = accountData?.usage;
 
-  const creditsUsed = usage?.messages || 0;
-  const creditsLimit = typeof plan?.limits?.messages === "number" ? plan.limits.messages : 2500;
-  const creditsPct = Math.min((creditsUsed / creditsLimit) * 100, 100);
+  const creditsRemaining = plan?.credits ?? 0;
+  const creditsTotal = plan?.totalCredits ?? 25;
+  const creditsUsed = Math.max(creditsTotal - creditsRemaining, 0);
+  const creditsPct = creditsTotal > 0 ? Math.min((creditsUsed / creditsTotal) * 100, 100) : 0;
 
   return (
     <div className="space-y-5">
@@ -193,7 +195,7 @@ export const PlanSection = React.memo(function PlanSection({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[12px] font-medium text-foreground">
-              {(creditsLimit - creditsUsed).toLocaleString()} / {creditsLimit.toLocaleString()} remaining
+              {creditsRemaining.toLocaleString()} / {creditsTotal.toLocaleString()} remaining
             </span>
             <span className="text-[11px] text-muted-foreground">
               {creditsUsed.toLocaleString()} used

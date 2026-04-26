@@ -7,6 +7,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 const THEMES = [
   { id: "light", label: "Light", icon: Sun },
@@ -66,6 +67,7 @@ interface AppearanceSectionProps {
 
 export function AppearanceSection({ settings: propSettings }: AppearanceSectionProps) {
   const { theme, setTheme } = useTheme();
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
 
@@ -91,9 +93,10 @@ export function AppearanceSection({ settings: propSettings }: AppearanceSectionP
   }, [mutation]);
 
   const handleThemeSelect = useCallback((id: string) => {
+    trigger("success");
     setTheme(id);
     onUpdate("theme", id);
-  }, [setTheme, onUpdate]);
+  }, [setTheme, onUpdate, trigger]);
 
   const displaySettings = localSettings || propSettings || settings;
 

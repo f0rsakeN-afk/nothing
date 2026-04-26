@@ -28,6 +28,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNotificationStream } from "@/hooks/useNotificationStream";
 import { toast } from "@/components/ui/sileo-toast";
 import { Loader2 } from "lucide-react";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -325,6 +326,7 @@ const PrefRow = memo(function PrefRow({
 // ---------------------------------------------------------------------------
 
 export const NotificationsButton = memo(function NotificationsButton() {
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
   const [view, setView] = useState<ViewType>("inbox");
 
@@ -376,6 +378,7 @@ export const NotificationsButton = memo(function NotificationsButton() {
       );
     },
     onSuccess: () => {
+      trigger("success");
       // Invalidate to get server state
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -385,6 +388,7 @@ export const NotificationsButton = memo(function NotificationsButton() {
   const bulkMutation = useMutation({
     mutationFn: bulkAction,
     onSuccess: () => {
+      trigger("success");
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       setActionsOpen(false);
     },
@@ -394,6 +398,7 @@ export const NotificationsButton = memo(function NotificationsButton() {
   const prefMutation = useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => updatePref(id, enabled),
     onSuccess: (_, { id, enabled }) => {
+      trigger("success");
       setLocalPrefs((prev) => ({ ...prev, [id]: enabled }));
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -434,11 +439,13 @@ export const NotificationsButton = memo(function NotificationsButton() {
   );
 
   const toggleFilter = useCallback(() => {
+    trigger("nudge");
     setFilterOpen((o) => !o);
     setActionsOpen(false);
   }, []);
 
   const toggleActions = useCallback(() => {
+    trigger("nudge");
     setActionsOpen((o) => !o);
     setFilterOpen(false);
   }, []);
@@ -461,6 +468,7 @@ export const NotificationsButton = memo(function NotificationsButton() {
 
   const handleFilterSelect = useCallback(
     (value: FilterType) => {
+      trigger("success");
       setFilter(value);
       setFilterOpen(false);
     },

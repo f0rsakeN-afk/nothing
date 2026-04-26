@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { ServiceIcon } from "@/components/apps/service-icon";
 import { toast } from "@/components/ui/sonner";
 import type { ServerItem } from "@/components/apps";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface ConnectorsPanelProps {
   onClose: () => void;
@@ -17,11 +18,14 @@ export function ConnectorsPanel({ onClose }: ConnectorsPanelProps) {
   const user = useUser();
   const { data: servers = [], isLoading } = useServers(user?.id);
   const toggleServer = useToggleServer();
+  const { trigger } = useHaptics();
 
   const handleToggle = async (server: ServerItem, isEnabled: boolean) => {
     try {
       await toggleServer.mutateAsync({ id: server.id, isEnabled });
+      trigger("success");
     } catch (error) {
+      trigger("error");
       toast.error(
         error instanceof Error ? error.message : "Failed to toggle server"
       );

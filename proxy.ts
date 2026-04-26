@@ -10,7 +10,7 @@ import redis, { KEYS, TTL } from "@/lib/redis";
 import { validateCSRF, csrfErrorResponse } from "@/lib/csrf";
 import { routing } from "./routing";
 
-const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog"];
+const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog", "/onboarding"];
 const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models", "/api/mcp", "/api/polar/plans"];
 
 export default async function proxy(request: NextRequest) {
@@ -65,23 +65,26 @@ export default async function proxy(request: NextRequest) {
       }
     }
 
-    // Rate limiting check - get client IP
+    // Rate limiting check - get client IP (skip in development)
     const clientIP =
       request.headers.get("x-forwarded-for")?.split(",")[0] ||
       request.headers.get("x-real-ip") ||
       "unknown";
+
     const bruteForceKey = KEYS.bruteForce(clientIP);
 
-    try {
-      const failures = await redis.get(bruteForceKey);
-      if (failures && parseInt(failures, 10) >= 10) {
-        return NextResponse.json(
-          { error: "Too many requests" },
-          { status: 429 },
-        );
+    if (process.env.NODE_ENV === "production") {
+      try {
+        const failures = await redis.get(bruteForceKey);
+        if (failures && parseInt(failures, 10) >= 10) {
+          return NextResponse.json(
+            { error: "Too many requests" },
+            { status: 429 },
+          );
+        }
+      } catch {
+        // Redis error, continue
       }
-    } catch {
-      // Redis error, continue
     }
 
     try {
@@ -89,13 +92,15 @@ export default async function proxy(request: NextRequest) {
       const stackUser = await stackServerApp.getUser({ tokenStore: request });
 
       if (!stackUser) {
-        // Increment failure count
-        try {
-          const current = await redis.get(bruteForceKey);
-          const count = current ? parseInt(current, 10) + 1 : 1;
-          await redis.setex(bruteForceKey, 3600, count.toString()); // 1 hour window
-        } catch {
-          // Redis error
+        // Increment failure count (skip in development)
+        if (process.env.NODE_ENV === "production") {
+          try {
+            const current = await redis.get(bruteForceKey);
+            const count = current ? parseInt(current, 10) + 1 : 1;
+            await redis.setex(bruteForceKey, 3600, count.toString()); // 1 hour window
+          } catch {
+            // Redis error
+          }
         }
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }

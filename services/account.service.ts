@@ -23,6 +23,7 @@ export interface AccountData {
     name: string;
     displayName: string;
     credits: number;
+    totalCredits: number;
     limits: {
       chats: string | number;
       projects: string | number;
@@ -167,6 +168,7 @@ export async function getAccountData(userId: string): Promise<AccountData> {
       name: effectivePlanData.id,
       displayName: effectivePlanData.name,
       credits: fullUser.credits,
+      totalCredits: effectivePlanData.credits,
       limits: {
         chats: effectivePlanData.maxChats === -1 ? "unlimited" : effectivePlanData.maxChats,
         projects: effectivePlanData.maxProjects === -1 ? "unlimited" : effectivePlanData.maxProjects,

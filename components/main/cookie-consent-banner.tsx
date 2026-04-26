@@ -7,6 +7,7 @@ import {
   useCookieConsent,
   type CookieConsent
 } from "@/hooks/use-cookie-consent";
+import { useHaptics } from "@/hooks/use-web-haptics";
 import { cn } from "@/lib/utils";
 
 function CookieToggle({
@@ -44,6 +45,7 @@ function CookieToggle({
 export function CookieConsentBanner() {
   const { consent, updateConsent, acceptAll, rejectAll, showBanner, hideBanner, hasConsented } =
     useCookieConsent();
+  const { trigger } = useHaptics();
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -53,38 +55,45 @@ export function CookieConsentBanner() {
     }
   }, [showBanner]);
 
-  if (!visible || hasConsented) return null;
-
   const handleAccept = useCallback(() => {
+    trigger("success");
     acceptAll();
     setVisible(false);
-  }, [acceptAll]);
+  }, [acceptAll, trigger]);
 
   const handleReject = useCallback(() => {
+    trigger("nudge");
     rejectAll();
     setVisible(false);
-  }, [rejectAll]);
+  }, [rejectAll, trigger]);
 
   const handleSave = useCallback(() => {
+    trigger("success");
     updateConsent(consent);
     setVisible(false);
-  }, [updateConsent, consent]);
+  }, [updateConsent, consent, trigger]);
 
   const handleManage = useCallback(() => {
+    trigger("nudge");
     setExpanded(true);
-  }, []);
+  }, [trigger]);
 
   const toggleAnalytics = useCallback(() => {
+    trigger("success");
     updateConsent({ ...consent, analytics: !consent.analytics });
-  }, [updateConsent, consent]);
+  }, [updateConsent, consent, trigger]);
 
   const togglePersonalization = useCallback(() => {
+    trigger("success");
     updateConsent({ ...consent, personalization: !consent.personalization });
-  }, [updateConsent, consent]);
+  }, [updateConsent, consent, trigger]);
 
   const hideExpanded = useCallback(() => {
+    trigger("nudge");
     setExpanded(false);
-  }, []);
+  }, [trigger]);
+
+  if (!visible || hasConsented) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">

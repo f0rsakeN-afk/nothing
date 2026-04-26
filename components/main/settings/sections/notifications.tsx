@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sileo-toast";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 function SettingRow({
   label,
@@ -58,6 +59,7 @@ interface NotificationsSectionProps {
 }
 
 export function NotificationsSection({ settings: propSettings }: NotificationsSectionProps) {
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
 
@@ -82,8 +84,9 @@ export function NotificationsSection({ settings: propSettings }: NotificationsSe
   });
 
   const onUpdate = useCallback((key: keyof Settings, value: boolean) => {
+    trigger("success");
     mutation.mutate({ key, value });
-  }, [mutation]);
+  }, [mutation, trigger]);
 
   const displaySettings = localSettings || propSettings || settings;
 

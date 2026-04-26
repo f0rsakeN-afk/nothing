@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sileo-toast";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 function SettingRow({
   label,
@@ -55,6 +56,7 @@ interface Settings {
   analytics: boolean;
   usageData: boolean;
   crashReports: boolean;
+  hapticsEnabled: boolean;
 }
 
 async function fetchSettings(): Promise<Settings> {
@@ -78,6 +80,7 @@ interface GeneralSectionProps {
 }
 
 export function GeneralSection({ settings: propSettings }: GeneralSectionProps) {
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
 
@@ -102,8 +105,9 @@ export function GeneralSection({ settings: propSettings }: GeneralSectionProps) 
   });
 
   const onUpdate = useCallback((key: keyof Settings, value: boolean | string) => {
+    trigger("success");
     mutation.mutate({ key, value });
-  }, [mutation]);
+  }, [mutation, trigger]);
 
   const displaySettings = localSettings || propSettings || settings;
 
@@ -191,6 +195,16 @@ export function GeneralSection({ settings: propSettings }: GeneralSectionProps) 
           Preferences
         </p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3">
+          <SettingRow
+            label="Haptic feedback"
+            description="Vibration feedback for actions on mobile devices."
+          >
+            <Switch
+              checked={displaySettings.hapticsEnabled}
+              onCheckedChange={(val) => onUpdate("hapticsEnabled", val)}
+              size="sm"
+            />
+          </SettingRow>
           <SettingRow
             label="Language"
             description="Interface language for the app."

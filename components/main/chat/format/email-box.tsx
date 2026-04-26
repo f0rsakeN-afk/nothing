@@ -3,6 +3,7 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { Copy, SendHorizontal, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface EmailBoxProps {
   initialContent: string;
@@ -15,6 +16,7 @@ export const EmailBox = memo(function EmailBox({
   label = "Email",
   onSend,
 }: EmailBoxProps) {
+  const { trigger } = useHaptics();
   const [content, setContent] = useState(initialContent);
   const [copied, setCopied] = useState(false);
 
@@ -24,13 +26,15 @@ export const EmailBox = memo(function EmailBox({
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(content);
+    trigger("success");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [content]);
+  }, [content, trigger]);
 
   const handleSend = useCallback(() => {
+    trigger("success");
     onSend?.(content);
-  }, [content, onSend]);
+  }, [content, onSend, trigger]);
 
   const renderHighlightedContent = () => {
     const parts = content.split(/(\[.*?\])/g);

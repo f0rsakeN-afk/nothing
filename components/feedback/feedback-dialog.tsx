@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/sileo-toast";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface FeedbackDialogProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface FeedbackDialogProps {
 
 export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
   const t = useTranslations("feedback");
+  const { trigger } = useHaptics();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
 
@@ -63,6 +65,7 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
         throw new Error("Failed to submit feedback");
       }
 
+      trigger("success");
       toast.success(t("successMessage"));
 
       // Reset and close
@@ -70,6 +73,7 @@ export function FeedbackDialog({ isOpen, onOpenChange }: FeedbackDialogProps) {
       onOpenChange(false);
     } catch (error) {
       console.error(error);
+      trigger("error");
       toast.error(t("errorMessage"));
     } finally {
       setIsSubmitting(false);

@@ -3,7 +3,12 @@
 import { Button } from '@/components/ui/button';
 import { easeOut, motion } from 'motion/react';
 import * as React from 'react';
-import { Github, Linkedin, Twitter } from 'lucide-react';
+import { Link2, type LucideProps } from 'lucide-react';
+
+// Fallback social icons - lucide-react may not include brand icons
+const GitHubIcon = (props: LucideProps) => <Link2 {...props} />;
+const LinkedInIcon = (props: LucideProps) => <Link2 {...props} />;
+const TwitterIcon = (props: LucideProps) => <Link2 {...props} />;
 
 export interface FlipCardData {
   name: string;
@@ -110,7 +115,7 @@ export function FlipCard({ data }: FlipCardProps) {
               rel="noopener noreferrer"
               className="hover:scale-105 transition-transform"
             >
-              <Linkedin size={20} />
+              <LinkedInIcon size={20} />
             </a>
           )}
           {data.socialLinks?.github && (
@@ -120,7 +125,7 @@ export function FlipCard({ data }: FlipCardProps) {
               rel="noopener noreferrer"
               className="hover:scale-105 transition-transform"
             >
-              <Github size={20} />
+              <GitHubIcon size={20} />
             </a>
           )}
           {data.socialLinks?.twitter && (
@@ -130,7 +135,7 @@ export function FlipCard({ data }: FlipCardProps) {
               rel="noopener noreferrer"
               className="hover:scale-105 transition-transform"
             >
-              <Twitter size={20} />
+              <TwitterIcon size={20} />
             </a>
           )}
         </div>

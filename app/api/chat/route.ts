@@ -337,9 +337,7 @@ async function buildMessages(
   const promptConfig: PromptConfig = {
     tone: userPreferences.tone as PromptConfig["tone"],
     detailLevel: userPreferences.detailLevel as PromptConfig["detailLevel"],
-    userName: userPreferences.name || userPreferences.firstName || userPreferences.email?.split("@")[0] || "User",
-    userFirstName: userPreferences.firstName,
-    userLastName: userPreferences.lastName,
+    userName: userPreferences.name || userPreferences.email?.split("@")[0] || "User",
     userInterests: userPreferences.interests,
     projectName: chat.project?.name,
     projectInstruction: chat.project?.instruction || undefined,

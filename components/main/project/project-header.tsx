@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useUpdateProject, useDeleteProject, useArchiveProject, useUnarchiveProject } from "@/hooks/use-projects";
 import type { Project } from "@/types/project";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface ProjectHeaderProps {
   project: Project | undefined;
@@ -31,6 +32,7 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({ project }: ProjectHeaderProps) {
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [renameName, setRenameName] = useState(project?.name || "");
@@ -51,39 +53,47 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         name: renameName.trim(),
         description: renameDesc.trim(),
       });
+      trigger("success");
       setRenameOpen(false);
     } catch (error) {
+      trigger("error");
       console.error("Failed to rename project:", error);
     }
-  }, [project, renameName, renameDesc, updateProject]);
+  }, [project, renameName, renameDesc, updateProject, trigger]);
 
   const handleDelete = useCallback(async () => {
     if (!project) return;
     try {
       await deleteProject.mutateAsync(project.id);
+      trigger("success");
       router.push("/project");
     } catch (error) {
+      trigger("error");
       console.error("Failed to delete project:", error);
     }
-  }, [project, deleteProject, router]);
+  }, [project, deleteProject, router, trigger]);
 
   const handleArchive = useCallback(async () => {
     if (!project) return;
     try {
       await archiveProject.mutateAsync(project.id);
+      trigger("success");
     } catch (error) {
+      trigger("error");
       console.error("Failed to archive project:", error);
     }
-  }, [project, archiveProject]);
+  }, [project, archiveProject, trigger]);
 
   const handleUnarchive = useCallback(async () => {
     if (!project) return;
     try {
       await unarchiveProject.mutateAsync(project.id);
+      trigger("success");
     } catch (error) {
+      trigger("error");
       console.error("Failed to unarchive project:", error);
     }
-  }, [project, unarchiveProject]);
+  }, [project, unarchiveProject, trigger]);
 
   const openRenameDialog = useCallback(() => {
     setRenameName(project?.name || "");

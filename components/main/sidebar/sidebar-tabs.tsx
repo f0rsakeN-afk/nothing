@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { TABS, type TabId } from "./data";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface SidebarTabsProps {
   activeTab: TabId;
@@ -28,10 +29,12 @@ export function SidebarTabs({ activeTab, onTabChange }: SidebarTabsProps) {
   const t = useTranslations();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { trigger } = useHaptics();
 
   const handleTabClick = useCallback((tabId: TabId) => {
+    trigger("nudge");
     onTabChange(tabId);
-  }, [onTabChange]);
+  }, [onTabChange, trigger]);
 
   if (isCollapsed) {
     return (

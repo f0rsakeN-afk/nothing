@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/sileo-toast";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface CustomizeDialogProps {
   isOpen: boolean;
@@ -63,6 +64,7 @@ export function CustomizeDialog({
   onOpenChange,
 }: CustomizeDialogProps) {
   const t = useTranslations("customize");
+  const { trigger } = useHaptics();
   const [hasInitialized, setHasInitialized] = useState(false);
   const queryClient = useQueryClient();
 
@@ -75,11 +77,13 @@ export function CustomizeDialog({
   const mutation = useMutation({
     mutationFn: updateCustomize,
     onSuccess: () => {
+      trigger("success");
       queryClient.invalidateQueries({ queryKey: ["customize"] });
       toast.success(t("successMessage"));
       onOpenChange(false);
     },
     onError: () => {
+      trigger("error");
       toast.error(t("errorMessage"));
     },
   });
@@ -104,8 +108,6 @@ export function CustomizeDialog({
   } = useForm<CustomizeSchema>({
     resolver: zodResolver(customizeSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
       preferredName: "",
       responseTone: "professional",
       detailLevel: "balanced",
@@ -117,8 +119,6 @@ export function CustomizeDialog({
   useEffect(() => {
     if (isOpen && customizeData && !hasInitialized) {
       reset({
-        firstName: customizeData.firstName || "",
-        lastName: customizeData.lastName || "",
         preferredName: customizeData.preferredName || "",
         responseTone: customizeData.responseTone || "professional",
         detailLevel: customizeData.detailLevel || "balanced",
@@ -160,35 +160,6 @@ export function CustomizeDialog({
           className="space-y-6 pt-4 max-h-[75dvh] sm:max-h-full overflow-scroll sm:overflow-auto hide-scrollbar"
         >
           <div className="space-y-5">
-            {/* First Name and Last Name */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-xs font-medium">
-                  {t("firstName")}
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="firstName"
-                    placeholder={t("firstName")}
-                    className="pl-9 h-11 rounded-xl"
-                    {...register("firstName")}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-xs font-medium">
-                  {t("lastName")}
-                </Label>
-                <Input
-                  id="lastName"
-                  placeholder={t("lastName")}
-                  className="h-11 rounded-xl"
-                  {...register("lastName")}
-                />
-              </div>
-            </div>
-
             {/* Preferred Name */}
             <div className="space-y-2">
               <Label htmlFor="preferredName" className="text-xs font-medium">

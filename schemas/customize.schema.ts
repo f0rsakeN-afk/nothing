@@ -1,8 +1,6 @@
 import { z } from "zod";
 
 export const customizeSchema = z.object({
-  firstName: z.string().max(50),
-  lastName: z.string().max(50),
   preferredName: z
     .string()
     .min(1, "Name is required")

@@ -101,6 +101,7 @@ import { useQuery } from "@tanstack/react-query";
 import { routing } from "@/routing";
 import { NotificationsButton } from "@/components/main/header/notifications-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 export function AppSidebarFooter() {
   const t = useTranslations();
@@ -110,6 +111,7 @@ export function AppSidebarFooter() {
   const user = useUser();
   const app = useStackApp();
   const { theme, setTheme } = useTheme();
+  const { trigger } = useHaptics();
   const [feedbackOpen, setFeedbackOpen] = React.useState<boolean>(false);
   const [customizeOpen, setCustomizeOpen] = React.useState<boolean>(false);
   const [pricingDialogOpen, setPricingDialogOpen] =
@@ -136,8 +138,9 @@ export function AppSidebarFooter() {
   const planName = accountData?.plan?.displayName || "Free";
 
   const toggleTheme = React.useCallback(() => {
+    trigger("success");
     setTheme(theme === "light" ? "dark" : "light");
-  }, [theme, setTheme]);
+  }, [theme, setTheme, trigger]);
 
   const switchLocale = React.useCallback((locale: string) => {
     // Set cookie for persistence
@@ -156,9 +159,10 @@ export function AppSidebarFooter() {
 
   const createLocaleHandler = React.useCallback(
     (locale: string) => () => {
+      trigger("success");
       switchLocale(locale);
     },
-    [switchLocale],
+    [switchLocale, trigger],
   );
 
   const openSettings = React.useCallback(() => setSettingsOpen(true), []);

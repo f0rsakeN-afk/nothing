@@ -11,8 +11,6 @@ export interface UserPreferences {
   tone: string;
   detailLevel: string;
   name: string;
-  firstName: string;
-  lastName: string;
   interests: string[];
   language: string;
   email?: string;
@@ -37,17 +35,13 @@ export async function getUserPreferences(userId: string, email: string | null | 
   }
 
   // Fetch from DB
-  const customize = await prisma.customize.findUnique({
-    where: { userId },
-  });
+  const customize = await prisma.customize.findUnique({ where: { userId } });
 
   const preferences: UserPreferences = customize
     ? {
         tone: customize.responseTone || "balanced",
         detailLevel: customize.knowledgeDetail || "BALANCED",
         name: customize.name || "",
-        firstName: customize.firstName || "",
-        lastName: customize.lastName || "",
         interests: customize.interest || [],
         language: "en", // Default, could be from settings
         email: emailStr || undefined,
@@ -56,8 +50,6 @@ export async function getUserPreferences(userId: string, email: string | null | 
         tone: "balanced",
         detailLevel: "BALANCED",
         name: emailStr?.split("@")[0] || "User",
-        firstName: "",
-        lastName: "",
         interests: [],
         language: "en",
         email: emailStr || undefined,
@@ -90,8 +82,6 @@ export async function invalidateUserPreferencesCache(userId: string): Promise<vo
 export async function updateUserPreferences(
   userId: string,
   data: Partial<{
-    firstName: string;
-    lastName: string;
     name: string;
     responseTone: string;
     knowledgeDetail: string;
@@ -102,16 +92,12 @@ export async function updateUserPreferences(
     where: { userId },
     create: {
       userId,
-      firstName: data.firstName || "",
-      lastName: data.lastName || "",
       name: data.name || "",
       responseTone: data.responseTone || "balanced",
       knowledgeDetail: (data.knowledgeDetail as KnowledgeDetail) || "BALANCED",
       interest: data.interest || [],
     },
     update: {
-      ...(data.firstName !== undefined && { firstName: data.firstName }),
-      ...(data.lastName !== undefined && { lastName: data.lastName }),
       ...(data.name !== undefined && { name: data.name }),
       ...(data.responseTone !== undefined && { responseTone: data.responseTone }),
       ...(data.knowledgeDetail !== undefined && { knowledgeDetail: data.knowledgeDetail as KnowledgeDetail }),

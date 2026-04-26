@@ -5,6 +5,7 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useHaptics } from "@/hooks/use-web-haptics"
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
@@ -143,12 +144,22 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
+  onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
+  const { trigger } = useHaptics();
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    trigger("nudge");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (onClick as any)?.(e);
+  };
+
   return (
     <Button
       data-slot="alert-dialog-action"
       className={cn(className)}
+      onClick={handleClick}
       {...props}
     />
   )
@@ -158,14 +169,23 @@ function AlertDialogCancel({
   className,
   variant = "outline",
   size = "default",
+  onClick,
   ...props
 }: AlertDialogPrimitive.Close.Props &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  const { trigger } = useHaptics();
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    trigger("nudge");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (onClick as any)?.(e);
+  };
+
   return (
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       className={cn(className)}
-      render={<Button variant={variant} size={size} />}
+      render={<Button variant={variant} size={size} onClick={handleClick} />}
       {...props}
     />
   )

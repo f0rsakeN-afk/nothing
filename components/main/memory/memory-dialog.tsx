@@ -11,6 +11,7 @@ import { Plus, Search, Trash2, Calendar, Loader2, Check, X } from 'lucide-react'
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { MemoryItem } from '@/services/memory.service';
+import { useHaptics } from '@/hooks/use-web-haptics';
 
 interface MemoryDialogProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function MemoryDialog({
   onMemoriesSelect,
 }: MemoryDialogProps) {
   const t = useTranslations("memory");
+  const { trigger } = useHaptics();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newMemory, setNewMemory] = useState({ title: '', content: '' });
@@ -76,9 +78,11 @@ export function MemoryDialog({
         title: newMemory.title || newMemory.content.slice(0, 50),
         content: newMemory.content,
       });
+      trigger("success");
       setNewMemory({ title: '', content: '' });
       setIsAdding(false);
     } catch (error) {
+      trigger("error");
       const err = error as { code?: string; message?: string; upgradeTo?: string };
       if (err.code === 'MEMORY_LIMIT_REACHED' || err.code === 'MEMORY_NOT_AVAILABLE') {
         toast.error(t("memoryLimitReached"), {

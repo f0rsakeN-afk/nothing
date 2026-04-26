@@ -45,10 +45,20 @@ interface AccountData {
     name: string;
     displayName: string;
     credits: number;
+    totalCredits: number;
     limits: {
       chats: string | number;
       projects: string | number;
       messages: string | number;
+    };
+    limitsDetail: {
+      maxMemoryItems: number;
+      maxBranchesPerChat: number;
+      maxFolders: number;
+      maxAttachmentsPerChat: number;
+      maxFileSizeMb: number;
+      canExport: boolean;
+      canApiAccess: boolean;
     };
     features: string[];
   };

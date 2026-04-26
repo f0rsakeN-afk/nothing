@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { createShareLink, removeShareLink } from "@/services/chat.service";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function ShareDialog({
   isOwner = true,
 }: ShareDialogProps) {
   const t = useTranslations("share");
+  const { trigger } = useHaptics();
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isShared, setIsShared] = useState(selectedVisibilityType === "public");
@@ -96,6 +98,7 @@ export function ShareDialog({
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
+      trigger("success");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -112,6 +115,7 @@ export function ShareDialog({
       if (isShared) {
         // Make private
         await removeShareLink(chatId);
+        trigger("success");
         setIsShared(false);
         setShareToken(null);
         setHasPassword(false);
@@ -125,11 +129,13 @@ export function ShareDialog({
           24,
           passwordEnabled && password ? password : undefined
         );
+        trigger("success");
         setShareToken(result.shareToken || null);
         setHasPassword(!!passwordEnabled && !!password);
         setIsShared(true);
       }
     } catch (err) {
+      trigger("error");
       if (err instanceof Error && err.name === "AbortError") {
         setError("Request timed out");
       } else {

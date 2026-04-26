@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sileo-toast";
 import { useCookieConsent } from "@/hooks/use-cookie-consent";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 function SettingRow({
   label,
@@ -72,6 +73,7 @@ interface PrivacySectionProps {
 }
 
 export function PrivacySection({ settings: propSettings }: PrivacySectionProps) {
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = React.useState<Settings | null>(null);
   const [deleteChatsOpen, setDeleteChatsOpen] = React.useState(false);
@@ -101,8 +103,9 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
   });
 
   const onUpdate = React.useCallback((key: keyof Settings, value: boolean) => {
+    trigger("success");
     mutation.mutate({ key, value });
-  }, [mutation]);
+  }, [mutation, trigger]);
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -120,8 +123,10 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      trigger("success");
       toast.success("Data exported successfully");
     } catch {
+      trigger("error");
       toast.error("Failed to export data");
     } finally {
       setIsExporting(false);
@@ -134,10 +139,12 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
       const res = await fetch("/api/settings/delete-chats", { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
 
+      trigger("success");
       toast.success("All conversations deleted");
       setDeleteChatsOpen(false);
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     } catch {
+      trigger("error");
       toast.error("Failed to delete conversations");
     } finally {
       setIsDeleting(false);
@@ -150,11 +157,13 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
       const res = await fetch("/api/settings/deactivate", { method: "POST" });
       if (!res.ok) throw new Error("Deactivate failed");
 
+      trigger("success");
       toast.success("Account deactivated");
       setDeactivateOpen(false);
       // Redirect to home after deactivation
       window.location.href = "/";
     } catch {
+      trigger("error");
       toast.error("Failed to deactivate account");
     } finally {
       setIsDeleting(false);
@@ -171,16 +180,18 @@ export function PrivacySection({ settings: propSettings }: PrivacySectionProps) 
 
   const updateAnalyticsConsent = useCallback(
     (val: boolean) => {
+      trigger("success");
       cookieConsent.updateConsent({ ...cookieConsent.consent, analytics: val });
     },
-    [cookieConsent]
+    [cookieConsent, trigger]
   );
 
   const updatePersonalizationConsent = useCallback(
     (val: boolean) => {
+      trigger("success");
       cookieConsent.updateConsent({ ...cookieConsent.consent, personalization: val });
     },
-    [cookieConsent]
+    [cookieConsent, trigger]
   );
 
   const displaySettings = localSettings || propSettings || settings;

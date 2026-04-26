@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/sileo-toast";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 function SettingRow({
   label,
@@ -86,6 +87,7 @@ interface AiPreferencesSectionProps {
 }
 
 export function AiPreferencesSection({ settings: propSettings }: AiPreferencesSectionProps) {
+  const { trigger } = useHaptics();
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
   const [detailLevel, setDetailLevel] = useState<string>("balanced");
@@ -113,6 +115,7 @@ export function AiPreferencesSection({ settings: propSettings }: AiPreferencesSe
       return updateSetting(key, value);
     },
     onSuccess: (newData) => {
+      trigger("success");
       queryClient.setQueryData(["settings"], newData);
       setLocalSettings(newData);
     },
@@ -123,17 +126,20 @@ export function AiPreferencesSection({ settings: propSettings }: AiPreferencesSe
       return updateDetailLevel(level);
     },
     onSuccess: (newData) => {
+      trigger("success");
       queryClient.setQueryData(["customize"], newData);
       toast.success("Response style updated");
     },
     onError: () => {
+      trigger("error");
       toast.error("Failed to update response style");
     },
   });
 
   const onUpdate = useCallback((key: keyof Settings, value: boolean) => {
+    trigger("success");
     mutation.mutate({ key, value });
-  }, [mutation]);
+  }, [mutation, trigger]);
 
   const onDetailLevelChange = useCallback((value: string | null) => {
     if (value === null) return;

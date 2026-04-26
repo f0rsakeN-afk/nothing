@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface VoiceButtonProps {
   isListening: boolean;
@@ -19,6 +20,7 @@ interface VoiceButtonProps {
 }
 
 export const VoiceButton = React.memo(({ isListening, toggleListening, isSupported, audioLevel = 0, errorMessage }: VoiceButtonProps) => {
+  const { trigger } = useHaptics();
   if (!isSupported) return null;
 
   const showError = !!errorMessage;
@@ -33,6 +35,7 @@ export const VoiceButton = React.memo(({ isListening, toggleListening, isSupport
             ref={triggerProps.ref}
             onClick={(e) => {
               triggerProps.onClick?.(e);
+              trigger("success");
               toggleListening();
             }}
             onKeyDown={triggerProps.onKeyDown}

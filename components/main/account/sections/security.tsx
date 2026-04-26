@@ -20,6 +20,7 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface AccountData {
   profile: {
@@ -43,11 +44,13 @@ export const SecuritySection = React.memo(function SecuritySection({
 }: SecuritySectionProps) {
   const t = useTranslations("account");
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: deleteAccount,
     onSuccess: () => {
+      trigger("success");
       toast.success("Account deactivated. We're sorry to see you go.");
       setDeleteDialogOpen(false);
       setTimeout(() => {
@@ -55,6 +58,7 @@ export const SecuritySection = React.memo(function SecuritySection({
       }, 1000);
     },
     onError: (error: Error) => {
+      trigger("error");
       toast.error(error.message || "Failed to delete account");
     },
   });
