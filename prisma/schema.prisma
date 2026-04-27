@@ -34,6 +34,12 @@ enum SubscriptionStatus {
   UNPAID
 }
 
+enum ChatRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
 model User {
   id        String   @id @default(uuid())
   stackId   String   @unique
@@ -49,6 +55,7 @@ model User {
   feedbacks Feedback[]
   projects  Project[]
   chats     Chat[]
+  chatMembers ChatMember[]
 
   customize         Customize?
   settings          Settings?
@@ -106,6 +113,10 @@ model Chat {
   shareExpiry   DateTime?
   sharePassword String?
 
+  // Collaboration
+  members     ChatMember[]
+  invitations ChatInvitation[]
+
   @@index([projectId])
   @@index([userId])
   @@index([archivedAt])
@@ -115,6 +126,39 @@ model Chat {
   @@index([parentChatId])
   @@index([userId, archivedAt]) // For fetching user's chats filtered by archive status
   @@index([title])
+}
+
+model ChatMember {
+  id        String   @id @default(cuid())
+  chatId    String
+  userId    String
+  role      ChatRole @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+}
+
+model ChatInvitation {
+  id        String   @id @default(cuid())
+  chatId    String
+  email     String?  // null for link-based invites
+  token     String   @unique @default(cuid())
+  role      ChatRole @default(VIEWER)
+  status    String   @default("pending") // "pending" | "accepted" | "declined" | "expired"
+  invitedBy String   // user ID of inviter
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@index([email])
+  @@index([token])
 }
 
 enum SENDER {

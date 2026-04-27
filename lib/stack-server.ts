@@ -239,20 +239,29 @@ export async function createChat(
 }
 
 export async function getChatById(chatId: string, userId: string) {
-  // Try cache first
+  // Try cache first (cache only works for direct owner access)
   const cached = await redis.hgetall(KEYS.chatMeta(chatId));
   if (cached && Object.keys(cached).length > 0) {
-    return {
-      id: chatId,
-      title: cached.title,
-      createdAt: cached.createdAt,
-      projectId: cached.projectId || null,
-    };
+    // Verify ownership via cache (cache only for owner)
+    if (cached.ownerId === userId) {
+      return {
+        id: chatId,
+        title: cached.title,
+        createdAt: cached.createdAt,
+        projectId: cached.projectId || null,
+      };
+    }
   }
 
-  // Fallback to DB
+  // Fallback to DB with membership check
   const chat = await prisma.chat.findFirst({
-    where: { id: chatId, userId },
+    where: {
+      id: chatId,
+      OR: [
+        { userId }, // Direct owner
+        { members: { some: { userId } } }, // Member
+      ],
+    },
     select: {
       id: true,
       title: true,
@@ -266,7 +275,13 @@ export async function getChatById(chatId: string, userId: string) {
 
 export async function getChatByIdWithMessages(chatId: string, userId: string) {
   const chat = await prisma.chat.findFirst({
-    where: { id: chatId, userId },
+    where: {
+      id: chatId,
+      OR: [
+        { userId }, // Direct owner
+        { members: { some: { userId } } }, // Member
+      ],
+    },
     include: {
       messages: {
         orderBy: { createdAt: "asc" },
@@ -473,10 +488,16 @@ export async function addChatMessage(
   data: { role: "user" | "assistant"; content: string },
   fileIds?: string[]
 ) {
-  // Verify user owns this chat
+  // Verify user has access to this chat (owner or member via ChatMember)
   const chat = await prisma.chat.findFirst({
-    where: { id: chatId, userId },
-    select: { id: true },
+    where: {
+      id: chatId,
+      OR: [
+        { userId }, // Direct owner
+        { members: { some: { userId } } }, // Member via ChatMember
+      ],
+    },
+    select: { id: true, userId: true },
   });
 
   if (!chat) {
