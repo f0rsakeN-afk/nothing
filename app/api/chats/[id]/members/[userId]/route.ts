@@ -126,6 +126,133 @@ export async function PATCH(
 }
 
 /**
+ * POST /api/chats/:id/members/:userId/transfer - Transfer ownership to another member
+ *
+ * Security:
+ * - Only OWNER can transfer ownership
+ * - Target must be an existing member (EDITOR or VIEWER)
+ * - Uses transaction for atomic update
+ * - Old owner becomes EDITOR
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; userId: string }> }
+) {
+  try {
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
+    const user = await validateAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id: chatId, userId: targetUserId } = await params;
+
+    // Must be OWNER to transfer ownership
+    await requireChatAccess(user.id, chatId, "OWNER");
+
+    // Cannot transfer to yourself
+    if (targetUserId === user.id) {
+      return NextResponse.json({ error: "Cannot transfer ownership to yourself" }, { status: 400 });
+    }
+
+    // Use transaction for atomic update
+    const updatedMember = await prisma.$transaction(async (tx) => {
+      // Verify target member exists
+      const targetMember = await tx.chatMember.findUnique({
+        where: { chatId_userId: { chatId, userId: targetUserId } },
+      });
+
+      if (!targetMember) {
+        throw new Error("MEMBER_NOT_FOUND");
+      }
+
+      // Verify current user is the owner
+      const chat = await tx.chat.findUnique({
+        where: { id: chatId },
+        select: { userId: true },
+      });
+
+      if (chat?.userId !== user.id) {
+        throw new Error("NOT_OWNER");
+      }
+
+      // Update target member to OWNER
+      const updated = await tx.chatMember.update({
+        where: { chatId_userId: { chatId, userId: targetUserId } },
+        data: { role: "OWNER" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      // Update chat's userId to new owner
+      await tx.chat.update({
+        where: { id: chatId },
+        data: { userId: targetUserId },
+      });
+
+      // Add old owner as a member with EDITOR role if not already there
+      const existingOldOwnerMember = await tx.chatMember.findUnique({
+        where: { chatId_userId: { chatId, userId: user.id } },
+      });
+
+      if (!existingOldOwnerMember) {
+        await tx.chatMember.create({
+          data: {
+            chatId,
+            userId: user.id,
+            role: "EDITOR",
+          },
+        });
+      }
+
+      return updated;
+    }, {
+      maxWait: 5000,
+      timeout: 10000,
+    });
+
+    // Invalidate caches
+    await Promise.all([
+      invalidateMemberCache(chatId),
+      invalidateRoleCache(chatId, targetUserId),
+      invalidateRoleCache(chatId, user.id),
+    ]);
+
+    // Publish role changed events
+    await publishMemberRoleChanged(chatId, targetUserId, "OWNER");
+
+    return NextResponse.json({ success: true, newOwner: updatedMember });
+  } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
+    if (error instanceof Error) {
+      if (error.message === "MEMBER_NOT_FOUND") {
+        return NextResponse.json({ error: "Member not found" }, { status: 404 });
+      }
+      if (error.message === "NOT_OWNER") {
+        return NextResponse.json({ error: "Only the current owner can transfer ownership" }, { status: 403 });
+      }
+      if (error.message.startsWith("Access denied")) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+    }
+    console.error("Transfer ownership error:", error);
+    return NextResponse.json({ error: "Failed to transfer ownership" }, { status: 500 });
+  }
+}
+
+/**
  * DELETE /api/chats/:id/members/:userId - Remove a member from a chat
  *
  * Security:

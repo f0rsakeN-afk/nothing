@@ -20,6 +20,7 @@ import {
 interface UseSidebarChatsResult {
   chats: Chat[];
   archivedChats: Chat[];
+  sharedChats: Chat[];
   isLoading: boolean;
   isError: boolean;
   refetch: () => void;
@@ -45,7 +46,7 @@ export function useSidebarChats(): UseSidebarChatsResult {
     refetch,
   } = useQuery({
     queryKey: ["chats"],
-    queryFn: () => getChats(50),
+    queryFn: () => getChats(50, true),
     staleTime: 30 * 1000,
     retry: false,
   });
@@ -359,7 +360,8 @@ export function useSidebarChats(): UseSidebarChatsResult {
   );
 
   return {
-    chats: data?.chats || [],
+    chats: (data?.chats || []).filter(c => !c.isShared),
+    sharedChats: (data?.chats || []).filter(c => c.isShared),
     archivedChats: archivedData?.chats || [],
     isLoading,
     isError,

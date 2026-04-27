@@ -385,6 +385,7 @@ function ChatPageInner() {
   const {
     messages,
     isLoading,
+    isStreaming,
     isError,
     refetch,
     sendUserMessage,
@@ -502,6 +503,14 @@ function ChatPageInner() {
                 window.dispatchEvent(new CustomEvent("open-pricing-dialog")),
             },
           });
+        } else if (error.code === "AI_BUSY") {
+          toast.info(error.message || "AI is busy", {
+            description: "Please wait for the current response to complete before sending another message.",
+          });
+        } else {
+          toast.error("Failed to send message", {
+            description: error.message,
+          });
         }
       }
     },
@@ -544,6 +553,7 @@ function ChatPageInner() {
               suggestionsEnabled={false}
               currentModel={currentModel}
               onModelChange={(model) => setCurrentModel(model)}
+              isLoading={isStreaming}
             />
           </div>
         </div>
@@ -569,6 +579,10 @@ function ChatPageInner() {
               onInvite={() => {
                 setMembersDialogOpen(false);
                 setInviteDialogOpen(true);
+              }}
+              onLeaveChat={() => {
+                // Redirect to home after leaving
+                window.location.href = "/home";
               }}
             />
             <InviteDialog

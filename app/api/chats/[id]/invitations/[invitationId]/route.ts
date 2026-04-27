@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import redis from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { requireChatAccess } from "@/lib/chat-access";
 import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -48,6 +49,13 @@ export async function DELETE(
       where: { id: invitationId },
       data: { status: "expired" },
     });
+
+    // Invalidate invitations cache
+    try {
+      await redis.del(`chat:${chatId}:invitations`);
+    } catch {
+      // Redis unavailable
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

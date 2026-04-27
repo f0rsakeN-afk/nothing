@@ -3,6 +3,8 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { useChatMembers } from "@/hooks/use-chat-members";
 import { useChatPresence } from "@/hooks/use-chat-presence";
+import { leaveChat, transferOwnership, getChatInvitations, cancelInvitation } from "@/services/collaboration.service";
+import { toast } from "@/components/ui/sileo-toast";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -41,6 +43,11 @@ import {
   Trash2,
   Loader2,
   ShieldCheck,
+  LogOut,
+  UserCog,
+  Mail,
+  X,
+  Clock,
 } from "lucide-react";
 import type { ChatMemberWithUser } from "@/services/collaboration.service";
 
@@ -50,6 +57,7 @@ interface ChatMembersDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onInvite: () => void;
+  onLeaveChat?: () => void;
 }
 
 const ROLE_CONFIG = {
@@ -78,10 +86,13 @@ interface MemberRowProps {
   isActive: boolean;
   isCurrentUser: boolean;
   canManage: boolean;
+  isOwner: boolean;
   isUpdating: boolean;
   isRemoving: boolean;
+  isTransferring: boolean;
   onRoleChange: (role: "EDITOR" | "VIEWER") => void;
   onRemove: () => void;
+  onTransferOwnership: () => void;
 }
 
 const MemberRow = React.memo(function MemberRow({
@@ -89,10 +100,13 @@ const MemberRow = React.memo(function MemberRow({
   isActive,
   isCurrentUser,
   canManage,
+  isOwner,
   isUpdating,
   isRemoving,
+  isTransferring,
   onRoleChange,
   onRemove,
+  onTransferOwnership,
 }: MemberRowProps) {
   const config = ROLE_CONFIG[member.role];
   const RoleIcon = config.icon;
@@ -152,6 +166,17 @@ const MemberRow = React.memo(function MemberRow({
                 Make Viewer
               </DropdownMenuItem>
             )}
+            {/* Transfer ownership option - only show for owner */}
+            {isOwner && (
+              <DropdownMenuItem onClick={onTransferOwnership} disabled={isTransferring} className="gap-2">
+                {isTransferring ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserCog className="h-4 w-4 text-amber-500" />
+                )}
+                Transfer Ownership
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onRemove} disabled={isRemoving} className="gap-2 text-destructive focus:text-destructive">
               <Trash2 className="h-4 w-4" />
@@ -202,18 +227,85 @@ export function ChatMembersDialog({
   isOpen,
   onClose,
   onInvite,
+  onLeaveChat,
 }: ChatMembersDialogProps) {
   const { members, isLoading, removeMember, updateRole, isRemoving, isUpdating } =
     useChatMembers(chatId);
   const { activeUsers } = useChatPresence(chatId);
 
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [transferringTo, setTransferringTo] = useState<string | null>(null);
+  const [showInvitations, setShowInvitations] = useState(false);
+  const [invitations, setInvitations] = useState<unknown[]>([]);
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const activeUserIds = useMemo(() => new Set(activeUsers.map((u) => u.userId)), [activeUsers]);
-  const isCurrentUserOwner = useMemo(
-    () => members.some((m) => m.userId === currentUserId && m.role === "OWNER"),
+  const currentMember = useMemo(
+    () => members.find((m) => m.userId === currentUserId),
     [members, currentUserId]
   );
+  const isCurrentUserOwner = currentMember?.role === "OWNER";
+  const isCurrentUserMember = !!currentMember;
+
+  const loadInvitations = useCallback(async () => {
+    if (!chatId) return;
+    setIsLoadingInvitations(true);
+    try {
+      const data = await getChatInvitations(chatId);
+      setInvitations(data);
+      setShowInvitations(true);
+    } catch (error) {
+      toast.error("Failed to load invitations");
+    } finally {
+      setIsLoadingInvitations(false);
+    }
+  }, [chatId]);
+
+  const handleCancelInvitation = useCallback(async (invitationId: string) => {
+    try {
+      setCancellingId(invitationId);
+      await cancelInvitation(chatId, invitationId);
+      setInvitations((prev) => prev.filter((inv: any) => inv.id !== invitationId));
+      toast.success("Invitation cancelled");
+    } catch (error) {
+      toast.error("Failed to cancel invitation");
+    } finally {
+      setCancellingId(null);
+    }
+  }, [chatId]);
+
+  const handleTransferOwnership = useCallback(async (userId: string) => {
+    try {
+      setTransferringTo(userId);
+      await transferOwnership(chatId, userId);
+      toast.success("Ownership transferred", {
+        description: "The new owner can now manage this chat.",
+      });
+    } catch (error) {
+      toast.error("Failed to transfer ownership", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setTransferringTo(null);
+    }
+  }, [chatId]);
+
+  const handleLeaveChat = useCallback(async () => {
+    try {
+      setIsLeaving(true);
+      await leaveChat(chatId);
+      onLeaveChat?.();
+      onClose();
+    } catch (error) {
+      toast.error("Failed to leave chat", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsLeaving(false);
+    }
+  }, [chatId, onLeaveChat, onClose]);
 
   const handleRoleChange = useCallback(
     (userId: string, newRole: "EDITOR" | "VIEWER") => {
@@ -251,14 +343,17 @@ export function ChatMembersDialog({
           isActive={isActive}
           isCurrentUser={isCurrentUser}
           canManage={canManage}
+          isOwner={isCurrentUserOwner}
           isUpdating={isUpdating}
           isRemoving={isRemoving}
+          isTransferring={transferringTo === member.userId}
           onRoleChange={(role) => handleRoleChange(member.userId, role)}
           onRemove={() => handleRemoveRequest(member.userId)}
+          onTransferOwnership={() => handleTransferOwnership(member.userId)}
         />
       );
     });
-  }, [members, activeUserIds, currentUserId, isCurrentUserOwner, isUpdating, isRemoving, handleRoleChange, handleRemoveRequest]);
+  }, [members, activeUserIds, currentUserId, isCurrentUserOwner, isUpdating, isRemoving, transferringTo, handleRoleChange, handleRemoveRequest, handleTransferOwnership]);
 
   return (
     <>
@@ -271,23 +366,110 @@ export function ChatMembersDialog({
                   <Users className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base">Chat Members</DialogTitle>
+                  <DialogTitle className="text-base">
+                    {showInvitations ? "Pending Invitations" : "Chat Members"}
+                  </DialogTitle>
                   <DialogDescription className="text-xs mt-0.5">
-                    {members.length} member{members.length !== 1 ? "s" : ""}
+                    {showInvitations
+                      ? `${invitations.length} pending invitation${invitations.length !== 1 ? "s" : ""}`
+                      : `${members.length} member${members.length !== 1 ? "s" : ""}`}
                   </DialogDescription>
                 </div>
               </div>
-              {isCurrentUserOwner && (
-                <Button size="sm" onClick={onInvite} className="gap-2">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Invite
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {showInvitations ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInvitations(false)}
+                    className="gap-2"
+                  >
+                    Back
+                  </Button>
+                ) : (
+                  <>
+                    {isCurrentUserOwner && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={loadInvitations}
+                        disabled={isLoadingInvitations}
+                        className="gap-2"
+                      >
+                        {isLoadingInvitations ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Mail className="h-3.5 w-3.5" />
+                        )}
+                        Invitations
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={onInvite} className="gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Invite
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden">
-            {isLoading ? (
+            {showInvitations ? (
+              <div className="px-6 py-4">
+                {invitations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Mail className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No pending invitations</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {invitations.map((invitation: any) => (
+                      <div
+                        key={invitation.id}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Mail className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {invitation.email || "Link invitation"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={cn(
+                              "text-xs px-1.5 py-0.5 rounded",
+                              invitation.role === "EDITOR"
+                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                : "bg-muted text-muted-foreground"
+                            )}>
+                              {invitation.role === "EDITOR" ? "Editor" : "Viewer"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                          disabled={cancellingId === invitation.id}
+                          className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          {cancellingId === invitation.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : isLoading ? (
               <div className="px-6 py-4 space-y-2">
                 <MemoizedMemberSkeleton />
                 <MemoizedMemberSkeleton />
@@ -303,6 +485,30 @@ export function ChatMembersDialog({
               </ScrollArea>
             )}
           </div>
+
+          {/* Footer with Leave Chat option */}
+          {!isCurrentUserOwner && isCurrentUserMember && (
+            <div className="px-6 py-4 border-t">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleLeaveChat}
+                disabled={isLeaving}
+              >
+                {isLeaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Leaving...
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Leave Chat
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

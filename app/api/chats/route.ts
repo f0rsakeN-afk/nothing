@@ -23,12 +23,13 @@ export async function GET(request: NextRequest) {
     const rawCursor = searchParams.get("cursor");
     const archived = searchParams.get("archived") === "true";
     const projectId = searchParams.get("projectId");
+    const includeShared = searchParams.get("includeShared") === "true";
 
     // Manual parse to avoid schema caching issues
     const limit = rawLimit ? parseInt(rawLimit, 10) : 20;
     const cursor = rawCursor && rawCursor !== "null" ? rawCursor : undefined;
 
-    const result = await getUserChats(user.id, Math.min(Math.max(limit, 1), 100), cursor, { archived, projectId: projectId || undefined });
+    const result = await getUserChats(user.id, Math.min(Math.max(limit, 1), 100), cursor, { archived, projectId: projectId || undefined, includeShared });
 
     const response = NextResponse.json(result);
     response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");

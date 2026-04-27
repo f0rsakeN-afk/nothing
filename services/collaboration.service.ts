@@ -63,6 +63,26 @@ export async function removeChatMember(
   }
 }
 
+export async function leaveChat(chatId: string): Promise<void> {
+  const res = await fetch(`/api/chats/${chatId}/leave`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: "Failed to leave chat" }));
+    throw new Error(error.error || "Failed to leave chat");
+  }
+}
+
+export async function transferOwnership(chatId: string, userId: string): Promise<void> {
+  const res = await fetch(`/api/chats/${chatId}/members/${userId}/transfer`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: "Failed to transfer ownership" }));
+    throw new Error(error.error || "Failed to transfer ownership");
+  }
+}
+
 // Invitations API
 export async function createInvitation(
   chatId: string,
@@ -159,6 +179,8 @@ export interface ChatMemberWithUser {
   userId: string;
   role: ChatRole;
   createdAt: Date;
+  lastActive?: string | null;
+  isActive?: boolean;
   user: {
     id: string;
     email: string;

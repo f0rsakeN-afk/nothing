@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import redis, { KEYS } from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { requireChatAccess, invalidateMemberCache, generateInviteToken } from "@/lib/chat-access";
 import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+
+const INVITATIONS_CACHE_TTL = 30; // 30 seconds
 
 /**
  * POST /api/chats/:id/invitations - Create an invitation
@@ -100,6 +103,13 @@ export async function POST(
     // Invalidate member cache
     await invalidateMemberCache(chatId);
 
+    // Invalidate invitations cache for this chat
+    try {
+      await redis.del(`chat:${chatId}:invitations`);
+    } catch {
+      // Redis unavailable
+    }
+
     const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${invitation.token}`;
 
     return NextResponse.json({
@@ -146,6 +156,17 @@ export async function GET(
     // Must be owner to view all invitations
     await requireChatAccess(user.id, chatId, "OWNER");
 
+    // Try cache first
+    const cacheKey = `chat:${chatId}:invitations`;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return NextResponse.json({ invitations: JSON.parse(cached) });
+      }
+    } catch {
+      // Redis unavailable, fall through to DB
+    }
+
     const invitations = await prisma.chatInvitation.findMany({
       where: {
         chatId,
@@ -154,6 +175,13 @@ export async function GET(
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // Cache the result
+    try {
+      await redis.setex(cacheKey, INVITATIONS_CACHE_TTL, JSON.stringify(invitations));
+    } catch {
+      // Redis unavailable
+    }
 
     return NextResponse.json({ invitations });
   } catch (error) {

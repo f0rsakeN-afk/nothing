@@ -21,15 +21,15 @@ export async function getUserChats(
   userId: string,
   limit = 20,
   cursor?: string,
-  options: { archived?: boolean; projectId?: string } = {}
+  options: { archived?: boolean; projectId?: string; includeShared?: boolean } = {}
 ) {
-  const { archived = false, projectId } = options;
+  const { archived = false, projectId, includeShared = false } = options;
   const cacheKey = archived
     ? KEYS.userChatsArchived(userId)
     : KEYS.userChats(userId);
 
   // Try cache first (only for non-paginated queries - cursor means pagination)
-  if (!cursor) {
+  if (!cursor && !includeShared) {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
@@ -87,13 +87,75 @@ export async function getUserChats(
     nextCursor: hasMore ? chats[chats.length - 1].id : null,
   };
 
-  // Cache the result (only for non-paginated queries)
-  if (!cursor) {
+  // Cache the result (only for non-paginated queries and not including shared)
+  if (!cursor && !includeShared) {
     try {
       await redis.setex(cacheKey, TTL.userChats, JSON.stringify(result));
     } catch {
       // Cache error, continue without caching
     }
+  }
+
+  // If includeShared, also fetch chats where user is a member but not owner
+  if (includeShared) {
+    const sharedChats = await prisma.chat.findMany({
+      where: {
+        archivedAt: null,
+        AND: [
+          { userId: { not: userId } },
+          { members: { some: { userId } } },
+        ],
+      },
+      orderBy: { updatedAt: "desc" },
+      take: limit + 1,
+      include: {
+        user: {
+          select: { id: true, email: true },
+        },
+        messages: {
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          select: { content: true },
+        },
+        _count: {
+          select: { messages: true },
+        },
+      },
+    });
+
+    const sharedHasMore = sharedChats.length > limit;
+    if (sharedHasMore) sharedChats.pop();
+
+    const sharedResult = {
+      chats: sharedChats.map((chat) => ({
+        id: chat.id,
+        title: chat.title,
+        createdAt: chat.createdAt.toISOString(),
+        updatedAt: chat.updatedAt.toISOString(),
+        projectId: chat.projectId,
+        messageCount: chat._count.messages,
+        firstMessagePreview: chat.messages[0]?.content.slice(0, 100) || null,
+        parentChatId: chat.parentChatId,
+        archivedAt: chat.archivedAt?.toISOString() ?? null,
+        pinnedAt: chat.pinnedAt?.toISOString() ?? null,
+        owner: chat.user ? {
+          id: chat.user.id,
+          email: chat.user.email,
+        } : null,
+        isShared: true,
+      })),
+      nextCursor: sharedHasMore ? sharedChats[sharedChats.length - 1].id : null,
+    };
+
+    // Merge own chats with shared chats and sort by updatedAt
+    const allChats = [...result.chats, ...sharedResult.chats].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+
+    return {
+      chats: allChats,
+      nextCursor: sharedHasMore ? sharedResult.nextCursor : result.nextCursor,
+    };
   }
 
   return result;
@@ -229,6 +291,14 @@ export async function createChat(
 
     // Trigger async title generation (fire and forget)
     generateTitle(chat.id).catch(console.error);
+  }
+
+  // Invalidate user's chat list cache (new chat should appear immediately)
+  try {
+    await redis.del(KEYS.userChats(userId));
+    await redis.del(KEYS.userChatsArchived(userId));
+  } catch {
+    // Redis error, ignore
   }
 
   // Return chat with trigger flag

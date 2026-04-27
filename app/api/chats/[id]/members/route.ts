@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import redis, { KEYS } from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import {
   requireChatAccess,
@@ -8,6 +9,8 @@ import {
 } from "@/lib/chat-access";
 import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { publishMemberAdded } from "@/services/chat-pubsub.service";
+
+const PRESENCE_TTL = 60; // 60 seconds - must match presence route
 
 /**
  * GET /api/chats/:id/members - List all members of a chat
@@ -47,8 +50,26 @@ export async function GET(
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
     });
 
-    const hasMore = members.length > limit;
-    const results = hasMore ? members.slice(0, -1) : members;
+    // Get presence data from Redis
+    const presenceKey = KEYS.chatPresence(chatId);
+    const presenceData = await redis.hgetall(presenceKey);
+    const now = Date.now();
+
+    // Add lastActive to each member
+    const membersWithPresence = members.map((member) => {
+      const lastSeenStr = presenceData[member.userId];
+      const lastSeen = lastSeenStr ? parseInt(lastSeenStr, 10) : null;
+      const isActive = lastSeen && (now - lastSeen < PRESENCE_TTL * 1000);
+
+      return {
+        ...member,
+        lastActive: lastSeen ? new Date(lastSeen).toISOString() : null,
+        isActive: isActive || false,
+      };
+    });
+
+    const hasMore = membersWithPresence.length > limit;
+    const results = hasMore ? membersWithPresence.slice(0, -1) : membersWithPresence;
     const nextCursor = hasMore ? results[results.length - 1]?.id : null;
 
     return NextResponse.json({

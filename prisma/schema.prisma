@@ -50,11 +50,11 @@ model User {
   seenOnboarding Boolean  @default(false)
   isActive       Boolean  @default(true)
 
-  role      Role       @default(USER)
-  reports   Report[]
-  feedbacks Feedback[]
-  projects  Project[]
-  chats     Chat[]
+  role        Role         @default(USER)
+  reports     Report[]
+  feedbacks   Feedback[]
+  projects    Project[]
+  chats       Chat[]
   chatMembers ChatMember[]
 
   customize         Customize?
@@ -146,11 +146,11 @@ model ChatMember {
 model ChatInvitation {
   id        String   @id @default(cuid())
   chatId    String
-  email     String?  // null for link-based invites
+  email     String? // null for link-based invites
   token     String   @unique @default(cuid())
   role      ChatRole @default(VIEWER)
   status    String   @default("pending") // "pending" | "accepted" | "declined" | "expired"
-  invitedBy String   // user ID of inviter
+  invitedBy String // user ID of inviter
   expiresAt DateTime
   createdAt DateTime @default(now())
 
