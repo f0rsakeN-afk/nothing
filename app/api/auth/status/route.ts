@@ -18,11 +18,12 @@ export async function GET(request: NextRequest) {
 
     const dbUser = await prisma.user.findUnique({
       where: { stackId: user.id },
-      select: { seenOnboarding: true, email: true, isActive: true },
+      select: { id: true, seenOnboarding: true, email: true, isActive: true },
     });
 
     return NextResponse.json({
       authenticated: true,
+      userId: dbUser?.id,
       email: user.primaryEmail,
       seenOnboarding: dbUser?.seenOnboarding ?? false,
     });

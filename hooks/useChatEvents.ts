@@ -9,7 +9,10 @@ type SidebarEvent =
   | { type: "chat:created"; chat: { id: string; title: string; createdAt: string; updatedAt: string } }
   | { type: "chat:renamed"; chatId: string; title: string }
   | { type: "chat:deleted"; chatId: string }
-  | { type: "chat:archived"; chatId: string; title: string };
+  | { type: "chat:archived"; chatId: string; title: string }
+  | { type: "chat:member:added"; chatId: string; memberId: string }
+  | { type: "chat:member:removed"; chatId: string; memberId: string }
+  | { type: "chat:member:role_changed"; chatId: string; memberId: string; newRole: string };
 
 /**
  * High-performance SSE subscription hook
@@ -77,6 +80,15 @@ export function useChatEvents() {
                 };
               }
             );
+            break;
+
+          case "chat:member:added":
+          case "chat:member:removed":
+          case "chat:member:role_changed":
+            // Invalidate member list for real-time collaboration updates
+            queryClient.invalidateQueries({
+              queryKey: ["chat", data.chatId, "members"],
+            });
             break;
         }
       } catch {

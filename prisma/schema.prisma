@@ -34,6 +34,12 @@ enum SubscriptionStatus {
   UNPAID
 }
 
+enum ChatRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
 model User {
   id        String   @id @default(uuid())
   stackId   String   @unique
@@ -44,11 +50,12 @@ model User {
   seenOnboarding Boolean  @default(false)
   isActive       Boolean  @default(true)
 
-  role      Role       @default(USER)
-  reports   Report[]
-  feedbacks Feedback[]
-  projects  Project[]
-  chats     Chat[]
+  role        Role         @default(USER)
+  reports     Report[]
+  feedbacks   Feedback[]
+  projects    Project[]
+  chats       Chat[]
+  chatMembers ChatMember[]
 
   customize         Customize?
   settings          Settings?
@@ -106,6 +113,10 @@ model Chat {
   shareExpiry   DateTime?
   sharePassword String?
 
+  // Collaboration
+  members     ChatMember[]
+  invitations ChatInvitation[]
+
   @@index([projectId])
   @@index([userId])
   @@index([archivedAt])
@@ -115,6 +126,41 @@ model Chat {
   @@index([parentChatId])
   @@index([userId, archivedAt]) // For fetching user's chats filtered by archive status
   @@index([title])
+}
+
+model ChatMember {
+  id        String   @id @default(cuid())
+  chatId    String
+  userId    String
+  role      ChatRole @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+  @@index([userId, chatId]) // For queries filtering by userId only
+}
+
+model ChatInvitation {
+  id        String   @id @default(cuid())
+  chatId    String
+  email     String? // null for link-based invites
+  token     String   @unique @default(cuid())
+  role      ChatRole @default(VIEWER)
+  status    String   @default("pending") // "pending" | "accepted" | "declined" | "expired"
+  invitedBy String // user ID of inviter
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@index([email])
+  @@index([token])
+  @@index([chatId, status, expiresAt]) // For fetching pending invitations by chat
 }
 
 enum SENDER {
@@ -437,14 +483,15 @@ model OnboardingData {
 }
 
 model Notification {
-  id           String    @id @default(cuid())
-  userId       String
-  title        String
-  description  String
-  read         Boolean   @default(false)
-  archived     Boolean   @default(false)
-  snoozedUntil DateTime?
-  accent       String    @default("bg-blue-400") // CSS color class
+  id              String    @id @default(cuid())
+  userId          String
+  title           String
+  description     String
+  read            Boolean   @default(false)
+  archived        Boolean   @default(false)
+  snoozedUntil    DateTime?
+  accent          String    @default("bg-blue-400") // CSS color class
+  invitationToken String? // Token for invitation-type notifications
 
   createdAt DateTime @default(now())
 

@@ -79,6 +79,7 @@ interface ChatHistoryItemProps {
   onPin?: (id: string) => Promise<void>;
   onUnpin?: (id: string) => Promise<void>;
   isArchived?: boolean;
+  isShared?: boolean;
 }
 
 // =========================================
@@ -426,6 +427,7 @@ export function ChatHistoryItem({
   onPin,
   onUnpin,
   isArchived = false,
+  isShared = false,
 }: ChatHistoryItemProps) {
   const t = useTranslations();
   const { prefetchOnHover } = useChatPrefetch();
@@ -485,6 +487,12 @@ export function ChatHistoryItem({
                 )}
                 {item.title}
               </span>
+              {isShared && (
+                <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sidebar-accent/60 text-sidebar-foreground/60">
+                  <Globe className="h-2.5 w-2.5" />
+                  Shared
+                </span>
+              )}
             </Link>
           }
           className="h-8 w-full text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"

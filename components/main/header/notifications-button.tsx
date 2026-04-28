@@ -36,7 +36,7 @@ import { useHaptics } from "@/hooks/use-web-haptics";
 
 type FilterType = "all" | "unread" | "snoozed" | "archived";
 type ViewType = "inbox" | "settings";
-type NotificationAction = "read" | "unread" | "archive" | "unarchive" | "snooze" | "unsnooze";
+type NotificationAction = "read" | "unread" | "archive" | "unarchive" | "snooze" | "unsnooze" | "accept" | "decline";
 
 type Notification = {
   id: string;
@@ -47,6 +47,7 @@ type Notification = {
   archived: boolean;
   snoozed: boolean;
   accent: string;
+  invitationToken?: string;
 };
 
 type PrefCategory = {
@@ -119,6 +120,27 @@ async function bulkAction(action: "read-all" | "archive-read" | "archive-all" | 
   if (!res.ok) throw new Error(`Failed to ${action}`);
 }
 
+async function acceptInvite(token: string): Promise<{ success: boolean; chatId?: string }> {
+  const res = await fetch(`/api/invites/${token}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Failed to accept" }));
+    throw new Error(data.error || "Failed to accept invitation");
+  }
+  return res.json();
+}
+
+async function declineInvite(token: string): Promise<void> {
+  const res = await fetch(`/api/invites/${token}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Failed to decline" }));
+    throw new Error(data.error || "Failed to decline invitation");
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -145,12 +167,22 @@ const FILTER_OPTIONS: { value: FilterType; label: string; icon: React.ElementTyp
 interface NotificationItemProps {
   notification: Notification;
   onMenuToggle: (id: string) => void;
+  onAccept?: (token: string) => void;
+  onDecline?: (token: string) => void;
+  isAccepting?: boolean;
+  isDeclining?: boolean;
 }
 
 const NotificationItem = memo(function NotificationItem({
   notification,
   onMenuToggle,
+  onAccept,
+  onDecline,
+  isAccepting,
+  isDeclining,
 }: NotificationItemProps) {
+  const isInvitation = notification.title === "Chat Invitation";
+
   return (
     <div
       className={cn(
@@ -174,19 +206,40 @@ const NotificationItem = memo(function NotificationItem({
         <p className="mt-1 text-[10px] text-muted-foreground/50">
           {notification.time}
         </p>
+        {/* Accept/Decline buttons for invitations */}
+        {isInvitation && !notification.read && (
+          <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => onAccept?.(notification.invitationToken || "")}
+              disabled={isAccepting || isDeclining || !notification.invitationToken}
+              className="flex-1 h-7 rounded-md bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {isAccepting ? "Accepting..." : "Accept"}
+            </button>
+            <button
+              onClick={() => onDecline?.(notification.invitationToken || "")}
+              disabled={isAccepting || isDeclining || !notification.invitationToken}
+              className="flex-1 h-7 rounded-md border border-border text-[11px] font-medium hover:bg-accent/60 transition-colors disabled:opacity-50"
+            >
+              {isDeclining ? "Declining..." : "Decline"}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Context menu trigger */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onMenuToggle(notification.id);
-        }}
-        className="notification-menu-trigger absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-        aria-label="Notification actions"
-      >
-        <MoreHorizontal className="h-4 w-4 text-muted-foreground/60" />
-      </button>
+      {/* Context menu trigger - only show for non-invitation or read invitations */}
+      {!isInvitation && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onMenuToggle(notification.id);
+          }}
+          className="notification-menu-trigger absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="Notification actions"
+        >
+          <MoreHorizontal className="h-4 w-4 text-muted-foreground/60" />
+        </button>
+      )}
     </div>
   );
 }, (prev, next) => {
@@ -197,7 +250,9 @@ const NotificationItem = memo(function NotificationItem({
     prev.notification.archived === next.notification.archived &&
     prev.notification.snoozed === next.notification.snoozed &&
     prev.notification.title === next.notification.title &&
-    prev.notification.description === next.notification.description
+    prev.notification.description === next.notification.description &&
+    prev.isAccepting === next.isAccepting &&
+    prev.isDeclining === next.isDeclining
   );
 });
 
@@ -343,6 +398,8 @@ export const NotificationsButton = memo(function NotificationsButton() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [localPrefs, setLocalPrefs] = useState<Partial<Record<string, boolean>>>({});
+  const [acceptingInvite, setAcceptingInvite] = useState<string | null>(null);
+  const [decliningInvite, setDecliningInvite] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["notifications", filter],
@@ -403,6 +460,56 @@ export const NotificationsButton = memo(function NotificationsButton() {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
+
+  // Accept invitation mutation
+  const acceptInviteMutation = useMutation({
+    mutationFn: acceptInvite,
+    onSuccess: (data) => {
+      trigger("success");
+      toast.success("Invitation accepted!", {
+        description: "You've joined the chat.",
+      });
+      if (data.chatId) {
+        window.location.href = `/chat/${data.chatId}`;
+      }
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    },
+    onError: (error: Error) => {
+      trigger("error");
+      toast.error("Failed to accept", { description: error.message });
+    },
+    onSettled: () => {
+      setAcceptingInvite(null);
+    },
+  });
+
+  // Decline invitation mutation
+  const declineInviteMutation = useMutation({
+    mutationFn: declineInvite,
+    onSuccess: () => {
+      trigger("success");
+      toast.success("Invitation declined");
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (error: Error) => {
+      trigger("error");
+      toast.error("Failed to decline", { description: error.message });
+    },
+    onSettled: () => {
+      setDecliningInvite(null);
+    },
+  });
+
+  const handleAcceptInvite = useCallback((token: string) => {
+    setAcceptingInvite(token);
+    acceptInviteMutation.mutate(token);
+  }, [acceptInviteMutation]);
+
+  const handleDeclineInvite = useCallback((token: string) => {
+    setDecliningInvite(token);
+    declineInviteMutation.mutate(token);
+  }, [declineInviteMutation]);
 
   const notifications = data?.notifications || [];
   const unreadCount = data?.unreadCount ?? 0;
@@ -619,7 +726,14 @@ export const NotificationsButton = memo(function NotificationsButton() {
                 <div className="flex flex-col gap-0.5 p-1.5">
                   {filteredNotifications.map((n) => (
                     <div key={n.id} className="relative">
-                      <NotificationItem notification={n} onMenuToggle={setActiveMenuId} />
+                      <NotificationItem
+                        notification={n}
+                        onMenuToggle={setActiveMenuId}
+                        onAccept={handleAcceptInvite}
+                        onDecline={handleDeclineInvite}
+                        isAccepting={acceptingInvite === n.invitationToken}
+                        isDeclining={decliningInvite === n.invitationToken}
+                      />
                       {activeMenuId === n.id && activeMenuNotification && (
                         <NotificationMenu
                           notificationId={n.id}

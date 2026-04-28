@@ -34,6 +34,8 @@ export interface Chat {
   archivedAt?: string | null;
   pinnedAt?: string | null;
   visibility?: "public" | "private";
+  owner?: { id: string; email: string | null };
+  isShared?: boolean;
 }
 
 export interface ChatListResponse {
@@ -73,8 +75,11 @@ export interface SearchResponse {
 }
 
 // Chat CRUD
-export async function getChats(limit = 50): Promise<ChatListResponse> {
-  const res = await fetch(`/api/chats?limit=${limit}`);
+export async function getChats(limit = 50, includeShared = false): Promise<ChatListResponse> {
+  const url = new URL("/api/chats", window.location.origin);
+  url.searchParams.set("limit", String(limit));
+  if (includeShared) url.searchParams.set("includeShared", "true");
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Failed to fetch chats");
   return res.json();
 }
@@ -324,15 +329,24 @@ export async function streamChat(
 
       if (!res.ok) {
         const contentType = res.headers.get("content-type");
-        let errorData: { error: string; message?: string; required?: number; current?: number; upgradeTo?: string } = { error: "Request failed" };
+        let errorData: { error: string; message?: string; code?: string; required?: number; current?: number; upgradeTo?: string } = { error: "Request failed" };
         if (contentType?.includes("application/json")) {
           try {
             errorData = await res.json();
           } catch { /* ignore parse failure */ }
         }
+
+        // Check for AI_BUSY error - another stream is active
+        if (errorData.code === "AI_BUSY") {
+          const err = new Error(errorData.message || "AI is currently processing another message") as Error & { code?: string; message?: string };
+          err.code = "AI_BUSY";
+          err.message = errorData.message || "Another message is being processed. Please wait for it to complete.";
+          throw err;
+        }
+
         const err = new Error(errorData.error || `Request failed with status ${res.status}`) as Error & { code?: string; message?: string; required?: number; current?: number; upgradeTo?: string };
-        err.code = "CREDIT_ERROR";
-        err.message = errorData.message || `Insufficient credits. Required: ${errorData.required}, Current: ${errorData.current}`;
+        err.code = errorData.code || (errorData.required !== undefined ? "CREDIT_ERROR" : "UNKNOWN_ERROR");
+        err.message = errorData.message || `Request failed with status ${res.status}`;
         err.required = errorData.required;
         err.current = errorData.current;
         err.upgradeTo = "Pro";

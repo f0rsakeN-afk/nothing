@@ -25,6 +25,7 @@ export const ChatInput = React.memo(function ChatInput({
   onSubmit,
   className,
   isLoading = false,
+  disabled = false,
   onOpenMemory,
   onMemoriesSelect,
   webSearchEnabled = false,
@@ -190,16 +191,18 @@ export const ChatInput = React.memo(function ChatInput({
           ref={textareaRef}
           value={value}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
+          onKeyDown={disabled ? undefined : handleKeyDown}
+          onFocus={disabled ? undefined : handleFocus}
           onBlur={handleBlur}
           rows={1}
-          placeholder={placeholder}
-          autoFocus
+          placeholder={disabled ? "You have view-only access" : placeholder}
+          autoFocus={!disabled}
+          readOnly={disabled}
           className={cn(
             "block w-full resize-none bg-transparent px-4 py-4 pr-20",
             "text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/40",
             "outline-none placeholder:font-light hide-scrollbar",
+            disabled && "cursor-not-allowed opacity-60",
           )}
         />
 
@@ -332,7 +335,7 @@ export const ChatInput = React.memo(function ChatInput({
             />
             <SendButton
               onSubmit={handleSubmit}
-              disabled={isEmpty}
+              disabled={isEmpty || disabled}
               isLoading={isLoading}
             />
           </div>

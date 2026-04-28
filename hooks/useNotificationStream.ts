@@ -11,6 +11,7 @@ export interface NotificationData {
   archived: boolean;
   snoozed: boolean;
   accent: string;
+  invitationToken?: string;
   createdAt: string;
 }
 

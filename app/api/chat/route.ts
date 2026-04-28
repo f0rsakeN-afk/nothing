@@ -10,7 +10,7 @@ import { getChatContext, queueSummarization } from "@/services/summarize.service
 import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-breaker.service";
 import { publishMessageNew } from "@/services/chat-pubsub.service";
 import { notifyNewMessage } from "@/services/push-notification.service";
-import { checkChatRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { webSearch, type SearchResult } from "@/lib/web-search";
 import {
   startResumableStream,
@@ -450,7 +450,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Check rate limit
-    const rateLimit = await checkChatRateLimit(req);
+    const rateLimit = await checkApiRateLimit(req, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -471,17 +471,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Chat ID required" }, { status: 400 });
     }
 
-    // Verify user owns this chat
-    const chat = await prisma.chat.findFirst({
-      where: { id: chatId, userId: user.id },
-      select: { id: true },
-    });
+    // Verify user has access to this chat (EDITOR or OWNER can trigger AI)
+    const { requireChatAccess } = await import("@/lib/chat-access");
+    const userRole = await requireChatAccess(user.id, chatId, "EDITOR");
 
-    if (!chat) {
+    if (!userRole) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
     const supersededKey = getSupersededKey(chatId, streamVersion);
+
+    // If there's an existing active stream for this chat (local OR cross-container), REJECT
+    // This prevents concurrent AI triggers - user must wait
+    const activeStreamId = getStreamId(chatId);
+    const { isStreamActiveCrossContainer } = await import("@/services/resumable-pubsub.service");
+    const isActiveCrossContainer = await isStreamActiveCrossContainer(activeStreamId);
+    if (isActiveCrossContainer || isStreamActive(chatId)) {
+      return new Response(JSON.stringify({
+        error: "AI is currently processing",
+        message: "Another message is being processed. Please wait.",
+        code: "AI_BUSY",
+      }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // Check credits before processing
     const { checkCreditsForOperation, deductCredits, addCredits } = await import("@/services/credit.service");
@@ -493,8 +507,8 @@ export async function POST(req: NextRequest) {
 
     // Try to resume existing stream if requested
     if (resume) {
-      const streamId = getStreamId(chatId);
-      console.log(`[Chat] Attempting to resume stream: ${streamId}`);
+      const resumeStreamId = getStreamId(chatId);
+      console.log(`[Chat] Attempting to resume stream: ${resumeStreamId}`);
 
       try {
         const resumed = await resumeResumableStream(
@@ -517,33 +531,20 @@ export async function POST(req: NextRequest) {
         );
 
         if (resumed && resumed.hasExisting) {
-          console.log(`[Chat] Resumed existing stream: ${streamId}`);
+          console.log(`[Chat] Resumed existing stream: ${resumeStreamId}`);
           return new Response(resumed.stream, {
             headers: {
               "Content-Type": "text/event-stream",
               "Cache-Control": "no-cache",
               Connection: "keep-alive",
               "X-Stream-Resumed": "true",
-              "X-Stream-ID": streamId,
+              "X-Stream-ID": resumeStreamId,
             },
           });
         }
       } catch (resumeError) {
         console.log(`[Chat] Could not resume stream, starting fresh:`, resumeError);
       }
-    }
-
-    // If there's an existing active stream for this chat, STOP IT FIRST
-    // This is critical to prevent race conditions
-    if (isStreamActive(chatId)) {
-      console.log(`[Chat] Stopping existing stream for chat ${chatId}`);
-      // Mark current stream as superseded BEFORE stopping
-      // The old stream's onComplete will check this and not save
-      supersededStreams.add(supersededKey);
-      // Clean up old superseded keys (keep only last 10)
-      cleanupSupersededKeys(chatId);
-      // Stop the old stream
-      await stopResumableStream(chatId);
     }
 
     // Check credits for new stream

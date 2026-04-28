@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getChatMessages, addChatMessage } from "@/lib/stack-server";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
+import { requireChatAccess, PERMISSIONS, getChatRole } from "@/lib/chat-access";
 import { publishMessageNew } from "@/services/chat-pubsub.service";
 import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -25,12 +26,18 @@ export async function GET(
     const cursor = searchParams.get("cursor") || undefined;
     const direction = (searchParams.get("direction") as "before" | "after") || "before";
 
+    // Check access (any role can view messages)
+    await requireChatAccess(user.id, chatId, "VIEWER");
+
     const result = await getChatMessages(chatId, user.id, limit, cursor, direction);
 
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AccountDeactivatedError) {
       return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
+    if (error instanceof Error && error.message.startsWith("Access denied")) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
     console.error("Error fetching messages:", error);
     return NextResponse.json(
@@ -68,6 +75,12 @@ export async function POST(
       );
     }
 
+    // Check access - viewers cannot send messages
+    const userRole = await requireChatAccess(user.id, chatId, "VIEWER");
+    if (!PERMISSIONS.canSendMessage(userRole)) {
+      return NextResponse.json({ error: "Viewers cannot send messages" }, { status: 403 });
+    }
+
     const message = await addChatMessage(chatId, user.id, { role, content }, fileIds);
 
     // Publish new message event for real-time sync
@@ -90,6 +103,9 @@ export async function POST(
   } catch (error) {
     if (error instanceof AccountDeactivatedError) {
       return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
+    }
+    if (error instanceof Error && error.message.startsWith("Access denied")) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
     console.error("Error adding message:", error);
     return NextResponse.json(

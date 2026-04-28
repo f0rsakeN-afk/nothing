@@ -6,6 +6,8 @@ import { useAuthStatus } from "@/hooks/use-auth-status";
 interface AuthStatusContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
+  userId?: string;
+  email?: string;
 }
 
 export const AuthStatusContext = React.createContext<AuthStatusContextValue>({
@@ -21,8 +23,10 @@ export function AuthStatusProvider({ children }: { children: React.ReactNode }) 
     () => ({
       isAuthenticated: !!authStatus?.authenticated,
       isLoading,
+      userId: authStatus?.userId,
+      email: authStatus?.email,
     }),
-    [authStatus?.authenticated, isLoading],
+    [authStatus?.authenticated, authStatus?.userId, authStatus?.email, isLoading],
   );
 
   return (

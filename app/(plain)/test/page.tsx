@@ -7,6 +7,105 @@ import { Play, Square } from "lucide-react";
 import { ChatMessage } from "@/components/main/chat/chat-message";
 import type { Message } from "@/components/main/chat/chat-message";
 import { toast } from "@/components/ui/sileo-toast";
+import { CollaborationMenu } from "@/components/main/chat/collaboration-menu";
+import { InviteDialog } from "@/components/main/chat/invite-dialog";
+import { ChatMembersDialog } from "@/components/main/chat/chat-members-dialog";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { UserPlus, Link2, Copy, Check, ArrowRight } from "lucide-react";
+
+// Mock Invite Dialog with hardcoded success state for preview
+function MockInviteDialog({
+  isOpen,
+  onClose,
+}: {
+  chatId: string;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const inviteLink = "https://eryx.app/invite/mock-token-123456";
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md p-0">
+        <div className="px-6 py-5 space-y-5">
+          {/* Success header */}
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <UserPlus className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-foreground mb-0.5">Link ready</h3>
+              <p className="text-xs text-muted-foreground">
+                Share this link with anyone you want to invite
+              </p>
+            </div>
+          </div>
+
+          {/* Link display */}
+          <div className="p-3 rounded-lg bg-muted/40 border border-border/50">
+            <div className="flex items-center gap-2 mb-2">
+              <Link2 className="h-3.5 w-3.5 text-muted-foreground/70" />
+              <span className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wide">
+                Invite link
+              </span>
+              <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                editor
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground/80 font-mono truncate">
+              {inviteLink}
+            </p>
+          </div>
+
+          {/* Expiry notice */}
+          <p className="text-[11px] text-muted-foreground text-center">
+            This link expires in 7 days
+          </p>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button
+              variant={copied ? "outline" : "default"}
+              size="sm"
+              className={cn("flex-1 h-9", copied && "border-green-500/50 text-green-600 dark:text-green-400")}
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                  Copy link
+                </>
+              )}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-9 px-3">
+              Create another
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const STATIC_SEARCH_RESULTS = [
   {
@@ -98,6 +197,21 @@ export default function Page() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentMessage, setCurrentMessage] = useState<Message | null>(null);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  // Mock data for testing - replace with real chatId from your DB
+  const MOCK_CHAT_ID = "cmog163xe0000srd2oeut7nxz";
+  const MOCK_USER_ID = "test-user-456";
+
+  // Mock createInvitation to show success UI without backend
+  const mockCreateInvitation = async () => {
+    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
+    return {
+      invitation: { id: "mock-invite-123", role: "EDITOR" },
+      inviteLink: `${window.location.origin}/invite/mock-token-${Date.now()}`
+    };
+  };
 
   const startStream = useCallback(() => {
     setIsStreaming(true);
@@ -312,6 +426,70 @@ export default function Page() {
             </Button>
           </div>
         </div>
+
+        {/* Collaboration UI Test */}
+        <div className="w-full p-6 border border-border/40 bg-card rounded-2xl">
+          <p className="text-xs text-muted-foreground mb-4">Collaboration UI</p>
+
+          {/* Floating collaboration menu */}
+          <div className="flex items-center gap-4 mb-6">
+            <span className="text-xs text-muted-foreground">Floating Menu:</span>
+            <CollaborationMenu
+              chatId={MOCK_CHAT_ID}
+              onMembersOpen={() => setMembersDialogOpen(true)}
+              onInviteOpen={() => setInviteDialogOpen(true)}
+            />
+            <span className="text-[10px] text-muted-foreground/60">top-right</span>
+          </div>
+
+          {/* Dialog triggers */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setMembersDialogOpen(true)}
+            >
+              Open Members Dialog
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setInviteDialogOpen(true)}
+            >
+              Open Invite Dialog
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                // Show success state directly
+                setInviteDialogOpen(true);
+                setTimeout(() => {
+                  const event = new CustomEvent('mock-invite-success');
+                  window.dispatchEvent(event);
+                }, 100);
+              }}
+            >
+              Show Success State
+            </Button>
+          </div>
+        </div>
+
+        <MockInviteDialog
+          chatId={MOCK_CHAT_ID}
+          isOpen={inviteDialogOpen}
+          onClose={() => setInviteDialogOpen(false)}
+        />
+        <ChatMembersDialog
+          chatId={MOCK_CHAT_ID}
+          currentUserId={MOCK_USER_ID}
+          isOpen={membersDialogOpen}
+          onClose={() => setMembersDialogOpen(false)}
+          onInvite={() => {
+            setMembersDialogOpen(false);
+            setInviteDialogOpen(true);
+          }}
+        />
       </div>
     </div>
   );

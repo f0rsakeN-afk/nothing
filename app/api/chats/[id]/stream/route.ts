@@ -12,6 +12,7 @@ import { redisPubSub } from "@/lib/redis";
 import { CHANNELS } from "@/lib/redis";
 import prisma from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getChatRole } from "@/lib/chat-access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,13 +37,9 @@ export async function GET(
 
   const { id: chatId } = await params;
 
-  // Verify user owns this chat
-  const chat = await prisma.chat.findFirst({
-    where: { id: chatId, userId: user.id },
-    select: { id: true, title: true },
-  });
-
-  if (!chat) {
+  // Verify user has access to this chat (owner or member)
+  const role = await getChatRole(user.id, chatId);
+  if (!role) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }
 

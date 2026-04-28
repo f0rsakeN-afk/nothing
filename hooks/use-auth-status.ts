@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export interface AuthStatus {
   authenticated: boolean;
+  userId?: string;
   email?: string;
   seenOnboarding?: boolean;
   isActive?: boolean;

@@ -168,7 +168,8 @@ export async function validateAuth(request: Request): Promise<AuthenticatedUser 
       email: user.email,
       stackId: stackUser.id,
     };
-  } catch {
+  } catch (error) {
+    console.error("validateAuth error:", error);
     return null;
   }
 }

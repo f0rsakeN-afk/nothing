@@ -60,6 +60,25 @@ export interface ChatResumeReadyEvent {
   chatId: string;
 }
 
+export interface ChatMemberAddedEvent {
+  type: "chat:member:added";
+  chatId: string;
+  memberId: string;
+}
+
+export interface ChatMemberRemovedEvent {
+  type: "chat:member:removed";
+  chatId: string;
+  memberId: string;
+}
+
+export interface ChatMemberRoleChangedEvent {
+  type: "chat:member:role_changed";
+  chatId: string;
+  memberId: string;
+  newRole: string;
+}
+
 export type ChatEvent =
   | ChatMessageEvent
   | ChatRenamedEvent
@@ -67,7 +86,10 @@ export type ChatEvent =
   | ChatDeletedEvent
   | ChatCreatedEvent
   | SidebarUpdateEvent
-  | ChatResumeReadyEvent;
+  | ChatResumeReadyEvent
+  | ChatMemberAddedEvent
+  | ChatMemberRemovedEvent
+  | ChatMemberRoleChangedEvent;
 
 /**
  * Publish event to a chat channel
@@ -151,18 +173,19 @@ export async function publishChatArchived(
 }
 
 /**
- * Notify chat was deleted
+ * Notify chat was deleted - publishes to all member's sidebar channels
  */
 export async function publishChatDeleted(
   chatId: string,
-  userId: string
+  memberIds: string[]
 ): Promise<void> {
   const event: ChatDeletedEvent = {
     type: "chat:deleted",
     chatId,
   };
 
-  await publishToSidebar(userId, event);
+  // Publish to all members' sidebar channels
+  await Promise.all(memberIds.map((memberId) => publishToSidebar(memberId, event)));
 }
 
 /**
@@ -212,5 +235,67 @@ export async function publishChatResumeReady(
   await Promise.all([
     publishToChat(chatId, event),
     publishToSidebar(userId, event),
+  ]);
+}
+
+/**
+ * Notify member was added to chat (for collaboration real-time updates)
+ */
+export async function publishMemberAdded(
+  chatId: string,
+  memberId: string
+): Promise<void> {
+  const event: ChatMemberAddedEvent = {
+    type: "chat:member:added",
+    chatId,
+    memberId,
+  };
+
+  // Publish to chat channel (for other members) and to member's sidebar (for the new member)
+  await Promise.all([
+    publishToChat(chatId, event),
+    publishToSidebar(memberId, event),
+  ]);
+}
+
+/**
+ * Notify member was removed from chat
+ */
+export async function publishMemberRemoved(
+  chatId: string,
+  memberId: string
+): Promise<void> {
+  const event: ChatMemberRemovedEvent = {
+    type: "chat:member:removed",
+    chatId,
+    memberId,
+  };
+
+  // Publish to chat channel (for remaining members) and to removed member's sidebar
+  await Promise.all([
+    publishToChat(chatId, event),
+    publishToSidebar(memberId, event),
+  ]);
+}
+
+/**
+ * Notify member role was changed
+ */
+export async function publishMemberRoleChanged(
+  chatId: string,
+  memberId: string,
+  newRole: string
+): Promise<void> {
+  const event: ChatMemberRoleChangedEvent = {
+    type: "chat:member:role_changed",
+    chatId,
+    memberId,
+    newRole,
+  };
+
+  // Publish to chat channel (for other members) and to affected member's sidebar
+  await Promise.all([
+    publishToChat(chatId, event),
+    publishToSidebar(memberId, event),
   ]);
 }

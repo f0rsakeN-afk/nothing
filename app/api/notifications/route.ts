@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
       archived: n.archived,
       snoozed: n.snoozedUntil !== null && n.snoozedUntil > now,
       accent: n.accent,
+      invitationToken: n.invitationToken,
     }));
 
     const result: NotificationsCache = {

@@ -13,6 +13,7 @@ export interface ChatInputProps {
   placeholder?: string;
   className?: string;
   isLoading?: boolean;
+  disabled?: boolean;
   onOpenMemory?: () => void;
   onMemoriesSelect?: (memoryIds: string[]) => void;
   webSearchEnabled?: boolean;

@@ -32,9 +32,10 @@ export default async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Allow static assets, legal pages, and public API routes
+  // Allow static assets, RSC data, legal pages, and public API routes
   if (
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/__nextjs") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/handler") ||
     pathname.startsWith("/legal") ||
@@ -185,20 +186,9 @@ export default async function proxy(request: NextRequest) {
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
   );
 
-  // If no locale prefix, redirect to locale-prefixed path (preserve query params)
+  // If no locale prefix, continue without adding one (localePrefix: "never")
   if (!pathnameLocale) {
-    // Extract query string from URL
-    const search = request.nextUrl.search;
-
-    // Try to get locale from cookie first
-    const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
-    const targetLocale = localeCookie && routing.locales.includes(localeCookie as (typeof routing.locales)[number])
-      ? localeCookie
-      : routing.defaultLocale;
-
-    const response = NextResponse.redirect(
-      new URL(`${pathname}${search}`, request.url),
-    );
+    const response = NextResponse.next();
     setSecurityHeaders(response);
     return response;
   }

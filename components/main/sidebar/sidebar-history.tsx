@@ -43,6 +43,8 @@ interface ChatItem {
   visibility?: "public" | "private";
   archivedAt?: string | null;
   pinnedAt?: string | null;
+  isShared?: boolean;
+  owner?: { id: string; email: string | null };
 }
 
 function groupChatsByDate(chats: ChatItem[], t: ReturnType<typeof useTranslations>) {
@@ -136,6 +138,7 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
   // Use sidebar chats hook
   const {
     chats,
+    sharedChats,
     archivedChats,
     isLoading: isChatsLoading,
     isError: isChatsError,
@@ -355,6 +358,33 @@ export function SidebarHistory({ activeTab }: SidebarHistoryProps) {
 
     return (
       <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar">
+        {/* Shared with me section */}
+        {sharedChats.length > 0 && (
+          <SidebarGroup className="py-1 px-2">
+            <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
+              {t("sidebar.sharedWithMe")}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0">
+                {sharedChats.map((item) => (
+                  <ChatHistoryItem
+                    key={item.id}
+                    item={item}
+                    onDelete={deleteChatById}
+                    onRename={renameChat}
+                    onArchive={handleArchiveChat}
+                    onUnarchive={handleUnarchiveChat}
+                    onShare={handleShareChat}
+                    onPin={handlePinChat}
+                    onUnpin={handleUnpinChat}
+                    isShared
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {groups.map((group) => (
           <SidebarGroup key={group.labelKey} className="py-1 px-2">
             <SidebarGroupLabel className="px-2 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/30 h-6">
