@@ -3,83 +3,112 @@
  * GET /api/polar/plans - Get all available plans with user's current plan
  *
  * Caching strategy:
- * - Static plan data: Module-level in-memory cache (never changes)
- * - User subscription: Redis cache with 2-min TTL (handles rapid clicking)
+ * - Plan data: Redis cache with 60s TTL
+ * - User subscription: Redis cache with 2-min TTL
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { polarConfig } from "@/lib/polar-config";
 import { validateAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import redis from "@/lib/redis";
 import {
   getSubscriptionCache,
   setSubscriptionCache,
 } from "@/lib/subscription-cache";
 
-// ---------------------------------------------------------------------------
-// Static plan data cache (module-level, survives across requests)
-// ---------------------------------------------------------------------------
+const POLAR_PLANS_CACHE_KEY = "polar:plans";
+const POLAR_PLANS_CACHE_TTL = 60; // 60 seconds
 
-interface CachedPlans {
-  plans: {
-    free: Omit<typeof polarConfig.plans.free, "name" | "description" | "features"> & {
-      name: string;
-      description: string;
-      features: readonly string[];
-      polarProductId: string | null;
-    };
-    basic: typeof polarConfig.plans.basic & { polarProductId: string };
-    pro: typeof polarConfig.plans.pro & { polarProductId: string };
-    enterprise: typeof polarConfig.plans.enterprise & { polarProductId: string };
-  };
+interface PlanData {
+  id: string;
+  tier: string;
+  name: string;
+  description: string;
+  price: number;
+  credits: number;
+  maxChats: number;
+  maxProjects: number;
+  maxMessages: number;
+  maxMemoryItems: number;
+  maxBranchesPerChat: number;
+  maxFolders: number;
+  maxAttachmentsPerChat: number;
+  maxFileSizeMb: number;
+  canExport: boolean;
+  canApiAccess: boolean;
+  features: string[];
+  polarPriceId: string | null;
+  polarProductId: string | null;
+  isActive: boolean;
+  isVisible: boolean;
+  isDefault: boolean;
 }
 
-let plansCache: CachedPlans | null = null;
-let plansCacheTimestamp = 0;
-const PLANS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-function getPlans(): CachedPlans {
-  const now = Date.now();
-
-  if (plansCache && now - plansCacheTimestamp < PLANS_CACHE_TTL_MS) {
-    return plansCache;
+async function getCachedPlans(): Promise<PlanData[] | null> {
+  try {
+    const cached = await redis.get(POLAR_PLANS_CACHE_KEY);
+    if (cached) return JSON.parse(cached);
+  } catch {
+    // Redis unavailable
   }
-
-  plansCache = {
-    plans: {
-      free: {
-        ...polarConfig.plans.free,
-        polarProductId: null,
-      },
-      basic: {
-        ...polarConfig.plans.basic,
-        polarProductId: polarConfig.plans.basic.polarProductId,
-      },
-      pro: {
-        ...polarConfig.plans.pro,
-        polarProductId: polarConfig.plans.pro.polarProductId,
-      },
-      enterprise: {
-        ...polarConfig.plans.enterprise,
-        polarProductId: polarConfig.plans.enterprise.polarProductId,
-      },
-    },
-  };
-  plansCacheTimestamp = now;
-  return plansCache;
+  return null;
 }
 
-// ---------------------------------------------------------------------------
-// API Route
-// ---------------------------------------------------------------------------
+async function setCachedPlans(plans: PlanData[]): Promise<void> {
+  try {
+    await redis.setex(POLAR_PLANS_CACHE_KEY, POLAR_PLANS_CACHE_TTL, JSON.stringify(plans));
+  } catch {
+    // Redis unavailable
+  }
+}
+
+async function getPlans(): Promise<PlanData[]> {
+  // Try cache first
+  const cached = await getCachedPlans();
+  if (cached) return cached;
+
+  // Fetch from DB - only active and visible plans
+  const plans = await prisma.plan.findMany({
+    where: { isActive: true, isVisible: true },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const planData: PlanData[] = plans.map((p) => ({
+    id: p.id,
+    tier: p.tier,
+    name: p.name,
+    description: p.description,
+    price: p.price,
+    credits: p.credits,
+    maxChats: p.maxChats,
+    maxProjects: p.maxProjects,
+    maxMessages: p.maxMessages,
+    maxMemoryItems: p.maxMemoryItems,
+    maxBranchesPerChat: p.maxBranchesPerChat,
+    maxFolders: p.maxFolders,
+    maxAttachmentsPerChat: p.maxAttachmentsPerChat,
+    maxFileSizeMb: p.maxFileSizeMb,
+    canExport: p.canExport,
+    canApiAccess: p.canApiAccess,
+    features: p.features,
+    polarPriceId: p.polarPriceId,
+    polarProductId: p.polarProductId,
+    isActive: p.isActive,
+    isVisible: p.isVisible,
+    isDefault: p.isDefault,
+  }));
+
+  await setCachedPlans(planData);
+  return planData;
+}
 
 export async function GET(request: NextRequest) {
   try {
     // Auth is optional - only needed to show user's current plan
     const user = await validateAuth(request);
 
-    // Get static plan data (cached in memory, ~0 overhead)
-    const { plans } = getPlans();
+    // Get plan data from DB (with Redis caching)
+    const plans = await getPlans();
 
     // Determine current plan - only if authenticated
     let currentPlan = "free";

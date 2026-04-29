@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
+import redis from "@/lib/redis";
 import { queueEmail } from "@/services/queue.service";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,15 @@ export async function GET(request: NextRequest) {
           where: { id: existingUser.id },
           data: { email: user.primaryEmail },
         });
+        // Invalidate admin users cache
+        try {
+          const keys = await redis.keys("admin:users:*");
+          if (keys.length > 0) {
+            await redis.del(...keys);
+          }
+        } catch {
+          // Redis unavailable
+        }
       }
     } else {
       // Create new user
@@ -43,6 +53,16 @@ export async function GET(request: NextRequest) {
         data: { stackId: user.id, email: user.primaryEmail, role: "USER" },
       });
       userCreated = true;
+
+      // Invalidate admin users cache
+      try {
+        const keys = await redis.keys("admin:users:*");
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } catch {
+        // Redis unavailable
+      }
 
       // Send welcome email for new users
       queueEmail(user.primaryEmail, "welcome", {

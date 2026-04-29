@@ -342,6 +342,7 @@ model Report {
   description String
   email       String
   image       String
+  status      String   @default("pending")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -350,6 +351,7 @@ model Report {
 
   @@index([userId])
   @@index([createdAt])
+  @@index([status])
 }
 
 model Feedback {
@@ -745,6 +747,40 @@ model McpUserServer {
 
   @@index([userId])
   @@index([userId, isEnabled])
+}
+
+// ---------------------------------------------------------------------------
+// Audit Log
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  userId    String
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  status    String   @default("success")
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Admin Settings
+// ---------------------------------------------------------------------------
+
+model AdminSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
 }
 
 // ---------------------------------------------------------------------------

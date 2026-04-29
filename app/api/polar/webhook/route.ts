@@ -12,7 +12,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { validateEvent } from "@polar-sh/sdk/webhooks";
-import { polarConfig } from "@/lib/polar-config";
 import { queueWebhook } from "@/services/queue.service";
 import { logger } from "@/lib/logger";
 
@@ -38,7 +37,7 @@ async function validateWebhookPayload(
         "polar-signature": signature,
         "polar-timestamp": timestamp,
       },
-      polarConfig.webhookSecret
+      process.env.POLAR_WEBHOOK_SECRET || ""
     );
 
     return event as { type: string; data: Record<string, unknown> };

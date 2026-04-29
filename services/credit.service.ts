@@ -7,16 +7,21 @@
  */
 
 import prisma from "@/lib/prisma";
-import { polarConfig } from "@/lib/polar-config";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
 import { invalidateAccountCache } from "@/services/account.service";
 import redis, { KEYS } from "@/lib/redis";
 import { publishCreditsUpdated } from "@/services/credit-pubsub.service";
 
 const BYPASS_CREDITS = process.env.NODE_ENV === "development";
+const CREDIT_COSTS_CACHE_KEY = "credit:costs";
 
-// Credit costs remain in polar-config (not plan-specific)
-export type CreditOperation = keyof typeof polarConfig.creditCosts;
+interface CreditCost {
+  operation: string;
+  credits: number;
+  description: string;
+}
+
+export type CreditOperation = string; // flexible - any string stored in DB
 
 export interface CreditResult {
   success: boolean;
@@ -27,6 +32,57 @@ export interface CreditResult {
 export interface DeductionResult extends CreditResult {
   deducted: number;
   operation: string;
+}
+
+async function getCreditCostsFromDb(): Promise<Record<string, number>> {
+  const setting = await prisma.adminSetting.findUnique({
+    where: { key: "credit_costs" },
+  });
+
+  let costs: CreditCost[] = [];
+  if (setting?.value) {
+    try { costs = JSON.parse(setting.value); } catch { /* invalid JSON */ }
+  }
+
+  if (costs.length === 0) {
+    // Return defaults matching polar-config
+    return {
+      "gpt-4.1-mini": 1,
+      "gpt-4.1-nano": 1,
+      "gpt-4.1": 2,
+      "gpt-4o-mini": 2,
+      "gpt-4o": 3,
+      "gpt-5.1-mini": 4,
+      "gpt-5.1": 5,
+      "claude-3.5-haiku": 1,
+      "claude-3.5-sonnet": 3,
+      "claude-3.5-opus": 5,
+      "web-search": 3,
+      "file-analysis": 5,
+      "image-generation": 20,
+    };
+  }
+
+  const result: Record<string, number> = {};
+  for (const c of costs) {
+    result[c.operation] = c.credits;
+  }
+  return result;
+}
+
+export async function getCreditCosts(): Promise<Record<string, number>> {
+  try {
+    const cached = await redis.get(CREDIT_COSTS_CACHE_KEY);
+    if (cached) return JSON.parse(cached);
+  } catch { /* Redis unavailable */ }
+
+  const costs = await getCreditCostsFromDb();
+
+  try {
+    await redis.setex(CREDIT_COSTS_CACHE_KEY, 300, JSON.stringify(costs));
+  } catch { /* Redis unavailable */ }
+
+  return costs;
 }
 
 export async function getUserCredits(userId: string): Promise<number> {
@@ -50,7 +106,7 @@ export async function invalidateUserCreditsCache(userId: string): Promise<void> 
 
 export async function deductCredits(
   userId: string,
-  operation: CreditOperation,
+  operation: string,
   customAmount?: number
 ): Promise<DeductionResult> {
   if (BYPASS_CREDITS) {
@@ -62,7 +118,8 @@ export async function deductCredits(
     };
   }
 
-  const cost = customAmount ?? polarConfig.creditCosts[operation] ?? 1;
+  const allCosts = await getCreditCosts();
+  const cost = customAmount ?? allCosts[operation] ?? 1;
 
   try {
     const user = await prisma.user.findUnique({
@@ -189,12 +246,13 @@ export async function addCredits(
 
 export async function checkCreditsForOperation(
   userId: string,
-  operation: CreditOperation
+  operation: string
 ): Promise<boolean> {
   if (BYPASS_CREDITS) {
     return true;
   }
-  const cost = polarConfig.creditCosts[operation] ?? 1;
+  const allCosts = await getCreditCosts();
+  const cost = allCosts[operation] ?? 1;
   const balance = await getUserCredits(userId);
   return balance >= cost;
 }
@@ -207,7 +265,7 @@ export async function refundProportional(
   userId: string,
   streamedBytes: number,
   totalBytes: number,
-  operation: CreditOperation
+  operation: string
 ): Promise<CreditResult> {
   if (BYPASS_CREDITS) {
     return { success: true, remainingCredits: 999999 };
@@ -217,7 +275,8 @@ export async function refundProportional(
     return { success: true, remainingCredits: await getUserCredits(userId) };
   }
 
-  const cost = polarConfig.creditCosts[operation] ?? 1;
+  const allCosts = await getCreditCosts();
+  const cost = allCosts[operation] ?? 1;
   // Proportional refund: (1 - streamed/total) * cost
   const refundAmount = Math.max(0, Math.round((1 - streamedBytes / totalBytes) * cost));
 

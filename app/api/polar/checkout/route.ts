@@ -6,9 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { polarConfig } from "@/lib/polar-config";
 import { validateAuth } from "@/lib/auth";
-import { getPlan } from "@/services/plan.service";
+import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,34 +40,24 @@ export async function POST(request: NextRequest) {
  * Create checkout for subscription plan
  */
 async function createSubscriptionCheckout(userId: string, planId: string) {
-  // Free plan doesn't need checkout
   if (planId === "free") {
     return NextResponse.json({ error: "Free plan doesn't need checkout" }, { status: 400 });
   }
 
-  const plan = await getPlan(planId);
+  const plan = await prisma.plan.findUnique({ where: { id: planId } });
   if (!plan) {
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  // Get polarProductId from polar-config based on plan tier (lowercase)
-  const tierKey = plan.tier.toLowerCase() as keyof typeof polarConfig.plans;
-  const polarProductId = polarConfig.plans[tierKey]?.polarProductId;
+  const polarProductId = plan.polarProductId;
   if (!polarProductId) {
     return NextResponse.json({ error: "Plan not configured for Polar" }, { status: 400 });
   }
 
-  // Create Polar checkout URL
-  // Polar checkout links can be created via API or pre-created in dashboard
-  // Here we use a pre-created checkout link with metadata
   const checkoutUrl = new URL(`https://polar.sh/checkout/${polarProductId}`);
-
-  // Add metadata for webhook identification
   checkoutUrl.searchParams.set("metadata[userId]", userId);
   checkoutUrl.searchParams.set("metadata[planId]", planId);
   checkoutUrl.searchParams.set("metadata[type]", "subscription");
-
-  // Optional: embed on your site
   checkoutUrl.searchParams.set("embed", "true");
   checkoutUrl.searchParams.set("embed_origin", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
 
@@ -79,16 +68,21 @@ async function createSubscriptionCheckout(userId: string, planId: string) {
  * Create checkout for credit package
  */
 async function createCreditPackageCheckout(userId: string, packageId: string) {
-  const creditPackage = polarConfig.creditPackages.find(p => p.id === packageId);
+  // Read credit packages from AdminSetting
+  const setting = await prisma.adminSetting.findUnique({ where: { key: "credit_packages" } });
+  let creditPackages: { id: string; name: string; credits: number; amount: number; polarProductId?: string }[] = [];
+  if (setting?.value) {
+    try { creditPackages = JSON.parse(setting.value); } catch { /* invalid JSON */ }
+  }
+
+  const creditPackage = creditPackages.find(p => p.id === packageId);
   if (!creditPackage) {
     return NextResponse.json({ error: "Credit package not found" }, { status: 404 });
   }
 
-  // For credit packages, you would typically have a Polar product per package
-  // Use the product ID from environment or map package to product
-  const productId = process.env[`POLAR_${packageId.toUpperCase()}_PRODUCT_ID`];
+  const productId = creditPackage.polarProductId;
   if (!productId) {
-    return NextResponse.json({ error: "Credit package not configured" }, { status: 400 });
+    return NextResponse.json({ error: "Credit package not configured for Polar" }, { status: 400 });
   }
 
   const checkoutUrl = new URL(`https://polar.sh/checkout/${productId}`);

@@ -1,0 +1,55 @@
+import { z } from "zod";
+
+export const auditActionSchema = z.enum([
+  "ADMIN_LOGIN",
+  "ADMIN_LOGOUT",
+  "ADMIN_VIEW_DASHBOARD",
+  "ADMIN_VIEW_USERS",
+  "ADMIN_USER_ROLE_UPDATE",
+  "ADMIN_USER_STATUS_UPDATE",
+  "ADMIN_USER_DEACTIVATE",
+  "ADMIN_USER_REACTIVATE",
+  "ADMIN_USER_LIST",
+  "ADMIN_USER_VIEW",
+  "ADMIN_CHANGELOG_LIST",
+  "ADMIN_CHANGELOG_CREATE",
+  "ADMIN_CHANGELOG_UPDATE",
+  "ADMIN_CHANGELOG_DELETE",
+  "ADMIN_CHATS_LIST",
+  "ADMIN_CHAT_UPDATE",
+  "ADMIN_CHAT_DELETE",
+  "ADMIN_PROJECTS_LIST",
+  "ADMIN_PROJECT_UPDATE",
+  "ADMIN_PROJECT_DELETE",
+  "ADMIN_FILES_LIST",
+  "ADMIN_FILE_DELETE",
+  "ADMIN_MEMORIES_LIST",
+  "ADMIN_MEMORY_DELETE",
+  "ADMIN_MCP_SERVERS_LIST",
+  "ADMIN_MCP_SERVER_UPDATE",
+  "ADMIN_MCP_SERVER_DELETE",
+  "ADMIN_REPORTS_LIST",
+  "ADMIN_REPORT_STATUS_UPDATE",
+  "ADMIN_REPORT_DELETE",
+  "ADMIN_FEEDBACK_LIST",
+  "ADMIN_FEEDBACK_DELETE",
+  "ADMIN_CONTACTS_LIST",
+  "ADMIN_CONTACT_DELETE",
+  "ADMIN_AUDIT_LIST",
+  "ADMIN_NOTIFICATION_SEND",
+  "ADMIN_SETTINGS_CHANGE",
+]);
+
+export const auditFiltersSchema = z.object({
+  search: z.string().max(200).optional(),
+  action: auditActionSchema.optional(),
+  userId: z.string().cuid("Invalid user ID").optional(),
+  status: z.enum(["success", "failure"]).optional(),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(50),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+
+export type AuditFiltersInput = z.infer<typeof auditFiltersSchema>;
+export type AuditActionInput = z.infer<typeof auditActionSchema>;

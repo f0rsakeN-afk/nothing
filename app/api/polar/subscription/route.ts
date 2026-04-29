@@ -7,7 +7,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { polarConfig, polar } from "@/lib/polar-config";
 import { validateAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { invalidateUserLimitsCache } from "@/services/limit.service";

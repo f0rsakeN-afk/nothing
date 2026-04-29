@@ -84,8 +84,30 @@ function parseFields(fieldsParam: string | null): Set<FieldName> | null {
 
 // ─── Cache ─────────────────────────────────────────────────────────────────────
 
+async function getCachedChangelog(cacheKey: string): Promise<Record<string, unknown> | null> {
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch {
+    // Redis unavailable
+  }
+  return null;
+}
+
+async function setChangelogCache(cacheKey: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    await redis.setex(cacheKey, CHANGELOG_CACHE_TTL, JSON.stringify(data));
+  } catch {
+    // Redis unavailable
+  }
+}
+
 async function invalidateChangelogCache(): Promise<void> {
   try {
+    const keys = await redis.keys("changelog:list:*");
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
     await redis.del(CHANGELOG_CACHE_KEY);
   } catch {
     // Redis unavailable
@@ -138,9 +160,6 @@ export async function GET(request: NextRequest) {
     const cursor = searchParams.get("cursor") || undefined;
     const fieldsParam = searchParams.get("fields");
 
-    // Field filtering
-    const fields = parseFields(fieldsParam);
-
     // Admin check for unpublished entries
     if (includeUnpublished) {
       const user = await validateAuth(request);
@@ -148,6 +167,22 @@ export async function GET(request: NextRequest) {
         return apiError(ERROR_TYPES.FORBIDDEN, "Not authorized to view unpublished entries", 403);
       }
     }
+
+    // Build cache key based on all filter params (admin cache includes unpublished)
+    const cacheKey = `changelog:list:${includeUnpublished}:${limit}:${search || "all"}:${cursor || "none"}:${fieldsParam || "all"}`;
+
+    // Try cache first (only for non-search, non-cursor requests)
+    if (!search && !cursor && !fieldsParam) {
+      const cached = await getCachedChangelog(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached, {
+          headers: { "X-Cache": "HIT" },
+        });
+      }
+    }
+
+    // Field filtering
+    const fields = parseFields(fieldsParam);
 
     // Build where clause
     const where: Prisma.ChangelogWhereInput = includeUnpublished ? {} : { isPublished: true };
@@ -197,7 +232,14 @@ export async function GET(request: NextRequest) {
     if (nextCursor) response.nextCursor = nextCursor;
     if (search) response.search = search;
 
-    return NextResponse.json(response);
+    // Cache result (only for non-search, non-cursor requests)
+    if (!search && !cursor && !fieldsParam) {
+      await setChangelogCache(cacheKey, response);
+    }
+
+    return NextResponse.json(response, {
+      headers: { "X-Cache": "MISS" },
+    });
   } catch (error) {
     console.error("Get changelog error:", error);
     return apiError(ERROR_TYPES.INTERNAL_ERROR, "Failed to get changelog", 500);

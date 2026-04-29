@@ -83,6 +83,19 @@ export const KEYS = {
   activeStreams: () => "active:streams",
   resumeReady: (chatId: string) => `resume:${chatId}:ready`,
   streamVersion: (chatId: string) => `chat:${chatId}:stream:version`,
+  // Admin route caches
+  adminChats: (...args: (string | number)[]) => `admin:chats:${args.join(":")}`,
+  adminUsers: (...args: (string | number)[]) => `admin:users:${args.join(":")}`,
+  adminPlans: () => "admin:plans",
+  adminSettings: () => "admin:settings",
+  adminStats: () => "admin:stats",
+  adminReports: (...args: (string | number)[]) => `admin:reports:${args.join(":")}`,
+  adminNotifications: (...args: (string | number)[]) => `admin:notifications:${args.join(":")}`,
+  creditCosts: () => "credit:costs",
+  polarPlans: () => "polar:plans",
+  changelogEntries: () => "changelog:entries",
+  changelogList: (...args: (string | number)[]) => `changelog:list:${args.join(":")}`,
+  chatInvitations: (chatId: string) => `chat:${chatId}:invitations`,
 } as const;
 
 // TTL constants (in seconds)
@@ -114,6 +127,19 @@ export const TTL = {
   activeStreams: 60, // 1 minute for active stream tracking (short, refreshed frequently)
   resumeReady: 5 * 60, // 5 minutes for resume ready signal
   streamVersion: 24 * 60 * 60, // 24 hours for stream version tracking
+  // Admin route caches
+  adminChats: 30, // 30 seconds for admin chat list
+  adminUsers: 30, // 30 seconds for admin user list
+  adminPlans: 60, // 1 minute for admin plans list
+  adminSettings: 5 * 60, // 5 minutes for settings
+  adminStats: 30, // 30 seconds for dashboard stats
+  adminReports: 30, // 30 seconds for reports list
+  adminNotifications: 30, // 30 seconds for notifications list
+  creditCosts: 5 * 60, // 5 minutes for credit costs (updated by admin)
+  polarPlans: 60, // 1 minute for public polar plans
+  changelogEntries: 60, // 1 minute for changelog entries
+  changelogList: 30, // 30 seconds for changelog list
+  chatInvitations: 60, // 1 minute for chat invitations
 } as const;
 
 // Pub/Sub channel helpers

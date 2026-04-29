@@ -12,6 +12,8 @@ import { routing } from "./routing";
 
 const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog", "/onboarding"];
 const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models", "/api/mcp", "/api/polar/plans"];
+const ADMIN_PATHS = ["/admin"];
+const ADMIN_API_PREFIX = "/api/admin";
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -154,6 +156,42 @@ export default async function proxy(request: NextRequest) {
       response.headers.set("x-user-email", userData.email);
       response.headers.set("x-user-stack-id", stackUser.id);
       setSecurityHeaders(response);
+
+      // Admin route protection - check role for admin paths
+      if (
+        pathname.startsWith(ADMIN_API_PREFIX) ||
+        ADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+      ) {
+        const { default: prisma } = await import("@/lib/prisma");
+        const dbUser = await prisma.user.findUnique({
+          where: { stackId: stackUser.id },
+          select: { id: true, role: true, isActive: true },
+        });
+
+        if (!dbUser?.isActive) {
+          return NextResponse.json(
+            { error: { type: "forbidden", message: "Account deactivated" } },
+            { status: 403 },
+          );
+        }
+
+        const isAdmin = dbUser.role === "ADMIN" || dbUser.role === "MODERATOR";
+
+        if (!isAdmin) {
+          if (pathname.startsWith("/api/")) {
+            return NextResponse.json(
+              { error: { type: "forbidden", message: "Admin or moderator role required" } },
+              { status: 403 },
+            );
+          }
+          // Page routes redirect to home
+          return NextResponse.redirect(new URL("/", request.url));
+        }
+
+        // Inject role header for downstream API validation
+        response.headers.set("x-user-role", dbUser.role);
+      }
+
       return response;
     } catch (error) {
       console.error("Auth error:", error);

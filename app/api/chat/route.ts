@@ -498,12 +498,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Check credits before processing
-    const { checkCreditsForOperation, deductCredits, addCredits } = await import("@/services/credit.service");
-    const { polarConfig } = await import("@/lib/polar-config");
+    const { checkCreditsForOperation, deductCredits, addCredits, getCreditCosts } = await import("@/services/credit.service");
 
     // Map user-facing model name to internal model key
     const modelKey = requestedModel || aiConfig.model;
-    const cost = polarConfig.creditCosts[modelKey as keyof typeof polarConfig.creditCosts] || polarConfig.creditCosts[aiConfig.model as keyof typeof polarConfig.creditCosts] || 1;
+    const allCosts = await getCreditCosts();
+    const cost = allCosts[modelKey] ?? allCosts[aiConfig.model] ?? 1;
+    const webSearchCost = allCosts["web-search"] ?? 3;
 
     // Try to resume existing stream if requested
     if (resume) {
@@ -606,7 +607,6 @@ export async function POST(req: NextRequest) {
 
     // Web search mode
     if (mode === "web") {
-      const webSearchCost = polarConfig.creditCosts["web-search"] || 3;
       const hasWebSearchCredits = await checkCreditsForOperation(user.id, "web-search");
       if (!hasWebSearchCredits) {
         const { getUserCredits } = await import("@/services/credit.service");
@@ -642,7 +642,7 @@ export async function POST(req: NextRequest) {
         });
       }
       if (webSearchCreditsDeducted) {
-        addCredits(user.id, polarConfig.creditCosts["web-search"] || 3).catch((err) => {
+        addCredits(user.id, webSearchCost).catch((err) => {
           console.error("[Chat] Failed to refund web search credits:", err);
         });
       }
@@ -714,7 +714,7 @@ export async function POST(req: NextRequest) {
         });
       }
       if (webSearchCreditsDeducted) {
-        addCredits(user.id, polarConfig.creditCosts["web-search"] || 3).catch((err) => {
+        addCredits(user.id, webSearchCost).catch((err) => {
           console.error("[Chat] Failed to refund web search credits:", err);
         });
       }
