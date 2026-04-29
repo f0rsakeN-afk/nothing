@@ -34,6 +34,7 @@ export const QUEUE_NAMES = {
   FILE_PROCESSING: "file-processing",
   EMAIL: "email",
   RESUME: "resume",
+  EXPORT: "export",
 } as const;
 
 // Queue instances (singleton)
@@ -167,6 +168,24 @@ export async function queueEmail(
 }
 
 /**
+ * Add an export job
+ */
+export async function queueExportJob(
+  exportJobId: string,
+  userId: string
+): Promise<Job> {
+  return addJob(
+    QUEUE_NAMES.EXPORT,
+    { exportJobId, userId },
+    {
+      jobId: `export:${exportJobId}`,
+      attempts: 1, // No retries for exports
+      backoff: { type: "fixed", delay: 0 },
+    }
+  );
+}
+
+/**
  * Create a worker for a queue
  */
 export function createWorker<T = Record<string, unknown>>(
@@ -210,6 +229,8 @@ function getConcurrency(queueName: string): number {
       return 5; // Email sending is fast
     case QUEUE_NAMES.RESUME:
       return 3; // Resume attempts are moderate priority
+    case QUEUE_NAMES.EXPORT:
+      return 1; // Export is expensive, only one at a time
     default:
       return 3;
   }

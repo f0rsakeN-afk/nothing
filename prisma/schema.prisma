@@ -784,6 +784,34 @@ model AdminSetting {
 }
 
 // ---------------------------------------------------------------------------
+// Async Export Jobs
+// ---------------------------------------------------------------------------
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ExportJob {
+  id        String       @id @default(cuid())
+  userId    String
+  status    ExportStatus @default(PENDING)
+  s3Key     String? // S3 object key when completed
+  error     String? // Error message if failed
+  metadata  Json? // Additional job metadata
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  expiresAt DateTime? // When the download URL expires
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
 // RAG Embeddings (pgvector)
 // ---------------------------------------------------------------------------
 

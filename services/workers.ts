@@ -209,6 +209,24 @@ async function processEmail(job: Job<{ to: string; template: string; data: Recor
 }
 
 // ============================================
+// EXPORT WORKER
+// ============================================
+
+async function processExport(job: Job<{ exportJobId: string; userId: string }>): Promise<void> {
+  const { exportJobId, userId } = job.data;
+  logger.info(`[Export] Processing job ${exportJobId}`);
+
+  try {
+    const { processExportJob } = await import("@/services/export.service");
+    await processExportJob({ exportJobId, userId });
+    logger.info(`[Export] Job ${exportJobId} completed`);
+  } catch (err) {
+    logger.error(`[Export] Job ${exportJobId} failed`, err as Error);
+    throw err;
+  }
+}
+
+// ============================================
 // START ALL WORKERS
 // ============================================
 
@@ -230,6 +248,10 @@ export function startAllWorkers(): void {
   // Email worker
   createWorker(QUEUE_NAMES.EMAIL, processEmail);
   logger.info(`[Workers] Email worker started (concurrency: 5)`);
+
+  // Export worker
+  createWorker(QUEUE_NAMES.EXPORT, processExport);
+  logger.info(`[Workers] Export worker started (concurrency: 1)`);
 
   logger.info("[Workers] All workers started");
 }
@@ -253,6 +275,10 @@ function startSpecificWorker(queueName: string): void {
     case QUEUE_NAMES.EMAIL:
       createWorker(QUEUE_NAMES.EMAIL, processEmail);
       logger.info(`[Workers] Email worker started (concurrency: 5)`);
+      break;
+    case QUEUE_NAMES.EXPORT:
+      createWorker(QUEUE_NAMES.EXPORT, processExport);
+      logger.info(`[Workers] Export worker started (concurrency: 1)`);
       break;
     default:
       logger.error(`[Workers] Unknown queue: ${queueName}`);

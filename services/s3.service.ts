@@ -52,7 +52,7 @@ export interface CompletedPart {
 }
 
 // Create S3 client
-function getS3Client(): S3Client {
+export function getS3Client(): S3Client {
   if (!S3_CONFIG.accessKeyId || !S3_CONFIG.secretAccessKey) {
     throw new Error("AWS credentials not configured");
   }

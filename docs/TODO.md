@@ -15,20 +15,19 @@ This document tracks planned improvements, optimizations, and technical debt for
 - Users with 1000+ chats cause HTTP timeouts and memory exhaustion
 - No progress indication for users
 
-**Proposed Solution:**
-1. `POST /api/settings/export` returns immediately with `{ status: "processing", jobId }`
-2. Background BullMQ job generates ZIP
-3. ZIP uploaded to S3 with presigned URL
-4. User polls `/api/settings/export/status?jobId=xxx` or receives email
-5. Download via S3 presigned URL (24hr expiry)
+**Implemented:**
+- [x] `POST /api/settings/export` returns immediately with `{ status: "processing", jobId }`
+- [x] Background BullMQ job generates ZIP
+- [x] ZIP uploaded to S3 with presigned URL
+- [x] `GET /api/settings/export?jobId=xxx` returns status and download URL
+- [x] Download via S3 presigned URL (24hr expiry)
 
-**Files to Create/Modify:**
-- `prisma/schema.prisma` - Add `Job` model
-- `app/api/settings/export/route.ts` - Split into sync + async
-- `app/api/settings/export/status/route.ts` - New endpoint
-- `services/export.service.ts` - New service
-- `workers/export.worker.ts` - BullMQ worker
-- `services/s3.service.ts` - Integrate S3 presigned URLs
+**Files Created/Modified:**
+- `prisma/schema.prisma` - Added `ExportJob` model and `ExportStatus` enum
+- `app/api/settings/export/route.ts` - Split into async POST and status GET
+- `services/export.service.ts` - New service for export job processing
+- `services/queue.service.ts` - Added EXPORT queue
+- `services/workers.ts` - Added export worker
 
 **S3 Cost Estimate (1000 users/month):**
 - Storage (10GB): ~$0.23/mo
