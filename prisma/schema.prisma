@@ -180,6 +180,10 @@ model Message {
   content String
   type    String @default("text")
 
+  // Full-text search vector (managed via raw SQL migration)
+  // Uses PostgreSQL tsvector for efficient text search with ranking
+  searchVector Unsupported("tsvector")?
+
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   messageFiles MessageFile[]
@@ -194,6 +198,7 @@ model Message {
   @@index([chatId, createdAt]) // For fetching messages in chronological order within a chat
   @@index([sender])
   @@index([updatedAt])
+  @@index([searchVector], type: Gin)
 }
 
 // ---------------------------------------------------------------------------

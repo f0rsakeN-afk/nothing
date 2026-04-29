@@ -1,36 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchUserChats } from "@/lib/stack-server";
-import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
-import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
+import { stackServerApp } from "@/src/stack/server";
+import { searchChats } from "@/services/search.service";
+import { checkSearchRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = await rateLimit(request, "default");
-    if (!rateLimitResult.success) {
-      return rateLimitResponse(rateLimitResult.resetAt);
+    const rateLimit = await checkSearchRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
     }
 
-    // Validate auth and get user
-    const user = await getOrCreateUser(request);
+    // Auth check
+    const user = await stackServerApp.getUser({ tokenStore: request });
+    if (!user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
 
-    // Validate query params
+    // Parse query params
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q") || "";
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 50);
+    const projectId = searchParams.get("projectId") || undefined;
+    const dateFrom = searchParams.get("dateFrom") ? new Date(searchParams.get("dateFrom")!) : undefined;
+    const dateTo = searchParams.get("dateTo") ? new Date(searchParams.get("dateTo")!) : undefined;
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 100);
+    const cursor = searchParams.get("cursor") || undefined;
 
-    const result = await searchUserChats(user.id, query, limit);
+    if (!query.trim()) {
+      return NextResponse.json(
+        { error: "Query parameter 'q' is required" },
+        { status: 400 }
+      );
+    }
+
+    if (query.length > 500) {
+      return NextResponse.json(
+        { error: "Query too long (max 500 characters)" },
+        { status: 400 }
+      );
+    }
+
+    // Validate date range
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      return NextResponse.json(
+        { error: "dateFrom must be before dateTo" },
+        { status: 400 }
+      );
+    }
+
+    logger.info("Chat search", {
+      query,
+      userId: user.id,
+      projectId,
+    });
+
+    const result = await searchChats(user.id, {
+      query,
+      projectId,
+      dateFrom,
+      dateTo,
+      limit,
+      cursor,
+    });
 
     return NextResponse.json(result);
   } catch (error) {
-    if (error instanceof AccountDeactivatedError) {
-      return NextResponse.json({ error: "Account deactivated" }, { status: 403 });
-    }
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    logger.error("Error searching chats", error as Error, { userId: "unknown" });
+    logger.error("Chat search API error", error as Error);
     return NextResponse.json(
       { error: "Failed to search chats" },
       { status: 500 }
