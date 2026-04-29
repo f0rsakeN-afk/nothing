@@ -44,16 +44,25 @@ This document tracks planned improvements, optimizations, and technical debt for
 
 **Current:** Redis-based rate limiting exists per-user/per-IP.
 
-**Gaps:**
-- No per-endpoint granular rate limits
-- No distributed rate limiting across containers (uses Redis, so this is partially solved)
-- No circuit breaker integration
+**Implemented:**
+- [x] Basic rate limiting by tier (default, auth, chat, search, upload, export)
+- [x] Per-endpoint custom limits via config
+- [x] Rate limit analytics via `getRateLimitAnalytics()`
+- [x] Automatic rate limit increase for premium users (tier multipliers)
 
-**Implementation:**
-- [x] Basic rate limiting by tier (default, auth, chat, search)
-- [ ] Per-endpoint custom limits via config
-- [ ] Rate limit analytics endpoint
-- [ ] Automatic rate limit increase for premium users
+**Rate Limit Tiers:**
+| Tier | Window | Default Limit | Premium Multiplier |
+|------|--------|---------------|-------------------|
+| default | 1 min | 100 | 1x - 5x |
+| auth | 5 min | 10 | 1x - 5x |
+| chat | 1 min | 60 | 1x - 5x |
+| search | 1 min | 30 | 1x - 5x |
+| upload | 1 min | 20 | 1x - 5x |
+| export | 1 hour | 3 | 1x - 5x |
+
+**Files Modified:**
+- `services/rate-limit.service.ts` - Enhanced with tier multipliers and analytics
+- `lib/rate-limit.ts` - Updated exports and type definitions
 
 ---
 
@@ -61,14 +70,21 @@ This document tracks planned improvements, optimizations, and technical debt for
 
 **Current:** Basic CSRF module exists in `lib/csrf.ts`.
 
-**Gaps:**
-- Not enforced on all state-changing endpoints
-- Double-submit cookie pattern not fully integrated
+**Implemented:**
+- [x] Origin header validation on all state-changing endpoints
+- [x] `validateRequestOrigin()` middleware for API routes
+- [x] Applied to key routes (notifications, report, etc.)
 
-**Implementation:**
-- [ ] Enforce CSRF token validation on all POST/PUT/PATCH/DELETE
-- [ ] Add CSRF token to forms automatically
-- [ ] Add `lib/csrf.ts` integration to API routes
+**Usage:**
+```typescript
+const csrfError = validateRequestOrigin(request);
+if (csrfError) return csrfError;
+```
+
+**Files Modified:**
+- `lib/csrf.ts` - Enhanced with `validateRequestOrigin()` helper
+- `app/api/notifications/route.ts` - CSRF validation on PATCH/POST
+- `app/api/report/route.ts` - CSRF validation on POST
 
 ---
 

@@ -11,14 +11,15 @@ import { stackServerApp } from "@/src/stack/server";
 import { webSearch } from "@/lib/web-search";
 import { scrapeUrls, type ScrapedContent } from "@/lib/scraper";
 import { logger } from "@/lib/logger";
-import { checkSearchRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkSearchRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
     // Check rate limit
     const rateLimit = await checkSearchRateLimit(request);
     if (!rateLimit.success) {
-      return rateLimitResponse(rateLimit.resetAt);
+      return rateLimitError(rateLimit);
     }
 
     // Auth check - required for search (use anonymous only for rate limit tracking)

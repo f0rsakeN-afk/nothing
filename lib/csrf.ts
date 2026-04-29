@@ -1,6 +1,16 @@
 /**
  * CSRF Protection
  * Validates Origin header to prevent cross-site request forgery
+ *
+ * Usage in API routes:
+ *
+ * ```typescript
+ * export async function POST(request: NextRequest) {
+ *   const csrfError = validateRequestOrigin(request);
+ *   if (csrfError) return csrfError;
+ *   // handle request...
+ * }
+ * ```
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,11 +21,11 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:3000",
 ].filter(Boolean));
 
-export function validateCSRF(request: NextRequest): boolean {
+export function validateRequestOrigin(request: NextRequest): NextResponse | null {
   // Skip CSRF for GET, HEAD, OPTIONS (safe methods)
   const method = request.method;
   if (["GET", "HEAD", "OPTIONS"].includes(method)) {
-    return true;
+    return null;
   }
 
   // Check Origin header for state-changing requests
@@ -30,7 +40,7 @@ export function validateCSRF(request: NextRequest): boolean {
     if (!referer) {
       // No origin, no referer - likely a direct API call (e.g., from mobile app)
       // In this case, rely on other auth mechanisms
-      return true;
+      return null;
     }
   }
 
@@ -42,7 +52,7 @@ export function validateCSRF(request: NextRequest): boolean {
 
       // Check if origin is in allowed list
       if (ALLOWED_ORIGINS.has(origin)) {
-        return true;
+        return null;
       }
 
       // Allow localhost variations in development
@@ -50,27 +60,31 @@ export function validateCSRF(request: NextRequest): boolean {
         process.env.NODE_ENV !== "production" &&
         (originHost === "localhost:3000" || originHost === "127.0.0.1:3000")
       ) {
-        return true;
+        return null;
       }
 
       // Check if origin matches the host (same origin)
       if (originHost === host) {
-        return true;
+        return null;
       }
 
-      return false;
+      return csrfErrorResponse();
     } catch {
-      return false;
+      return csrfErrorResponse();
     }
   }
 
   // Allow if we can't determine origin (rely on other auth)
-  return true;
+  return null;
 }
 
 export function csrfErrorResponse(): NextResponse {
   return NextResponse.json(
-    { error: "CSRF validation failed" },
+    {
+      error: "CSRF validation failed",
+      code: "CSRF_ERROR",
+      message: "Request origin is not allowed. Please ensure you're making requests from the official domain.",
+    },
     { status: 403 }
   );
 }

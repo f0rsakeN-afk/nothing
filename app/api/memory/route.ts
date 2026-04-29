@@ -130,6 +130,12 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return unauthorizedError();
@@ -167,6 +173,12 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return unauthorizedError();

@@ -9,9 +9,14 @@ import prisma from "@/lib/prisma";
 import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
 import { notFoundError, internalError, validationError } from "@/lib/api-response";
 import { createReportSchema } from "@/lib/validations/api.validation";
+import { validateRequestOrigin, csrfErrorResponse } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate CSRF origin
+    const csrfError = validateRequestOrigin(request);
+    if (csrfError) return csrfError;
+
     // Rate limiting
     const rateLimitResult = await rateLimit(request, "default");
     if (!rateLimitResult.success) {

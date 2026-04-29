@@ -12,6 +12,8 @@ import { updateAccountSchema } from "@/schemas/validation";
 import { getAccountData, invalidateAccountCache } from "@/services/account.service";
 import { invalidateUserPreferencesCache } from "@/services/preferences.service";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 import {
   unauthorizedError,
   notFoundError,
@@ -21,6 +23,12 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     // Use validateAuth which checks proxy-set headers first (fast path)
     const user = await validateAuth(request);
     if (!user) {
@@ -41,10 +49,16 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     // Use validateAuth which checks proxy-set headers first (fast path)
     const user = await validateAuth(request);
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedError();
     }
 
     const fullUser = await prisma.user.findUnique({
@@ -136,10 +150,16 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     // Use validateAuth which checks proxy-set headers first (fast path)
     const user = await validateAuth(request);
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedError();
     }
 
     const fullUser = await prisma.user.findUnique({

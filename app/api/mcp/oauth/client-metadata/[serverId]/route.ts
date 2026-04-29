@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getOrCreateUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { checkApiRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ serverId: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await getOrCreateUser(request);
     const { serverId } = await params;
 

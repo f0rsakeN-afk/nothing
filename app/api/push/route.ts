@@ -12,6 +12,8 @@ import {
   getVapidPublicKey,
   isPushConfigured,
 } from "@/services/push-notification.service";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError, unauthorizedError } from "@/lib/api-response";
 
 /**
  * Get VAPID public key for client
@@ -36,6 +38,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -76,9 +84,15 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedError();
     }
 
     const body = await request.json();

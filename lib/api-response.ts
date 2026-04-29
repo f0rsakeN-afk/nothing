@@ -108,19 +108,41 @@ export function validationError(details: unknown): NextResponse {
   );
 }
 
-export function rateLimitError(retryAfter: number): NextResponse {
+export function rateLimitError(retryAfterOrResult: number | { resetAt: number; remaining: number; limit: number; tier: string }): NextResponse {
+  let retryAfter: number;
+  let remaining: number;
+  let limit: number;
+  let tier: string;
+
+  if (typeof retryAfterOrResult === "number") {
+    // Backward compatible: receive resetAt timestamp
+    retryAfter = Math.ceil((retryAfterOrResult - Date.now()) / 1000);
+    remaining = 0;
+    limit = 0;
+    tier = "FREE";
+  } else {
+    // New format: full RateLimitResult
+    retryAfter = Math.ceil((retryAfterOrResult.resetAt - Date.now()) / 1000);
+    remaining = retryAfterOrResult.remaining;
+    limit = retryAfterOrResult.limit;
+    tier = retryAfterOrResult.tier;
+  }
+
   return NextResponse.json(
     {
       error: {
         code: ErrorCodes.RATE_LIMITED,
         message: "Too many requests",
-        details: { retryAfter },
+        details: { retryAfter, remaining, limit, tier },
       },
     },
     {
       status: 429,
       headers: {
         "Retry-After": String(retryAfter),
+        "X-RateLimit-Limit": String(limit),
+        "X-RateLimit-Remaining": String(remaining),
+        "X-RateLimit-Reset": String(Math.floor((Date.now() + retryAfter * 1000) / 1000)),
       },
     }
   );

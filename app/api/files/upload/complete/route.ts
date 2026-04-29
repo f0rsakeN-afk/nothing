@@ -10,9 +10,17 @@ import { extractFileContent, getContentPreview, isExtractionSupported } from "@/
 import { invalidateProjectContext } from "@/services/project-context.service";
 import { createFileChunks } from "@/lib/stack-server";
 import prisma from "@/lib/prisma";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

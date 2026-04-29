@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { trackPromptUsage } from "@/services/trending.service";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const body = await request.json();
     const { prompt } = body;
 

@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import redis, { KEYS, TTL } from "@/lib/redis";
-import { validateCSRF, csrfErrorResponse } from "@/lib/csrf";
+import { validateRequestOrigin, csrfErrorResponse } from "@/lib/csrf";
 import { routing } from "./routing";
 
 const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog", "/onboarding"];
@@ -63,9 +63,8 @@ export default async function proxy(request: NextRequest) {
     const isPublicApiPath = PUBLIC_API_PATHS.some((p) => pathname.startsWith(p));
 
     if (!isWebhook && !isPublicApiPath && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
-      if (!validateCSRF(request)) {
-        return csrfErrorResponse();
-      }
+      const csrfError = validateRequestOrigin(request);
+      if (csrfError) return csrfError;
     }
 
     // Rate limiting check - get client IP (skip in development)

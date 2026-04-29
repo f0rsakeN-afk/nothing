@@ -3,6 +3,8 @@ import redis, { KEYS } from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { requireChatAccess } from "@/lib/chat-access";
 import { ChatRole } from "@/src/generated/prisma/client";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 const PRESENCE_TTL = 60; // 60 seconds
 
@@ -14,6 +16,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -76,6 +84,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

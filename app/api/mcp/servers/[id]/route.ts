@@ -12,6 +12,7 @@ import {
   McpAuthType,
   McpTransportType,
 } from '@/lib/mcp/server-config';
+import { checkApiRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 function isProUser(planTier: string | null | undefined) {
   return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
@@ -99,6 +100,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await getOrCreateUser(request);
 
     const { id } = await params;
@@ -239,6 +246,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await getOrCreateUser(request);
 
     const { id } = await params;

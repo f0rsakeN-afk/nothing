@@ -17,6 +17,7 @@ import {
   internalError,
   validationError,
 } from "@/lib/api-response";
+import { validateRequestOrigin, csrfErrorResponse } from "@/lib/csrf";
 import {
   notificationQuerySchema,
   notificationPrefsSchema,
@@ -159,6 +160,10 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Validate CSRF origin
+    const csrfError = validateRequestOrigin(request);
+    if (csrfError) return csrfError;
+
     const user = await getOrCreateUser(request);
 
     const body = await request.json();
@@ -245,6 +250,10 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate CSRF origin
+    const csrfError = validateRequestOrigin(request);
+    if (csrfError) return csrfError;
+
     const user = await getOrCreateUser(request);
 
     const body = await request.json();

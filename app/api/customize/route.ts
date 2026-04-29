@@ -11,6 +11,8 @@ import prisma from "@/lib/prisma";
 import { updateCustomizeSchema } from "@/schemas/validation";
 import { getUserPreferences, invalidateUserPreferencesCache } from "@/services/preferences.service";
 import { invalidateAccountCache } from "@/services/account.service";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 import {
   unauthorizedError,
   notFoundError,
@@ -20,6 +22,12 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return unauthorizedError();
@@ -52,6 +60,12 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return unauthorizedError();

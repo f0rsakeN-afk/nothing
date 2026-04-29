@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 const scryptAsync = promisify(scrypt);
 
@@ -22,6 +24,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - protect against brute force password attacks
+    const rateLimit = await checkApiRateLimit(request, "auth");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const { password } = body;

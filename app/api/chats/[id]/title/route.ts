@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateTitle } from "@/lib/title";
 import prisma from "@/lib/prisma";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

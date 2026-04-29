@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import promptsData from "@/data/prompts.json";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") || "json";
     const category = searchParams.get("category") || "";

@@ -12,6 +12,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { notFoundError, unauthorizedError, internalError } from "@/lib/api-response";
+import { checkExportRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 import {
   createExportJob,
   getExportJobStatus,
@@ -22,6 +24,12 @@ const EXPORT_COOLDOWN_HOURS = 1;
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkExportRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return unauthorizedError();
@@ -96,6 +104,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkExportRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return unauthorizedError();

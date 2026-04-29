@@ -16,11 +16,19 @@ import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
 import { redisPubSub } from "@/lib/redis";
 import { CHANNELS } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  // Rate limiting for SSE stream
+  const rateLimit = await checkApiRateLimit(request, "default");
+  if (!rateLimit.success) {
+    return rateLimitError(rateLimit);
+  }
+
   let user;
   try {
     user = await getOrCreateUser(request);

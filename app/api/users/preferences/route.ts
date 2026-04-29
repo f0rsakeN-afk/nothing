@@ -7,9 +7,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { invalidateUserPreferencesCache } from "@/services/preferences.service";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,6 +58,12 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

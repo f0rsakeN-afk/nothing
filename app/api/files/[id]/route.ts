@@ -8,12 +8,20 @@ import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { invalidateProjectContext } from "@/services/project-context.service";
 import { deleteFileEmbeddings } from "@/lib/stack-server";
+import { checkApiRateLimit } from "@/lib/rate-limit";
+import { rateLimitError } from "@/lib/api-response";
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

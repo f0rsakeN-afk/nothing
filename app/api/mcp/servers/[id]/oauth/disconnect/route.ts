@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getOrCreateUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { checkApiRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 function isProUser(planTier: string | null | undefined) {
   return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
@@ -11,6 +12,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkApiRateLimit(request);
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await getOrCreateUser(request);
 
     const { id } = await params;
