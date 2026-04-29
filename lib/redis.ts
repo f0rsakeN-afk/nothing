@@ -72,6 +72,7 @@ export const KEYS = {
   userProjects: (userId: string) => `user:${userId}:projects`,
   userSubscription: (userId: string) => `user:${userId}:subscription`,
   searchResults: (query: string) => `search:${Buffer.from(query).toString("base64").slice(0, 32)}`,
+  searchCache: (userId: string, hash: string) => `search:cache:${userId}:${hash}`,
   chatSummary: (chatId: string) => `chat:${chatId}:summary`,
   summarizing: (chatId: string) => `chat:${chatId}:summarizing`,
   mcpCatalog: "mcp:catalog",
@@ -119,6 +120,7 @@ export const TTL = {
   userProjects: 5 * 60, // 5 minutes for project list
   userSubscription: 2 * 60, // 2 minutes for user subscription/plan cache
   searchResults: 60 * 60, // 1 hour for web search results
+  searchCache: 60, // 1 minute for message search cache
   chatSummary: 7 * 24 * 60 * 60, // 7 days for chat summaries
   mcpCatalog: 10 * 60, // 10 minutes for MCP catalog (rarely changes)
   mcpTools: 5 * 60, // 5 minutes for user MCP tools cache
