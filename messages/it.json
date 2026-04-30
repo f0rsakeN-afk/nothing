@@ -416,7 +416,6 @@
     "memberSince": "Membro dal {date}",
     "usageTitle": "Utilizzo",
     "usageSubtitle": "Un dettaglio della tua attività questo mese.",
-    "messages": "Messaggi",
     "thisMonth": "questo mese",
     "totalChats": "Chat totali",
     "allTime": "sempre",
@@ -424,7 +423,6 @@
     "activityBreakdown": "Dettaglio attività",
     "messagesThisMonth": "Messaggi questo mese",
     "chatsThisMonth": "Chat questo mese",
-    "projects": "Progetti",
     "securityTitle": "Sicurezza",
     "securitySubtitle": "Gestisci la tua password, le sessioni e la sicurezza dell'account.",
     "twoFactorAuth": "Autenticazione a due fattori",
@@ -485,7 +483,6 @@
     "currentPlanBadge": "Piano Attuale",
     "currentPlanButton": "Piano Attuale",
     "perMonth": "/mese",
-    "creditsPerMonth": "crediti/mese",
     "redirecting": "Reindirizzamento...",
     "getStarted": "Inizia",
     "upgradeTo": "Esegui upgrade a {plan}",
@@ -499,11 +496,8 @@
     "features": {
       "chats": "Chat",
       "projects": "Progetti",
-      "monthlyCredits": "Crediti mensili",
       "basicChat": "Chat base",
       "basicProjects": "Progetti base",
-      "shortMemory": "Memoria a breve termine",
-      "longerMemory": "Memoria di conversazione più lunga",
       "attachments": "Allegati file",
       "advancedCustomization": "Personalizzazione avanzata",
       "chatFolders": "Cartelle chat",
@@ -512,8 +506,13 @@
       "teamCollaboration": "Collaborazione di team",
       "apiAccess": "Accesso API",
       "prioritySupport": "Supporto prioritario",
-      "dedicatedSupport": "Supporto dedicato"
-    }
+      "shortMemory": "Memoria breve",
+      "longerMemory": "Memoria più lunga",
+      "dedicatedSupport": "Supporto dedicato",
+      "monthlyMessages": "Monthly messages"
+    },
+    "subscribeTo": "Subscribe to {plan}",
+    "fetchError": "Failed to load pricing plans"
   },
   "notifications": {
     "title": "Notifiche",

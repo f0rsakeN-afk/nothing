@@ -1,13 +1,20 @@
 "use client";
 
-import { useState, memo, useRef, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Upload, FileText, X, File, FileCode } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useHaptics } from '@/hooks/use-web-haptics';
+import { memo, useRef, useCallback, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { FileText, X, File, FileCode, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useHaptics } from "@/hooks/use-web-haptics";
 
 export interface MemoryItem {
   id: string;
@@ -20,86 +27,167 @@ export interface MemoryItem {
 interface MemoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { title: string; content: string; category: string }) => void;
+  onSubmit: (data: {
+    title: string;
+    content: string;
+    category: string;
+  }) => void;
   memory?: MemoryItem | null;
 }
 
-const PRESET_CATEGORIES = ['work', 'personal', 'projects', 'ideas', 'important'];
+const PRESET_CATEGORIES = ["work", "personal", "projects", "ideas", "important"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const SUPPORTED_TYPES = [".md", ".txt", ".pdf"];
 
-function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModalProps) {
+interface FormValues {
+  title: string;
+  content: string;
+  category: string;
+}
+
+function MemoryModalComponent({
+  isOpen,
+  onClose,
+  onSubmit,
+  memory,
+}: MemoryModalProps) {
   const { trigger } = useHaptics();
-  const [title, setTitle] = useState(memory?.title || '');
-  const [content, setContent] = useState(memory?.content || '');
-  const [category, setCategory] = useState(memory?.category || '');
-  const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
-    trigger("success");
-    onSubmit({ title, content, category });
-    handleClose();
-  };
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<FormValues>({
+    defaultValues: {
+      title: memory?.title || "",
+      content: memory?.content || "",
+      category: memory?.category || "",
+    },
+  });
+
+  const content = watch("content");
+  const category = watch("category");
+  const fileNameRef = useRef<string | null>(null);
+  const fileContentRef = useRef<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const handleClose = useCallback(() => {
     trigger("nudge");
-    setTitle('');
-    setContent('');
-    setCategory('');
-    setFileName(null);
+    reset({
+      title: "",
+      content: "",
+      category: "",
+    });
+    fileNameRef.current = null;
+    fileContentRef.current = null;
+    setFileError(null);
     onClose();
-  }, [onClose, trigger]);
+  }, [onClose, trigger, reset]);
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    setFileName(file.name);
+      setFileError(null);
 
-    try {
-      let text = '';
-
-      if (file.type === 'text/markdown' || file.name.endsWith('.md')) {
-        text = await file.text();
-      } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-        text = await file.text();
-      } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-        text = `[PDF content from: ${file.name}]`;
-      } else {
-        text = await file.text();
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError("File too large. Maximum size is 5MB.");
+        return;
       }
 
-      setContent((prev) => prev ? `${prev}\n\n${text}` : text);
-
-      if (!title) {
-        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-        setTitle(nameWithoutExt);
+      // Validate file type
+      const ext = "." + file.name.split(".").pop()?.toLowerCase();
+      if (!SUPPORTED_TYPES.includes(ext)) {
+        setFileError("Unsupported file type. Upload .md, .txt, or .pdf");
+        return;
       }
-    } catch (error) {
-      console.error('Error reading file:', error);
-    }
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [title]);
+      setIsLoading(true);
+      fileNameRef.current = file.name;
+
+      try {
+        let text = "";
+
+        if (ext === ".md" || ext === ".txt") {
+          text = await file.text();
+        } else if (ext === ".pdf") {
+          text = await file.text();
+          if (text.length < 50) {
+            text = `[PDF content from: ${file.name}]\n\nNote: PDF text extraction is limited.`;
+          }
+        }
+
+        fileContentRef.current = text;
+        const currentContent = watch("content");
+        const newContent = currentContent
+          ? `${currentContent}\n\n${text}`
+          : text;
+        setValue("content", newContent);
+
+        // Auto-fill title from filename if empty
+        const currentTitle = watch("title");
+        if (!currentTitle) {
+          const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+          setValue("title", nameWithoutExt);
+        }
+      } catch (error) {
+        console.error("Error reading file:", error);
+        setFileError("Failed to read file. Please try again.");
+        fileNameRef.current = null;
+      } finally {
+        setIsLoading(false);
+      }
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [watch, setValue]
+  );
 
   const removeFile = useCallback(() => {
-    setFileName(null);
-  }, []);
+    if (fileContentRef.current) {
+      const currentContent = watch("content");
+      const cleaned = currentContent
+        .replace(fileContentRef.current, "")
+        .replace(/\n\n$/, "")
+        .replace(/^\n\n/, "");
+      setValue("content", cleaned);
+    }
+    fileNameRef.current = null;
+    fileContentRef.current = null;
+    setFileError(null);
+  }, [watch, setValue]);
 
   const triggerFileInput = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
-  const handleCategorySelect = useCallback((cat: string) => {
-    setCategory(cat);
-  }, []);
+  const handleCategoryToggle = useCallback(
+    (cat: string) => {
+      if (category === cat) {
+        setValue("category", ""); // Deselect
+      } else {
+        setValue("category", cat);
+      }
+    },
+    [category, setValue]
+  );
 
-  const handleCloseModal = useCallback(() => {
+  const onFormSubmit = (data: FormValues) => {
+    if (!data.content.trim()) return;
+    trigger("success");
+    onSubmit({ ...data, category: data.category });
     handleClose();
-  }, [handleClose]);
+  };
 
   const isEditing = !!memory;
 
@@ -108,20 +196,23 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Edit Memory' : 'New Memory'}
+            {isEditing ? "Edit Memory" : "New Memory"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
+        <form
+          onSubmit={handleSubmit(onFormSubmit)}
+          className="space-y-4 py-4"
+        >
+          <div className="space-y-2 flex flex-col">
+            <span className="text-sm font-medium">Title</span>
             <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              {...register("title")}
               placeholder="Title"
               className="w-full"
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col">
             <span className="text-sm font-medium">Content</span>
             <input
               type="file"
@@ -131,20 +222,45 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
               className="hidden"
             />
             <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+              {...register("content", {
+                required: "Content is required",
+              })}
               placeholder="What would you like to remember?"
               className="w-full min-h-[100px] resize-none"
             />
+            {errors.content && (
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <X className="w-3 h-3" />
+                {errors.content.message}
+              </p>
+            )}
 
-            {fileName ? (
+            {fileError && (
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <X className="w-3 h-3" />
+                {fileError}
+              </p>
+            )}
+
+            {isLoading ? (
+              <div className="flex items-center justify-center p-4 bg-muted/50 rounded-lg border border-dashed">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Reading file...
+                </span>
+              </div>
+            ) : fileNameRef.current ? (
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center justify-center w-10 h-10 bg-background rounded-lg">
                   <FileText className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{fileName}</p>
-                  <p className="text-xs text-muted-foreground">Added to memory</p>
+                  <p className="text-sm font-medium truncate">
+                    {fileNameRef.current}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Added to memory
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -177,24 +293,27 @@ function MemoryModalComponent({ isOpen, onClose, onSubmit, memory }: MemoryModal
               <button
                 key={cat}
                 type="button"
-                onClick={() => handleCategorySelect(cat)}
+                onClick={() => handleCategoryToggle(cat)}
                 className={cn(
-                  "px-3 py-1.5 rounded-full text-sm",
+                  "px-3 py-1.5 rounded-full text-sm transition-all",
                   category === cat
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
               >
+                {category === cat && (
+                  <X className="w-3 h-3 inline mr-1" />
+                )}
                 {cat}
               </button>
             ))}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleCloseModal}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={!content.trim()}>
-              {isEditing ? 'Save' : 'Add'}
+              {isEditing ? "Save" : "Add"}
             </Button>
           </DialogFooter>
         </form>

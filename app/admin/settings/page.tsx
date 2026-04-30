@@ -23,6 +23,7 @@ import {
   Plus,
   Trash2,
   Zap,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -134,11 +135,50 @@ export default function SettingsPage() {
   });
 
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
+  const [cachePattern, setCachePattern] = useState("*");
+  const [dryRunKeys, setDryRunKeys] = useState<number | null>(null);
 
   const handleSettingChange = useCallback((key: string, value: string) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
     setHasChanges(true);
   }, []);
+
+  const flushCacheMutation = useMutation({
+    mutationFn: async ({ pattern, dryRun }: { pattern: string; dryRun: boolean }) => {
+      const res = await fetch("/api/admin/cache", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pattern, dryRun }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || "Failed to flush cache");
+      }
+      return res.json();
+    },
+    onSuccess: (result) => {
+      if (result.dryRun) {
+        setDryRunKeys(result.matchedKeys);
+        toast.success(`Found ${result.matchedKeys} keys matching "${result.pattern}"`);
+      } else {
+        setDryRunKeys(null);
+        toast.success(`Flushed ${result.deletedCount} cache keys`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["admin", "cache"] });
+    },
+    onError: (err: Error) => {
+      toast.error("Failed to flush cache", { description: err.message });
+    },
+  });
+
+  const handleDryRun = () => {
+    flushCacheMutation.mutate({ pattern: cachePattern, dryRun: true });
+  };
+
+  const handleFlushCache = () => {
+    if (!confirm(`Flush all Redis cache keys matching "${cachePattern}"? This cannot be undone.`)) return;
+    flushCacheMutation.mutate({ pattern: cachePattern, dryRun: false });
+  };
 
   const updateMutation = useMutation({
     mutationFn: updateSettings,
@@ -258,7 +298,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -542,6 +582,55 @@ export default function SettingsPage() {
                 >
                   Reset
                 </Button>
+              </div>
+
+              <div className="border-t border-border pt-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-medium">Flush Redis Cache</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Remove all keys from Redis cache matching a pattern. Use with caution — may temporarily increase DB load.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={cachePattern}
+                      onChange={(e) => setCachePattern(e.target.value)}
+                      placeholder="Pattern (e.g. * or user:*:memories)"
+                      className="h-8 w-80"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDryRun}
+                      disabled={flushCacheMutation.isPending}
+                      className="gap-1.5"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Preview
+                    </Button>
+                  </div>
+                  {dryRunKeys !== null && (
+                    <p className="text-xs text-muted-foreground">
+                      {dryRunKeys} keys would be deleted
+                    </p>
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleFlushCache}
+                    disabled={flushCacheMutation.isPending}
+                    className="self-start gap-1.5"
+                  >
+                    {flushCacheMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Flush Cache
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

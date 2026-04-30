@@ -417,7 +417,6 @@
     "memberSince": "{date} देखि सदस्य",
     "usageTitle": "प्रयोग",
     "usageSubtitle": "यो महिनाको तपाईंको गतिविधिको विवरण।",
-    "messages": "सन्देशहरू",
     "thisMonth": "यो महिना",
     "totalChats": "कुल च्याटहरू",
     "allTime": "सबै समय",
@@ -425,7 +424,6 @@
     "activityBreakdown": "गतिविधि विवरण",
     "messagesThisMonth": "यो महिनाका सन्देशहरू",
     "chatsThisMonth": "यो महिनाका च्याटहरू",
-    "projects": "परियोजनाहरू",
     "securityTitle": "सुरक्षा",
     "securitySubtitle": "आफ्नो पासवर्ड, सत्रहरू, र खाता सुरक्षा व्यवस्थित गर्नुहोस्।",
     "twoFactorAuth": "दुई-कारक प्रमाणीकरण",
@@ -486,7 +484,6 @@
     "currentPlanBadge": "हालको योजना",
     "currentPlanButton": "हालको योजना",
     "perMonth": "/महिना",
-    "creditsPerMonth": "क्रेडिट/महिना",
     "redirecting": "पुनर्निर्देशन हुँदैछ...",
     "getStarted": "सुरु गर्नुहोस्",
     "upgradeTo": "{plan} मा अपग्रेड गर्नुहोस्",
@@ -500,11 +497,8 @@
     "features": {
       "chats": "च्याटहरू",
       "projects": "परियोजनाहरू",
-      "monthlyCredits": "मासिक क्रेडिट",
       "basicChat": "आधारभूत च्याट",
       "basicProjects": "आधारभूत परियोजनाहरू",
-      "shortMemory": "अल्पकालीन मेमोरी",
-      "longerMemory": "लामो कुराकानी मेमोरी",
       "attachments": "फाइल अट्याचमेन्टहरू",
       "advancedCustomization": "उन्नत अनुकूलन",
       "chatFolders": "च्याट फोल्डरहरू",
@@ -513,8 +507,13 @@
       "teamCollaboration": "टोली सहयोग",
       "apiAccess": "API पहुँच",
       "prioritySupport": "प्राथमिकता समर्थन",
-      "dedicatedSupport": "समर्पित समर्थन"
-    }
+      "shortMemory": "छोटो मेमोरी",
+      "longerMemory": "लामो मेमोरी",
+      "dedicatedSupport": "समर्पित समर्थन",
+      "monthlyMessages": "Monthly messages"
+    },
+    "subscribeTo": "Subscribe to {plan}",
+    "fetchError": "Failed to load pricing plans"
   },
   "notifications": {
     "title": "सूचनाहरू",

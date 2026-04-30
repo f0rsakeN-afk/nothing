@@ -95,6 +95,11 @@ const ReportDialog = dynamic(
     import("@/components/report/report-dialog").then((mod) => mod.ReportDialog),
   { ssr: false },
 );
+const PaymentResultDialog = dynamic(
+  () =>
+    import("./dialogs/payment-result-dialog").then((mod) => mod.PaymentResultDialog),
+  { ssr: false },
+);
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import { useStackApp, useUser } from "@stackframe/stack";
 import { useQuery } from "@tanstack/react-query";
@@ -122,7 +127,16 @@ export function AppSidebarFooter() {
   const [accountOpen, setAccountOpen] = React.useState<boolean>(false);
   const [shortcutsOpen, setShortcutsOpen] = React.useState<boolean>(false);
   const [reportOpen, setReportOpen] = React.useState<boolean>(false);
+  const [paymentResultOpen, setPaymentResultOpen] = React.useState<boolean>(false);
   const isCollapsed = state === "collapsed";
+
+  // Check for payment result in URL on mount
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment")) {
+      setPaymentResultOpen(true);
+    }
+  }, []);
 
   // Fetch user plan info
   const { data: accountData } = useQuery({
@@ -472,6 +486,10 @@ export function AppSidebarFooter() {
       <FeedbackDialog isOpen={feedbackOpen} onOpenChange={setFeedbackOpen} />
       <CustomizeDialog isOpen={customizeOpen} onOpenChange={setCustomizeOpen} />
       <ReportDialog isOpen={reportOpen} onOpenChange={setReportOpen} />
+      <PaymentResultDialog
+        isOpen={paymentResultOpen}
+        onOpenChange={setPaymentResultOpen}
+      />
     </>
   );
 }

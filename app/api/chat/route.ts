@@ -514,14 +514,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Check credits before processing
-    const { checkCreditsForOperation, deductCredits, addCredits, getCreditCosts } = await import("@/services/credit.service");
-
     // Map user-facing model name to internal model key
     const modelKey = requestedModel || aiConfig.model;
-    const allCosts = await getCreditCosts();
-    const cost = allCosts[modelKey] ?? allCosts[aiConfig.model] ?? 1;
-    const webSearchCost = allCosts["web-search"] ?? 3;
 
     // Try to resume existing stream if requested
     if (resume) {
@@ -565,22 +559,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check credits for new stream
-    const hasCredits = await checkCreditsForOperation(user.id, modelKey);
-    if (!hasCredits) {
-      const { getUserCredits } = await import("@/services/credit.service");
-      const balance = await getUserCredits(user.id);
-      return new Response(JSON.stringify({
-        error: "Insufficient credits",
-        required: cost,
-        current: balance,
-        message: `This operation requires ${cost} credits. You have ${balance} credits remaining.`,
-      }), {
-        status: 402,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     // Build messages
     let fullMessages = await buildMessages(chatId, messages, undefined, responseStyle);
 
@@ -589,8 +567,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Track state
-    let creditsDeducted = false;
-    let webSearchCreditsDeducted = false;
     let searchResults: SearchResult[] = [];
     let stopFn: (() => void) | null = null;
 
@@ -620,50 +596,6 @@ export async function POST(req: NextRequest) {
     } catch (mcpError) {
       console.error("[Chat] Failed to load MCP tools:", mcpError);
       // Continue without MCP tools - graceful degradation
-    }
-
-    // Web search mode
-    if (mode === "web") {
-      const hasWebSearchCredits = await checkCreditsForOperation(user.id, "web-search");
-      if (!hasWebSearchCredits) {
-        const { getUserCredits } = await import("@/services/credit.service");
-        const balance = await getUserCredits(user.id);
-        return new Response(JSON.stringify({
-          error: "Insufficient credits",
-          required: webSearchCost,
-          current: balance,
-          type: "web_search",
-          message: `Web search requires ${webSearchCost} credits. You have ${balance} credits remaining.`,
-        }), {
-          status: 402,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      try {
-        await deductCredits(user.id, "web-search");
-        webSearchCreditsDeducted = true;
-      } catch (deductError) {
-        console.error("[Chat] Failed to deduct web search credits:", deductError);
-      }
-    }
-
-    // Deduct AI credits
-    try {
-      await deductCredits(user.id, modelKey);
-      creditsDeducted = true;
-    } catch (error) {
-      if (creditsDeducted) {
-        addCredits(user.id, cost).catch((err) => {
-          console.error("[Chat] Failed to refund AI credits:", err);
-        });
-      }
-      if (webSearchCreditsDeducted) {
-        addCredits(user.id, webSearchCost).catch((err) => {
-          console.error("[Chat] Failed to refund web search credits:", err);
-        });
-      }
-      throw error;
     }
 
     // Web search preparation
@@ -724,18 +656,6 @@ export async function POST(req: NextRequest) {
       resumableStream = result.stream;
       stopFn = result.stop;
     } catch (error) {
-      // Refund credits on stream creation failure
-      if (creditsDeducted) {
-        addCredits(user.id, cost).catch((err) => {
-          console.error("[Chat] Failed to refund AI credits:", err);
-        });
-      }
-      if (webSearchCreditsDeducted) {
-        addCredits(user.id, webSearchCost).catch((err) => {
-          console.error("[Chat] Failed to refund web search credits:", err);
-        });
-      }
-
       if (error instanceof CircuitBreakerOpenError) {
         return new Response(JSON.stringify({
           error: "AI service temporarily unavailable",

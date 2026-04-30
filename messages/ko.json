@@ -416,7 +416,6 @@
     "memberSince": "{date}부터 회원",
     "usageTitle": "사용량",
     "usageSubtitle": "이번 달 활동 분석.",
-    "messages": "메시지",
     "thisMonth": "이번 달",
     "totalChats": "총 채팅",
     "allTime": "전체 기간",
@@ -424,7 +423,6 @@
     "activityBreakdown": "활동 분석",
     "messagesThisMonth": "이번 달 메시지",
     "chatsThisMonth": "이번 달 채팅",
-    "projects": "프로젝트",
     "securityTitle": "보안",
     "securitySubtitle": "비밀번호, 세션 및 계정 보안을 관리하세요.",
     "twoFactorAuth": "이중 인증",
@@ -485,7 +483,6 @@
     "currentPlanBadge": "현재 플랜",
     "currentPlanButton": "현재 플랜",
     "perMonth": "/월",
-    "creditsPerMonth": "크레딧/월",
     "redirecting": "리다이렉션 중...",
     "getStarted": "시작하기",
     "upgradeTo": "{plan}으로 업그레이드",
@@ -499,11 +496,8 @@
     "features": {
       "chats": "채팅",
       "projects": "프로젝트",
-      "monthlyCredits": "월간 크레딧",
       "basicChat": "기본 채팅",
       "basicProjects": "기본 프로젝트",
-      "shortMemory": "단기 메모리",
-      "longerMemory": "더 긴 대화 메모리",
       "attachments": "파일 첨부",
       "advancedCustomization": "고급 사용자 정의",
       "chatFolders": "채팅 폴더",
@@ -512,8 +506,13 @@
       "teamCollaboration": "팀 협업",
       "apiAccess": "API 액세스",
       "prioritySupport": "우선 지원",
-      "dedicatedSupport": "전담 지원"
-    }
+      "shortMemory": "짧은 메모리",
+      "longerMemory": "긴 메모리",
+      "dedicatedSupport": "전담 지원",
+      "monthlyMessages": "Monthly messages"
+    },
+    "subscribeTo": "Subscribe to {plan}",
+    "fetchError": "Failed to load pricing plans"
   },
   "notifications": {
     "title": "알림",

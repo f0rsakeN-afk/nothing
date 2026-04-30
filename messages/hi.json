@@ -417,7 +417,6 @@
     "memberSince": "{date} से सदस्य",
     "usageTitle": "उपयोग",
     "usageSubtitle": "इस महीने आपकी गतिविधि का विवरण।",
-    "messages": "संदेश",
     "thisMonth": "इस महीने",
     "totalChats": "कुल चैट्स",
     "allTime": "सभी समय",
@@ -425,7 +424,6 @@
     "activityBreakdown": "गतिविधि विवरण",
     "messagesThisMonth": "इस महीने के संदेश",
     "chatsThisMonth": "इस महीने की चैट्स",
-    "projects": "प्रोजेक्ट्स",
     "securityTitle": "सुरक्षा",
     "securitySubtitle": "अपना पासवर्ड, सेशन और खाता सुरक्षा प्रबंधित करें।",
     "twoFactorAuth": "दो-कारक प्रमाणीकरण",
@@ -486,7 +484,6 @@
     "currentPlanBadge": "वर्तमान प्लान",
     "currentPlanButton": "वर्तमान प्लान",
     "perMonth": "/महीना",
-    "creditsPerMonth": "क्रेडिट/महीना",
     "redirecting": "पुनर्निर्देशित हो रहा है...",
     "getStarted": "शुरू करें",
     "upgradeTo": "{plan} में अपग्रेड करें",
@@ -500,11 +497,8 @@
     "features": {
       "chats": "चैट्स",
       "projects": "प्रोजेक्ट्स",
-      "monthlyCredits": "मासिक क्रेडिट",
       "basicChat": "बेसिक चैट",
       "basicProjects": "बेसिक प्रोजेक्ट्स",
-      "shortMemory": "अल्पकालिक मेमोरी",
-      "longerMemory": "लंबी बातचीत मेमोरी",
       "attachments": "फ़ाइल अटैचमेंट",
       "advancedCustomization": "उन्नत अनुकूलन",
       "chatFolders": "चैट फ़ोल्डर्स",
@@ -513,8 +507,13 @@
       "teamCollaboration": "टीम सहयोग",
       "apiAccess": "API पहुँच",
       "prioritySupport": "प्राथमिकता सहायता",
-      "dedicatedSupport": "समर्पित सहायता"
-    }
+      "shortMemory": "छोटी मेमोरी",
+      "longerMemory": "लंबी मेमोरी",
+      "dedicatedSupport": "समर्पित सहायता",
+      "monthlyMessages": "Monthly messages"
+    },
+    "subscribeTo": "Subscribe to {plan}",
+    "fetchError": "Failed to load pricing plans"
   },
   "notifications": {
     "title": "सूचनाएं",

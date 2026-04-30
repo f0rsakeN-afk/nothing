@@ -33,7 +33,8 @@ interface MemoryCache {
  */
 function getMemoryCacheKey(userId: string, category?: string, query?: string): string {
   if (query) {
-    return `user:${userId}:memories:search:${Buffer.from(`${query}:${category || "all"}`).toString("base64").slice(0, 32)}`;
+    const stableKey = Buffer.from(`${query}:${category || "all"}`).toString("base64");
+    return `user:${userId}:memories:search:${stableKey}`;
   }
   if (category) {
     return `user:${userId}:memories:category:${category}`;

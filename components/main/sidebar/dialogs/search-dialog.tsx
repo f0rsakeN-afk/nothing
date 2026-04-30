@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { getChats } from "@/services/chat.service";
 
 interface SearchDialogProps {
   open: boolean;
@@ -29,18 +30,7 @@ interface Chat {
 
 interface ChatsResponse {
   chats: Chat[];
-}
-
-async function fetchChats(): Promise<ChatsResponse> {
-  const res = await fetch("/api/chats?limit=50");
-  if (!res.ok) throw new Error("Failed to fetch chats");
-  return res.json();
-}
-
-async function searchChats(query: string): Promise<ChatsResponse> {
-  const res = await fetch(`/api/chats/search?q=${encodeURIComponent(query)}&limit=50`);
-  if (!res.ok) throw new Error("Failed to search chats");
-  return res.json();
+  nextCursor: string | null;
 }
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
@@ -48,26 +38,27 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const [query, setQuery] = React.useState("");
   const router = useRouter();
 
-  // Fetch all chats when dialog opens
-  const { data: allChats, isLoading: loadingAll } = useQuery({
-    queryKey: ["chats", "all"],
-    queryFn: fetchChats,
+  // Uses same query key as sidebar - shares cache (no extra DB call if sidebar loaded)
+  const { data: allChats, isLoading } = useQuery({
+    queryKey: ["chats"],
+    queryFn: () => getChats(50, true) as unknown as Promise<ChatsResponse>,
     enabled: open,
     staleTime: 30000,
   });
 
-  // Search chats when query changes
-  const { data: searchResults, isLoading: searching } = useQuery({
-    queryKey: ["chats", "search", query],
-    queryFn: () => searchChats(query),
-    enabled: query.trim().length > 0,
-    staleTime: 10000,
-  });
+  // Client-side filter from cached chats
+  const filteredChats = React.useMemo(() => {
+    const chats = allChats?.chats ?? [];
+    if (!query.trim()) return chats;
+    const lower = query.toLowerCase();
+    return chats.filter(
+      (chat) =>
+        chat.title.toLowerCase().includes(lower) ||
+        chat.firstMessagePreview?.toLowerCase().includes(lower)
+    );
+  }, [allChats, query]);
 
-  const isLoading = query.trim() ? searching : loadingAll;
-  const chats = query.trim()
-    ? searchResults?.chats ?? []
-    : allChats?.chats ?? [];
+  const chats = filteredChats;
 
   const handleSelectChat = (chatId: string) => {
     router.push(`/chat/${chatId}`);
@@ -77,8 +68,6 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // If there's a query, search and navigate to first result
-    // Otherwise just close
     if (query.trim() && chats.length > 0) {
       handleSelectChat(chats[0].id);
     }
@@ -112,7 +101,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-4 pb-2">
+        <div className="px-4 py-2">
           <form onSubmit={handleSubmit}>
             <Input
               placeholder={t("search.placeholder")}
@@ -122,15 +111,11 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
               className="mb-3"
             />
           </form>
-          {query.trim() ? (
-            <p className="text-xs text-muted-foreground">
-              {t("search.results", { count: chats.length })}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              {t("search.searchChats")}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            {query.trim()
+              ? `${chats.length} result${chats.length !== 1 ? "s" : ""} for "${query}"`
+              : `${chats.length} recent chat${chats.length !== 1 ? "s" : ""}`}
+          </p>
         </div>
 
         {/* Results list */}
@@ -143,9 +128,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <MessageSquare className="h-8 w-8 text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground">
-                {query.trim()
-                  ? t("search.noResults")
-                  : t("chat.noChatsDesc")}
+                {query.trim() ? t("search.noResults") : t("chat.noChatsDesc")}
               </p>
             </div>
           ) : (

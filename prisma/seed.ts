@@ -1,5 +1,6 @@
 import { PrismaClient, PlanTier } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import redis from "../lib/redis";
 
 const adapter = new PrismaPg({
   connectionString:
@@ -8,6 +9,8 @@ const adapter = new PrismaPg({
 });
 
 const prisma = new PrismaClient({ adapter });
+
+const PLANS_CACHE_KEY = "plans:all";
 
 // ─── Plans ─────────────────────────────────────────────────────────────────────
 
@@ -18,18 +21,17 @@ const plans = [
     name: "Free",
     description: "Start for free. No credit card needed.",
     price: 0,
-    credits: 50,
-    maxChats: 100,
-    maxProjects: 3,
-    maxMessages: 100,
-    maxMemoryItems: 5,
+    maxChats: 10,
+    maxProjects: 1,
+    maxMessages: 50,
+    maxMemoryItems: 3,
     maxBranchesPerChat: 0,
     maxFolders: 0,
     maxAttachmentsPerChat: 0,
     maxFileSizeMb: 0,
     canExport: false,
     canApiAccess: false,
-    features: ["basic-chat", "basic-projects", "short-memory"],
+    features: ["basic-chat", "basic-projects"],
     sortOrder: 0,
     isActive: true,
     isVisible: true,
@@ -39,25 +41,24 @@ const plans = [
     id: "basic",
     tier: PlanTier.BASIC,
     name: "Basic",
-    description: "For individuals who want more than free. Less than a coffee.",
-    price: 299,
-    credits: 200,
-    maxChats: 1000,
-    maxProjects: 10,
-    maxMessages: 1000,
+    description: "For individuals who want more than free.",
+    price: 299, // NPR ~$2.25/month
+    maxChats: 30,
+    maxProjects: 3,
+    maxMessages: 500,
     maxMemoryItems: 20,
     maxBranchesPerChat: 3,
-    maxFolders: 5,
-    maxAttachmentsPerChat: 5,
+    maxFolders: 3,
+    maxAttachmentsPerChat: 3,
     maxFileSizeMb: 5,
     canExport: false,
     canApiAccess: false,
     features: [
       "basic-chat",
       "basic-projects",
-      "longer-memory",
       "attachments",
       "chat-folders",
+      "longer-memory",
     ],
     sortOrder: 1,
     isActive: true,
@@ -68,28 +69,26 @@ const plans = [
     id: "pro",
     tier: PlanTier.PRO,
     name: "Pro",
-    description:
-      "For power users. Half the price of ChatGPT Plus, built for speed.",
-    price: 999,
-    credits: 2000,
+    description: "For power users. Everything you need.",
+    price: 999, // NPR ~$7.50/month
     maxChats: -1,
     maxProjects: -1,
-    maxMessages: -1,
-    maxMemoryItems: 100,
-    maxBranchesPerChat: 10,
+    maxMessages: 3000,
+    maxMemoryItems: -1,
+    maxBranchesPerChat: -1,
     maxFolders: -1,
     maxAttachmentsPerChat: 20,
     maxFileSizeMb: 25,
     canExport: true,
-    canApiAccess: false,
+    canApiAccess: true,
     features: [
       "basic-chat",
       "basic-projects",
-      "longer-memory",
       "attachments",
-      "advanced-customization",
       "chat-folders",
       "chat-branches",
+      "longer-memory",
+      "advanced-customization",
       "export-chats",
     ],
     sortOrder: 2,
@@ -101,10 +100,8 @@ const plans = [
     id: "enterprise",
     tier: PlanTier.ENTERPRISE,
     name: "Enterprise",
-    description:
-      "For teams that need the best. API access and dedicated support.",
-    price: 2999,
-    credits: 10000,
+    description: "For teams. API access and dedicated support.",
+    price: 2999, // NPR ~$22.50/month
     maxChats: -1,
     maxProjects: -1,
     maxMessages: -1,
@@ -118,16 +115,15 @@ const plans = [
     features: [
       "basic-chat",
       "basic-projects",
-      "longer-memory",
       "attachments",
-      "advanced-customization",
       "chat-folders",
       "chat-branches",
+      "longer-memory",
+      "advanced-customization",
       "export-chats",
       "team-collaboration",
       "api-access",
       "priority-support",
-      "dedicated-support",
     ],
     sortOrder: 3,
     isActive: true,
@@ -735,10 +731,16 @@ async function main() {
         name: plan.name,
         description: plan.description,
         price: plan.price,
-        credits: plan.credits,
         maxChats: plan.maxChats,
         maxProjects: plan.maxProjects,
         maxMessages: plan.maxMessages,
+        maxMemoryItems: plan.maxMemoryItems,
+        maxBranchesPerChat: plan.maxBranchesPerChat,
+        maxFolders: plan.maxFolders,
+        maxAttachmentsPerChat: plan.maxAttachmentsPerChat,
+        maxFileSizeMb: plan.maxFileSizeMb,
+        canExport: plan.canExport,
+        canApiAccess: plan.canApiAccess,
         features: plan.features,
         sortOrder: plan.sortOrder,
         isActive: plan.isActive,
@@ -748,6 +750,14 @@ async function main() {
       create: plan,
     });
     console.log(`  ✓ ${result.name} plan`);
+  }
+
+  // Invalidate plans cache
+  try {
+    await redis.del(PLANS_CACHE_KEY);
+    console.log("  ✓ Plans cache invalidated");
+  } catch (e) {
+    console.log("  ! Could not invalidate cache:", e);
   }
 
   // Seed MCP catalog items

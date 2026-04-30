@@ -30,7 +30,6 @@
     "@aws-sdk/s3-request-presigner": "^3.1038.0",
     "@base-ui/react": "^1.4.1",
     "@hookform/resolvers": "^5.2.2",
-    "@polar-sh/sdk": "^0.47.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@stackframe/stack": "^2.8.85",

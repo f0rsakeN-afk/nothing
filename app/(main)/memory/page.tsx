@@ -6,15 +6,34 @@ import { MemoryGrid } from "@/components/main/memory/memory-grid";
 import { MemoryModal } from "@/components/main/memory/memory-modal";
 import type { MemoryItem } from "@/components/main/memory/memory-modal";
 import { useMemory } from "@/hooks/use-memory";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function MemoryPage() {
-  const { memories, isLoading, error, addMemory, updateMemory, deleteMemory, searchMemories, total } = useMemory();
+  const {
+    memories,
+    isLoading,
+    error,
+    addMemory,
+    updateMemory,
+    deleteMemory,
+    searchMemories,
+    total,
+  } = useMemory();
   const [searchQuery, setSearchQuery] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingMemory, setEditingMemory] = useState<MemoryItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MemoryItem | null>(null);
 
-  // Sync search query with API
   useEffect(() => {
     const timer = setTimeout(() => {
       searchMemories(searchQuery);
@@ -22,13 +41,23 @@ export default function MemoryPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, searchMemories]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    await deleteMemory(id);
-  }, [deleteMemory]);
-
   const handleEdit = useCallback((memory: MemoryItem) => {
     setEditingMemory(memory);
     setEditModalOpen(true);
+  }, []);
+
+  const handleDeleteClick = useCallback((memory: MemoryItem) => {
+    setDeleteTarget(memory);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+    await deleteMemory(deleteTarget.id);
+    setDeleteTarget(null);
+  }, [deleteTarget, deleteMemory]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteTarget(null);
   }, []);
 
   const handleAdd = useCallback(
@@ -57,15 +86,6 @@ export default function MemoryPage() {
     [editingMemory, updateMemory],
   );
 
-  // Client-side filter for display since API returns all on empty query
-  const filteredMemories = searchQuery.trim()
-    ? memories.filter(
-        (m) =>
-          m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          m.content.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : memories;
-
   return (
     <div className="flex flex-col h-full max-w-6xl w-full mx-auto">
       <MemoryHeader
@@ -75,10 +95,10 @@ export default function MemoryPage() {
       />
 
       <MemoryGrid
-        memories={filteredMemories}
+        memories={memories}
         searchQuery={searchQuery}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={handleDeleteClick}
       />
 
       <MemoryModal
@@ -95,6 +115,23 @@ export default function MemoryPage() {
         onSubmit={handleUpdate}
         memory={editingMemory}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && handleDeleteCancel()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Memory</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteTarget?.title || "this memory"}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

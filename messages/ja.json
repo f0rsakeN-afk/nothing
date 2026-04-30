@@ -416,7 +416,6 @@
     "memberSince": "{date}からメンバー",
     "usageTitle": "使用量",
     "usageSubtitle": "今月のアクティビティの内訳。",
-    "messages": "メッセージ",
     "thisMonth": "今月",
     "totalChats": "総チャット数",
     "allTime": "全期間",
@@ -424,7 +423,6 @@
     "activityBreakdown": "アクティビティ内訳",
     "messagesThisMonth": "今月のメッセージ",
     "chatsThisMonth": "今月のチャット",
-    "projects": "プロジェクト",
     "securityTitle": "セキュリティ",
     "securitySubtitle": "パスワード、セッション、アカウントセキュリティを管理してください。",
     "twoFactorAuth": "二要素認証",
@@ -485,7 +483,6 @@
     "currentPlanBadge": "現在のプラン",
     "currentPlanButton": "現在のプラン",
     "perMonth": "/月",
-    "creditsPerMonth": "クレジット/月",
     "redirecting": "リダイレクト中...",
     "getStarted": "始める",
     "upgradeTo": "{plan}にアップグレード",
@@ -499,11 +496,8 @@
     "features": {
       "chats": "チャット",
       "projects": "プロジェクト",
-      "monthlyCredits": "月間クレジット",
       "basicChat": "基本チャット",
       "basicProjects": "基本プロジェクト",
-      "shortMemory": "短期メモリ",
-      "longerMemory": "より長い会話メモリ",
       "attachments": "ファイル添付",
       "advancedCustomization": "高度なカスタマイズ",
       "chatFolders": "チャットフォルダ",
@@ -512,8 +506,13 @@
       "teamCollaboration": "チームコラボレーション",
       "apiAccess": "APIアクセス",
       "prioritySupport": "優先サポート",
-      "dedicatedSupport": "Dedicatedサポート"
-    }
+      "shortMemory": "短いメモリ",
+      "longerMemory": "長いメモリ",
+      "dedicatedSupport": "専用サポート",
+      "monthlyMessages": "Monthly messages"
+    },
+    "subscribeTo": "Subscribe to {plan}",
+    "fetchError": "Failed to load pricing plans"
   },
   "notifications": {
     "title": "通知",
