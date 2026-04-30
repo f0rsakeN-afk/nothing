@@ -161,16 +161,24 @@ export function ContactForm() {
       setStatus("loading");
       setGlobalError("");
       try {
-        // Replace with real API call when backend is ready:
-        // await fetch("/api/contact", { method: "POST", body: JSON.stringify(form) });
-        await new Promise((res) => setTimeout(res, 1200));
+        const res = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error?.message || "Failed to send message");
+        }
+
         setStatus("success");
       } catch {
         setStatus("error");
         setGlobalError(t("globalError"));
       }
     },
-    [form],
+    [form, t],
   );
 
   const handleReset = useCallback(() => {

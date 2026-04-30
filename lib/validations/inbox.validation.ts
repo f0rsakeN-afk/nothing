@@ -29,8 +29,6 @@ export const feedbackFiltersSchema = z.object({
   limit: z.number().int().min(1).max(100).default(20),
 });
 
-export const contactTopicSchema = z.enum(["bug", "feature", "general", "sales"]);
-
 export const contactsFiltersSchema = z.object({
   search: z.string().max(200).optional(),
   topic: contactTopicSchema.optional(),
