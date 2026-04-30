@@ -73,9 +73,10 @@ model User {
   features    String[] @default([])
 
   // Relations
-  subscription Subscription?
-  userPlan     Plan?           @relation("UserPlan", fields: [planId], references: [id], onDelete: SetNull)
-  mcpServers   McpUserServer[]
+  subscription        Subscription?
+  userPlan            Plan?                @relation("UserPlan", fields: [planId], references: [id], onDelete: SetNull)
+  mcpServers          McpUserServer[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([stackId])
   @@index([role])
@@ -537,7 +538,7 @@ model Plan {
   name        String
   description String @db.Text
 
-  // Pricing (in cents)
+  // Pricing (in NPR)
   price Int @default(0) // 0 = free
 
   // Polar integration
@@ -575,8 +576,9 @@ model Plan {
   updatedAt DateTime @updatedAt
 
   // Relations
-  users         User[]         @relation("UserPlan")
-  subscriptions Subscription[]
+  users               User[]               @relation("UserPlan")
+  subscriptions       Subscription[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([tier])
   @@index([isActive, isVisible])
@@ -603,6 +605,40 @@ model Changelog {
   @@index([isPublished, date])
 }
 
+// ---------------------------------------------------------------------------
+// Payment Transactions (History)
+// ---------------------------------------------------------------------------
+
+model PaymentTransaction {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Plan purchased
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  // Payment details
+  paymentMethod String // "esewa" | "khalti"
+  paymentId     String // Payment gateway transaction ID
+  amount        Int // Price in NPR
+
+  // Status
+  status String @default("completed") // "completed" | "failed" | "refunded"
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Metadata (extra data)
+  metadata Json?
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([paymentMethod])
+  @@index([status])
+}
+
 model Subscription {
   id String @id @default(cuid())
 
@@ -614,9 +650,9 @@ model Subscription {
   planId String
   plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
 
-  // Polar
-  polarSubscriptionId String? @unique // Polar subscription ID
-  polarCustomerId     String? // Polar customer ID
+  // Payment method (esewa or khalti)
+  paymentMethod String? // "esewa" | "khalti"
+  paymentId     String? // Payment gateway transaction ID
 
   // Status
   status SubscriptionStatus @default(ACTIVE)
@@ -638,7 +674,7 @@ model Subscription {
 
   @@index([userId])
   @@index([status])
-  @@index([polarCustomerId])
+  @@index([paymentMethod])
   @@index([currentPeriodEnd])
   @@index([planId])
   @@index([createdAt])

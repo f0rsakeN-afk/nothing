@@ -118,7 +118,6 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           updatedAt: true,
           planTier: true,
-          credits: true,
           _count: {
             select: {
               chats: true,

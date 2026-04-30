@@ -11,7 +11,6 @@ import { logAuditEvent } from "@/lib/admin/audit-log";
 import { z } from "zod";
 
 const SETTINGS_CACHE_KEY = "admin:settings";
-const CREDIT_COSTS_CACHE_KEY = "credit:costs";
 
 const updateSettingsSchema = z.object({
   settings: z.record(z.string(), z.string()),
@@ -32,14 +31,6 @@ async function getSettings(): Promise<Record<string, string>> {
 async function invalidateSettingsCache(): Promise<void> {
   try {
     await redis.del(SETTINGS_CACHE_KEY);
-  } catch {
-    // Redis unavailable
-  }
-}
-
-async function invalidateCreditCostsCache(): Promise<void> {
-  try {
-    await redis.del(CREDIT_COSTS_CACHE_KEY);
   } catch {
     // Redis unavailable
   }
@@ -119,11 +110,6 @@ export async function PATCH(request: NextRequest) {
     });
 
     await invalidateSettingsCache();
-
-    // Invalidate related caches when specific settings change
-    if (settings.credit_costs) {
-      await invalidateCreditCostsCache();
-    }
 
     const allSettings = await getSettings();
     return NextResponse.json({ settings: allSettings });

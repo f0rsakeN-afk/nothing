@@ -29,7 +29,6 @@ interface DashboardStats {
   activeIncidents: number;
   totalFiles: number;
   totalMemories: number;
-  totalCredits: number;
   chartData: { date: string; users: number; chats: number }[];
   recentActivity: {
     id: string;
@@ -106,7 +105,6 @@ export async function GET(request: NextRequest) {
       activeIncidents,
       totalFiles,
       totalMemories,
-      totalCreditsResult,
       recentUsers,
       recentChats,
       recentLogs,
@@ -130,7 +128,6 @@ export async function GET(request: NextRequest) {
       prisma.incident.count({ where: { status: { not: "RESOLVED" } } }),
       prisma.file.count(),
       prisma.memory.count(),
-      prisma.user.aggregate({ _sum: { credits: true } }),
       // Get users created in last 30 days for chart
       prisma.user.findMany({
         where: { createdAt: { gte: thirtyDaysAgo } },
@@ -226,7 +223,6 @@ export async function GET(request: NextRequest) {
       activeIncidents,
       totalFiles,
       totalMemories,
-      totalCredits: totalCreditsResult._sum.credits ?? 0,
       chartData,
       recentActivity: recentLogs.map((log) => ({
         id: log.id,

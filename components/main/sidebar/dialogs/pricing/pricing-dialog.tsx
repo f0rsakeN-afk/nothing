@@ -18,43 +18,40 @@ interface PricingDialogProps {
 }
 
 interface Plan {
+  id: string;
+  tier: string;
   name: string;
   price: number;
-  credits: number;
   maxChats: number;
   maxProjects: number;
+  maxMessages: number;
   features: string[];
   description?: string;
 }
 
 interface PlansData {
-  plans: {
-    free: Plan;
-    basic: Plan;
-    pro: Plan;
-    enterprise: Plan;
-  };
+  plans: Plan[];
   currentPlan: string;
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  "basic-chat": "pricing.features.basicChat",
-  "basic-projects": "pricing.features.basicProjects",
-  "short-memory": "pricing.features.shortMemory",
-  "longer-memory": "pricing.features.longerMemory",
-  attachments: "pricing.features.attachments",
-  "advanced-customization": "pricing.features.advancedCustomization",
-  "chat-folders": "pricing.features.chatFolders",
-  "chat-branches": "pricing.features.chatBranches",
-  "export-chats": "pricing.features.exportChats",
-  "team-collaboration": "pricing.features.teamCollaboration",
-  "api-access": "pricing.features.apiAccess",
-  "priority-support": "pricing.features.prioritySupport",
-  "dedicated-support": "pricing.features.dedicatedSupport",
+  "basic-chat": "features.basicChat",
+  "basic-projects": "features.basicProjects",
+  "short-memory": "features.shortMemory",
+  "longer-memory": "features.longerMemory",
+  attachments: "features.attachments",
+  "advanced-customization": "features.advancedCustomization",
+  "chat-folders": "features.chatFolders",
+  "chat-branches": "features.chatBranches",
+  "export-chats": "features.exportChats",
+  "team-collaboration": "features.teamCollaboration",
+  "api-access": "features.apiAccess",
+  "priority-support": "features.prioritySupport",
+  "dedicated-support": "features.dedicatedSupport",
 };
 
 async function fetchPlans(): Promise<PlansData> {
-  const res = await fetch("/api/polar/plans");
+  const res = await fetch("/api/plans");
   if (!res.ok) throw new Error("Failed to fetch plans");
   return res.json();
 }
@@ -67,7 +64,7 @@ interface TierCardProps {
   tier: { key: string; value: Plan };
   isCurrentPlan: boolean;
   variant?: "default" | "featured";
-  onUpgrade: (planId: string) => void;
+  onUpgrade: (planId: string, planName: string, planPrice: number) => void;
   isUpgrading: boolean;
   t: ReturnType<typeof useTranslations>;
 }
@@ -81,7 +78,6 @@ const TierCard = React.memo(function TierCard({
   t,
 }: TierCardProps) {
   const { key, value } = tier;
-  const isFree = key === "free";
   const isFeatured = variant === "featured";
 
   return (
@@ -139,17 +135,12 @@ const TierCard = React.memo(function TierCard({
           </p>
           <div className="flex items-end gap-1.5 mb-2">
             <span className="text-[1.875rem] font-semibold tracking-tight text-foreground leading-none">
-              {isFree ? "$0" : `$${(value.price / 100).toFixed(2)}`}
+              {`₹${value.price.toLocaleString()}`}
             </span>
             <span className="text-[11px] text-muted-foreground pb-0.5">
               {t("pricing.perMonth")}
             </span>
           </div>
-          {value.credits > 0 && (
-            <p className="text-[11px] text-primary/80 font-medium mb-2">
-              {value.credits.toLocaleString()} {t("pricing.creditsPerMonth")}
-            </p>
-          )}
           <p className="text-[12px] text-muted-foreground leading-relaxed">
             {value.description}
           </p>
@@ -172,7 +163,7 @@ const TierCard = React.memo(function TierCard({
               : "bg-background border border-border text-foreground hover:bg-muted",
           )}
           disabled={isCurrentPlan || isUpgrading}
-          onClick={() => onUpgrade(key)}
+          onClick={() => onUpgrade(key, value.name, value.price)}
         >
           {isCurrentPlan ? (
             t("pricing.currentPlanButton")
@@ -183,7 +174,7 @@ const TierCard = React.memo(function TierCard({
             </>
           ) : (
             <>
-              {isFree ? t("pricing.getStarted") : t("pricing.upgradeTo", { plan: value.name })}
+              {t("pricing.subscribeTo", { plan: value.name })}
               <ArrowRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
             </>
           )}
@@ -200,62 +191,58 @@ const TierCard = React.memo(function TierCard({
 interface FeatureRowProps {
   label: string;
   labelKey: string;
-  free: string | boolean | number;
-  basic: string | boolean | number;
-  pro: string | boolean | number;
+  values: Record<string, string | boolean | number>;
+  planKeys: string[];
 }
 
 const FeatureRow = React.memo(function FeatureRow({
   label,
   labelKey,
-  free,
-  basic,
-  pro,
+  values,
+  planKeys,
 }: FeatureRowProps) {
   const t = useTranslations("pricing");
-  const cells = [
-    { value: free, featured: false },
-    { value: basic, featured: false },
-    { value: pro, featured: true },
-  ];
 
   return (
-    <div className="grid grid-cols-4 hover:bg-muted/[0.04] border-b border-border/30 last:border-0">
+    <div className={cn("grid hover:bg-muted/[0.04] border-b border-border/30 last:border-0", `grid-cols-${planKeys.length + 1}`)}>
       <div className="py-3 px-4 flex items-center">
         <p className="text-[12px] text-foreground/80">{t(labelKey)}</p>
       </div>
-      {cells.map((cell, i) => (
-        <div
-          key={i}
-          className={cn(
-            "py-3 px-3 flex items-center justify-center",
-            i === 2 && "bg-primary/[0.03]",
-          )}
-        >
-          {typeof cell.value === "boolean" ? (
-            cell.value ? (
-              <Check
+      {planKeys.map((key) => {
+        const cell = { value: values[key], featured: key === "pro" };
+        return (
+          <div
+            key={key}
+            className={cn(
+              "py-3 px-3 flex items-center justify-center",
+              key === "pro" && "bg-primary/[0.03]",
+            )}
+          >
+            {typeof cell.value === "boolean" ? (
+              cell.value ? (
+                <Check
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    cell.featured ? "text-primary" : "text-foreground/70",
+                  )}
+                  strokeWidth={3}
+                />
+              ) : (
+                <span className="text-muted-foreground/30 text-sm">—</span>
+              )
+            ) : (
+              <span
                 className={cn(
-                  "w-3.5 h-3.5",
+                  "text-[11px] font-medium",
                   cell.featured ? "text-primary" : "text-foreground/70",
                 )}
-                strokeWidth={3}
-              />
-            ) : (
-              <span className="text-muted-foreground/30 text-sm">—</span>
-            )
-          ) : (
-            <span
-              className={cn(
-                "text-[11px] font-medium",
-                cell.featured ? "text-primary" : "text-foreground/70",
-              )}
-            >
-              {cell.value}
-            </span>
-          )}
-        </div>
-      ))}
+              >
+                {cell.value}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 });
@@ -268,14 +255,17 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
   const router = useRouter();
   const t = useTranslations();
   const { data, isLoading } = useQuery({
-    queryKey: ["stripe-plans"],
+    queryKey: ["plans"],
     queryFn: fetchPlans,
     enabled: isOpen,
   });
 
+  const [selectedPlan, setSelectedPlan] = React.useState<{ id: string; name: string; price: number } | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = React.useState(false);
+
   const checkoutMutation = useMutation({
-    mutationFn: async (planId: string) => {
-      const res = await fetch("/api/stripe/checkout", {
+    mutationFn: async ({ planId }: { planId: string }) => {
+      const res = await fetch("/api/payment/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
@@ -286,9 +276,27 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
       }
       return res.json();
     },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
+    onSuccess: (responseData: { method?: string; paymentUrl?: string; formData?: Record<string, string>; pidx?: string }) => {
+      // eSewa uses form post
+      if (responseData.method === "esewa" && responseData.paymentUrl && responseData.formData) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = responseData.paymentUrl;
+
+        for (const [key, value] of Object.entries(responseData.formData)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+      }
+      // Khalti uses redirect URL
+      else if (responseData.method === "khalti" && responseData.paymentUrl) {
+        window.location.href = responseData.paymentUrl;
       }
     },
     onError: (error: Error) => {
@@ -302,19 +310,21 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
     },
   });
 
-  const handleUpgrade = (planId: string) => {
-    if (planId === "free") {
-      onOpenChange(false);
-      router.push("/signup");
-      return;
+  const handleUpgrade = (planId: string, planName: string, planPrice: number) => {
+    setSelectedPlan({ id: planId, name: planName, price: planPrice });
+    setShowPaymentDialog(true);
+  };
+
+  const handlePayWithEsewa = () => {
+    if (selectedPlan) {
+      checkoutMutation.mutate({ planId: selectedPlan.id });
     }
-    checkoutMutation.mutate(planId);
   };
 
   const plans = data
-    ? (Object.entries(data.plans)
-        .filter(([key]) => key !== "enterprise")
-        .map(([key, value]) => ({ key, value })) as { key: string; value: Plan }[])
+    ? (data.plans
+        .filter((p) => p.tier !== "FREE")
+        .map((p) => ({ key: p.tier.toLowerCase(), value: p })) as { key: string; value: Plan }[])
     : [];
 
   // Group features from all plans
@@ -324,67 +334,83 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
     type FeatureEntry = {
       label: string;
       labelKey: string;
-      free: string | boolean | number;
-      basic: string | boolean | number;
-      pro: string | boolean | number;
+      values: Record<string, string | boolean | number>;
     };
 
     const featureMap = new Map<string, FeatureEntry>();
+    const planKeys = plans.map((p) => p.key);
 
-    // Add plan-level features
+    // Initialize all values to "—" for each plan
+    const makeValues = (): Record<string, string | boolean | number> => {
+      const vals: Record<string, string | boolean | number> = {};
+      planKeys.forEach((k) => (vals[k] = "—"));
+      return vals;
+    };
+
+    // Add plan-level features (chats, projects, messages)
     plans.forEach(({ key, value }) => {
-      const tierKey = key === "free" ? "free" : key === "basic" ? "basic" : "pro";
       // Chats
       if (!featureMap.has("Chats")) {
-        featureMap.set("Chats", { label: "Chats", labelKey: "features.chats", free: "—", basic: "—", pro: "—" });
+        featureMap.set("Chats", { label: "Chats", labelKey: "features.chats", values: makeValues() });
       }
-      const current = featureMap.get("Chats")!;
-      (current as Record<typeof tierKey, string | boolean | number>)[tierKey] = value.maxChats === -1 ? t("unlimited") : value.maxChats;
+      featureMap.get("Chats")!.values[key] = value.maxChats === -1 ? "Unlimited" : value.maxChats;
 
       // Projects
       if (!featureMap.has("Projects")) {
-        featureMap.set("Projects", { label: "Projects", labelKey: "features.projects", free: "—", basic: "—", pro: "—" });
+        featureMap.set("Projects", { label: "Projects", labelKey: "features.projects", values: makeValues() });
       }
-      const proj = featureMap.get("Projects")!;
-      (proj as Record<typeof tierKey, string | boolean | number>)[tierKey] = value.maxProjects === -1 ? t("unlimited") : value.maxProjects;
+      featureMap.get("Projects")!.values[key] = value.maxProjects === -1 ? "Unlimited" : value.maxProjects;
 
-      // Credits
-      if (!featureMap.has("Monthly credits")) {
-        featureMap.set("Monthly credits", { label: "Monthly credits", labelKey: "features.monthlyCredits", free: "—", basic: "—", pro: "—" });
+      // Messages
+      if (!featureMap.has("Monthly messages")) {
+        featureMap.set("Monthly messages", { label: "Monthly messages", labelKey: "features.monthlyMessages", values: makeValues() });
       }
-      const cred = featureMap.get("Monthly credits")!;
-      (cred as Record<typeof tierKey, string | boolean | number>)[tierKey] = value.credits > 0 ? value.credits.toLocaleString() : "—";
+      featureMap.get("Monthly messages")!.values[key] = value.maxMessages === -1 ? "Unlimited" : value.maxMessages;
     });
 
-    // Add specific features
-    data.plans.free.features.forEach((f) => {
+    // Add specific features from plan data
+    const basicPlan = data.plans.find((p) => p.tier === "BASIC");
+    const proPlan = data.plans.find((p) => p.tier === "PRO");
+    const enterprisePlan = data.plans.find((p) => p.tier === "ENTERPRISE");
+
+    basicPlan?.features.forEach((f) => {
       const featureLabel = FEATURE_LABELS[f] || f;
-      const featureKey = FEATURE_LABELS[f] ? `features.${FEATURE_LABELS[f].toLowerCase().replace(/\s+/g, "")}` : f;
+      const featureKey = FEATURE_LABELS[f] || f;
       if (!featureMap.has(featureLabel)) {
-        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, free: true, basic: "—", pro: "—" });
+        const values = makeValues();
+        values["basic"] = true;
+        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, values });
+      } else {
+        featureMap.get(featureLabel)!.values["basic"] = true;
       }
     });
-    data.plans.basic.features.forEach((f) => {
+
+    proPlan?.features.forEach((f) => {
       const featureLabel = FEATURE_LABELS[f] || f;
-      const featureKey = FEATURE_LABELS[f] ? `features.${FEATURE_LABELS[f].toLowerCase().replace(/\s+/g, "")}` : f;
+      const featureKey = FEATURE_LABELS[f] || f;
       if (!featureMap.has(featureLabel)) {
-        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, free: "—", basic: true, pro: "—" });
+        const values = makeValues();
+        values["pro"] = true;
+        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, values });
       } else {
-        featureMap.get(featureLabel)!.basic = true;
+        featureMap.get(featureLabel)!.values["pro"] = true;
       }
     });
-    data.plans.pro.features.forEach((f) => {
+
+    enterprisePlan?.features.forEach((f) => {
       const featureLabel = FEATURE_LABELS[f] || f;
-      const featureKey = FEATURE_LABELS[f] ? `features.${FEATURE_LABELS[f].toLowerCase().replace(/\s+/g, "")}` : f;
+      const featureKey = FEATURE_LABELS[f] || f;
       if (!featureMap.has(featureLabel)) {
-        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, free: "—", basic: "—", pro: true });
+        const values = makeValues();
+        values["enterprise"] = true;
+        featureMap.set(featureLabel, { label: featureLabel, labelKey: featureKey, values });
       } else {
-        featureMap.get(featureLabel)!.pro = true;
+        featureMap.get(featureLabel)!.values["enterprise"] = true;
       }
     });
 
     return Array.from(featureMap.values());
-  }, [data, t]);
+  }, [data, plans]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -424,7 +450,7 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
           <div className="px-6 py-5 space-y-6">
             {/* Tier cards */}
             {isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
@@ -432,8 +458,20 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
                   />
                 ))}
               </div>
+            ) : !plans.length || !data?.plans ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>{t("pricing.fetchError")}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => router.refresh()}
+                >
+                  {t("common.retry")}
+                </Button>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {plans.map(({ key, value }) => (
                   <TierCard
                     key={key}
@@ -460,51 +498,81 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
 
               <div className="rounded-xl border border-border overflow-hidden">
                 {/* Table header */}
-                <div className="grid grid-cols-4 border-b border-border bg-muted/20">
-                  <div className="py-3 px-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
-                      {t("pricing.feature")}
-                    </p>
+                {isLoading ? (
+                  <div className="grid grid-cols-4 border-b border-border/30">
+                    <div className="py-3 px-4">
+                      <div className="h-3 w-16 bg-muted/30 rounded animate-pulse" />
+                    </div>
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="py-3 px-3 text-center">
+                        <div className="h-3 w-12 bg-muted/30 rounded animate-pulse mx-auto" />
+                      </div>
+                    ))}
                   </div>
-                  {plans.map(({ key, value }) => (
-                    <div
-                      key={key}
-                      className={cn(
-                        "py-3 px-3 text-center",
-                        key === "pro" && "bg-primary/5",
-                      )}
-                    >
-                      <p
-                        className={cn(
-                          "text-[10px] font-semibold uppercase tracking-widest",
-                          key === "pro" ? "text-primary" : "text-muted-foreground",
-                        )}
-                      >
-                        {value.name}
+                ) : (
+                  <div className={cn("grid hover:bg-muted/[0.04] border-b border-border/30 last:border-0", `grid-cols-${plans.length + 1}`)}>
+                    <div className="py-3 px-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                        {t("pricing.feature")}
                       </p>
                     </div>
-                  ))}
-                </div>
+                    {plans.map(({ key, value }) => (
+                      <div
+                        key={key}
+                        className={cn(
+                          "py-3 px-3 text-center",
+                          key === "pro" && "bg-primary/5",
+                        )}
+                      >
+                        <p
+                          className={cn(
+                            "text-[10px] font-semibold uppercase tracking-widest",
+                            key === "pro" ? "text-primary" : "text-muted-foreground",
+                          )}
+                        >
+                          {value.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Feature rows */}
                 {isLoading ? (
-                  <div className="space-y-3 p-4">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div
-                        key={i}
-                        className="h-8 rounded-md bg-muted/20 animate-pulse"
-                      />
+                  <>
+                    {/* Feature table header skeleton */}
+                    <div className="grid grid-cols-4 border-b border-border/30">
+                      <div className="py-3 px-4">
+                        <div className="h-3 w-16 bg-muted/30 rounded animate-pulse" />
+                      </div>
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="py-3 px-3 text-center">
+                          <div className="h-3 w-12 bg-muted/30 rounded animate-pulse mx-auto" />
+                        </div>
+                      ))}
+                    </div>
+                    {/* Feature rows skeleton */}
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="grid grid-cols-4 border-b border-border/30 last:border-0">
+                        <div className="py-3 px-4">
+                          <div className="h-3 w-24 bg-muted/30 rounded animate-pulse" />
+                        </div>
+                        {[1, 2, 3].map((j) => (
+                          <div key={j} className="py-3 px-3 flex items-center justify-center">
+                            <div className="h-4 w-4 bg-muted/30 rounded animate-pulse" />
+                          </div>
+                        ))}
+                      </div>
                     ))}
-                  </div>
+                  </>
                 ) : (
                   allFeatures.map((feature) => (
                     <FeatureRow
                       key={feature.labelKey}
                       label={feature.label}
                       labelKey={feature.labelKey}
-                      free={feature.free}
-                      basic={feature.basic}
-                      pro={feature.pro}
+                      values={feature.values}
+                      planKeys={plans.map((p) => p.key)}
                     />
                   ))
                 )}
@@ -527,6 +595,45 @@ export function PricingDialog({ isOpen, onOpenChange }: PricingDialogProps) {
           </DialogClose>
         </div>
       </DialogContent>
+
+      {/* ── Payment Method Dialog ─────────────────────────────── */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <div className="flex flex-col items-center py-6">
+            <h2 className="text-lg font-semibold mb-1">Confirm Purchase</h2>
+            {selectedPlan && (
+              <p className="text-sm text-muted-foreground mb-6">
+                {selectedPlan.name} - ₹{selectedPlan.price.toLocaleString()}/month
+              </p>
+            )}
+
+            <div className="w-full space-y-3">
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors"
+                onClick={() => {
+                  setShowPaymentDialog(false);
+                  handlePayWithEsewa();
+                }}
+              >
+                <div className="w-8 h-8 rounded bg-green-500 flex items-center justify-center text-white font-bold text-sm">e</div>
+                <span className="font-medium">Pay with eSewa</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              All purchases are non-refundable. By completing this purchase, you agree to our refund policy.
+            </p>
+
+            <button
+              type="button"
+              className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowPaymentDialog(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

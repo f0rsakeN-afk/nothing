@@ -15,7 +15,6 @@ const updatePlanSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   price: z.number().int().min(0).optional(),
-  credits: z.number().int().optional(),
   maxChats: z.number().int().optional(),
   maxProjects: z.number().int().optional(),
   maxMessages: z.number().int().optional(),
