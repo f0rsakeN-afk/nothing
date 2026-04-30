@@ -24,12 +24,13 @@ import {
   updateMemorySchema,
   memoryIdSchema,
 } from "@/lib/validations";
+import { updateMemory as updateMemoryService } from "@/services/memory.service";
 
 export async function GET(request: NextRequest) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
-    if (!rateLimit.success) {
-      return rateLimitResponse(rateLimit.resetAt);
+    const rateLimitResult = await checkApiRateLimit(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
     }
 
     const user = await validateAuth(request);
@@ -62,9 +63,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
-    if (!rateLimit.success) {
-      return rateLimitResponse(rateLimit.resetAt);
+    const rateLimitResult = await checkApiRateLimit(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
     }
 
     const user = await validateAuth(request);
@@ -130,10 +131,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
-    if (!rateLimit.success) {
-      return rateLimitResponse(rateLimit.resetAt);
+    const rateLimitResult = await checkApiRateLimit(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
     }
 
     const user = await validateAuth(request);
@@ -156,9 +156,7 @@ export async function PUT(request: NextRequest) {
       return validationError(parsed.error.issues);
     }
 
-    const { updateMemory } = await import("@/services/memory.service");
-
-    const memory = await updateMemory(idParsed.data.id, user.id, parsed.data);
+    const memory = await updateMemoryService(idParsed.data.id, user.id, parsed.data);
 
     if (!memory) {
       return notFoundError("Memory");
@@ -173,10 +171,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
-    if (!rateLimit.success) {
-      return rateLimitResponse(rateLimit.resetAt);
+    const rateLimitResult = await checkApiRateLimit(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
     }
 
     const user = await validateAuth(request);

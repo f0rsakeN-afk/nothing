@@ -15,7 +15,7 @@ interface MemoryItem {
 interface MemoryCardProps {
   memory: MemoryItem;
   onEdit: (memory: MemoryItem) => void;
-  onDelete: (id: string) => void;
+  onDelete: (memory: MemoryItem) => void;
 }
 
 function MemoryCardComponent({ memory, onEdit, onDelete }: MemoryCardProps) {
@@ -32,8 +32,8 @@ function MemoryCardComponent({ memory, onEdit, onDelete }: MemoryCardProps) {
   }, [onEdit, memory]);
 
   const handleDelete = useCallback(() => {
-    onDelete(memory.id);
-  }, [onDelete, memory.id]);
+    onDelete(memory);
+  }, [onDelete, memory]);
 
   return (
     <div className="p-4 rounded-lg border bg-card relative group">
