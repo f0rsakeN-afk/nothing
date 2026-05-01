@@ -9,7 +9,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
-import { getUserLimits } from "@/services/limit.service";
+import { checkLimit } from "@/services/limits/service";
+import { limitExceededResponse } from "@/lib/limits/middleware";
 import redis, { KEYS, TTL } from "@/lib/redis";
 import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import {
@@ -138,26 +139,9 @@ export async function POST(request: NextRequest) {
     const { name, description, instruction } = parsed.data;
 
     // Check project limit
-    const limits = await getUserLimits(user.id);
-    const projectCount = await prisma.project.count({
-      where: { userId: user.id, archivedAt: null },
-    });
-
-    if (limits.maxProjects !== -1 && projectCount >= limits.maxProjects) {
-      return NextResponse.json(
-        {
-          error: "Project limit reached",
-          code: "PROJECT_LIMIT_REACHED",
-          message: `You've reached the maximum of ${limits.maxProjects} projects on your ${limits.maxProjects === 2 ? "Free" : "current"} plan.`,
-          action: "upgrade",
-          upgradeTo: limits.maxProjects === 2 ? "Basic" : limits.maxProjects === 5 ? "Pro" : null,
-          limits: {
-            current: projectCount,
-            max: limits.maxProjects,
-          },
-        },
-        { status: 403 }
-      );
+    const limitCheck = await checkLimit(user.id, "PROJECT");
+    if (!limitCheck.allowed) {
+      return limitExceededResponse(limitCheck);
     }
 
     const project = await prisma.project.create({

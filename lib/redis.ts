@@ -41,6 +41,11 @@ if (process.env.NODE_ENV !== "production") {
   globalForRedis.redisSub = redisSub;
 }
 
+// Pipeline helper for batch operations
+export function createPipeline() {
+  return redis.pipeline();
+}
+
 // Export regular client as default (used for publish too)
 export default redis;
 

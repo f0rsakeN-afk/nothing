@@ -118,13 +118,11 @@ export function CollaborationMenu({ chatId, onInviteOpen, onMembersOpen }: Colla
     <div className="flex items-center gap-2">
       <ActiveMembersRow activeUsers={activeUsers} currentUserId={currentUserId} />
       <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger>
-          <button
-            type="button"
-            className="h-8 w-8 p-0 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-sm hover:bg-muted/80 transition-all flex items-center justify-center"
-          >
-            <MoreHorizontal className="h-4 w-4 text-foreground" />
-          </button>
+        <PopoverTrigger
+          className="h-8 w-8 p-0 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-sm hover:bg-muted/80 transition-all flex items-center justify-center"
+          render={<button type="button" />}
+        >
+          <MoreHorizontal className="h-4 w-4 text-foreground" />
         </PopoverTrigger>
 
         <PopoverContent

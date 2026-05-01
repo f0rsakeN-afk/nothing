@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
+import { useAccountData } from "@/hooks/use-account-data";
 import {
   User,
   CreditCard,
@@ -44,6 +44,7 @@ interface AccountData {
   plan: {
     name: string;
     displayName: string;
+    tier: string;
     credits: number;
     totalCredits: number;
     limits: {
@@ -59,6 +60,9 @@ interface AccountData {
       maxFileSizeMb: number;
       canExport: boolean;
       canApiAccess: boolean;
+      maxChatBranches: number;
+      hasFolders: boolean;
+      hasBranches: boolean;
     };
     features: string[];
   };
@@ -73,17 +77,18 @@ interface AccountData {
     projects: number;
     messages: number;
     files: number;
+    memories: number;
   };
   monthlyUsage: {
     chats: number;
     messages: number;
   };
-}
-
-async function fetchAccount(): Promise<AccountData> {
-  const res = await fetch("/api/account", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch account");
-  return res.json();
+  limits: {
+    chats: number;
+    projects: number;
+    messages: number;
+  };
+  resetDate?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -278,11 +283,7 @@ const MobileAccountDrawer = React.memo(function MobileAccountDrawer({
   const t = useTranslations("account");
   const [activeSection, setActiveSection] = React.useState<TabId | null>(null);
 
-  const { data: accountData, isLoading } = useQuery({
-    queryKey: ["account"],
-    queryFn: fetchAccount,
-    staleTime: 30000,
-  });
+  const { data: accountData, isLoading } = useAccountData({ sessionTimeout: 30 * 1000 });
 
   React.useEffect(() => {
     if (!isOpen) setActiveSection(null);
@@ -356,11 +357,7 @@ const DesktopAccountDialog = React.memo(function DesktopAccountDialog({
   const t = useTranslations("account");
   const [activeTab, setActiveTab] = React.useState<TabId>("profile");
 
-  const { data: accountData, isLoading } = useQuery({
-    queryKey: ["account"],
-    queryFn: fetchAccount,
-    staleTime: 30000,
-  });
+  const { data: accountData, isLoading } = useAccountData({ sessionTimeout: 30 * 1000 });
 
   const handleTabChange = React.useCallback((v: string) => setActiveTab(v as TabId), []);
 

@@ -5,6 +5,8 @@ import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
 import { createChatSchema } from "@/schemas/validation";
 import { logger } from "@/lib/logger";
 import { publishChatCreated } from "@/services/chat-pubsub.service";
+import { checkLimit } from "@/services/limits/service";
+import { limitExceededResponse } from "@/lib/limits/middleware";
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,6 +74,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { projectId, firstMessage } = validationResult.data;
+
+    // Check chat limit before creating
+    const limitCheck = await checkLimit(user.id, "CHAT");
+    if (!limitCheck.allowed) {
+      return limitExceededResponse(limitCheck);
+    }
 
     logger.info("Creating chat", { userId: user.id, projectId });
 

@@ -1,15 +1,16 @@
-/**
- * Account Service
- * Caches user account data to avoid hitting DB on every request
- * Account data = profile + plan + usage + subscription (all in one)
- *
- * Cache TTL: 5 minutes (same as userCredits)
- * Invalidation: On any account, subscription, credits, or plan change
- */
+// ---------------------------------------------------------------------------
+// Account Service
+// Caches user account data to avoid hitting DB on every request
+// Account data = profile + plan + usage + subscription (all in one)
+//
+// Cache TTL: 5 minutes (same as userCredits)
+// Invalidation: On any account, subscription, credits, or plan change
+// ---------------------------------------------------------------------------
 
 import prisma from "@/lib/prisma";
 import redis, { KEYS, TTL } from "@/lib/redis";
 import { getPlan } from "@/services/plan.service";
+import type { PlanData } from "@/services/plan.service";
 
 export interface AccountData {
   profile: {
@@ -22,6 +23,7 @@ export interface AccountData {
   plan: {
     name: string;
     displayName: string;
+    tier: string;
     credits: number;
     totalCredits: number;
     limits: {
@@ -38,6 +40,10 @@ export interface AccountData {
       maxFileSizeMb: number;
       canExport: boolean;
       canApiAccess: boolean;
+      // New feature flags
+      maxChatBranches: number;
+      hasFolders: boolean;
+      hasBranches: boolean;
     };
   };
   subscription: {
@@ -51,11 +57,18 @@ export interface AccountData {
     projects: number;
     messages: number;
     files: number;
+    memories: number;
   };
   monthlyUsage: {
     chats: number;
     messages: number;
   };
+  limits: {
+    chats: number;
+    projects: number;
+    messages: number;
+  };
+  resetDate?: string;
 }
 
 /**
@@ -133,6 +146,7 @@ export async function getAccountData(userId: string): Promise<AccountData> {
     messageCountResult,
     monthlyChatCount,
     monthlyMessageCount,
+    memoryCount,
   ] = await Promise.all([
     // Active chats count (not full array)
     prisma.chat.count({ where: { userId, archivedAt: null } }),
@@ -147,6 +161,8 @@ export async function getAccountData(userId: string): Promise<AccountData> {
     // Monthly counts
     prisma.chat.count({ where: { userId, createdAt: { gte: startOfMonth } } }),
     prisma.message.count({ where: { chat: { userId }, createdAt: { gte: startOfMonth } } }),
+    // Memory count
+    prisma.memory.count({ where: { userId } }),
   ]);
 
   const fileCount = projectFileCount + chatFileCount + messageFileCount;
@@ -155,6 +171,12 @@ export async function getAccountData(userId: string): Promise<AccountData> {
 
   // Get name from customize or fallback to email
   const displayName = fullUser.customize?.name || fullUser.email?.split("@")[0] || "User";
+
+  // Calculate reset date (end of current month for messages)
+  const resetDate = new Date();
+  resetDate.setMonth(resetDate.getMonth() + 1);
+  resetDate.setDate(0);
+  resetDate.setHours(23, 59, 59, 999);
 
   const accountData: AccountData = {
     profile: {
@@ -167,6 +189,7 @@ export async function getAccountData(userId: string): Promise<AccountData> {
     plan: {
       name: effectivePlanData.id,
       displayName: effectivePlanData.name,
+      tier: effectivePlanData.tier,
       credits: fullUser.credits,
       totalCredits: effectivePlanData.credits,
       limits: {
@@ -183,6 +206,9 @@ export async function getAccountData(userId: string): Promise<AccountData> {
         maxFileSizeMb: effectivePlanData.maxFileSizeMb,
         canExport: effectivePlanData.canExport,
         canApiAccess: effectivePlanData.canApiAccess,
+        maxChatBranches: effectivePlanData.maxBranchesPerChat,
+        hasFolders: effectivePlanData.maxFolders > 0,
+        hasBranches: effectivePlanData.maxBranchesPerChat > 0,
       },
     },
     subscription: subscription
@@ -198,11 +224,18 @@ export async function getAccountData(userId: string): Promise<AccountData> {
       projects: projectCount,
       messages: messageCountResult,
       files: fileCount,
+      memories: memoryCount,
     },
     monthlyUsage: {
       chats: monthlyChatCount,
       messages: monthlyMessageCount,
     },
+    limits: {
+      chats: effectivePlanData.maxChats,
+      projects: effectivePlanData.maxProjects,
+      messages: effectivePlanData.maxMessages,
+    },
+    resetDate: resetDate.toISOString(),
   };
 
   // Cache the result

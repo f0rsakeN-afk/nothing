@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface AccountData {
@@ -11,32 +10,95 @@ interface AccountData {
     projects: number;
     messages: number;
     files: number;
+    memories: number;
   };
   monthlyUsage: {
     chats: number;
     messages: number;
   };
+  limits: {
+    chats: number;
+    projects: number;
+    messages: number;
+  };
+  resetDate?: string;
 }
 
 interface UsageSectionProps {
   accountData?: AccountData;
 }
 
+function formatNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
+}
+
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function SimpleProgress({ value, color, isWarning }: { value: number; color: string; isWarning: boolean }) {
+  return (
+    <div className={cn("h-1 rounded-full bg-muted overflow-hidden", isWarning && "bg-amber-500/20")}>
+      <div
+        className={cn("h-full rounded-full transition-all", color, isWarning && "bg-amber-500")}
+        style={{ width: `${Math.min(100, value)}%` }}
+      />
+    </div>
+  );
+}
+
+function UsageCard({ label, value, limit, color, subLabel }: {
+  label: string;
+  value: number;
+  limit: number;
+  color: string;
+  subLabel: string;
+}) {
+  const percentage = limit > 0 ? Math.min(100, (value / limit) * 100) : 0;
+  const isUnlimited = limit === -1;
+  const isWarning = percentage >= 80;
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/20 p-3.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        {isWarning && !isUnlimited && (
+          <span className="text-[10px] text-amber-500 font-medium">Warning</span>
+        )}
+      </div>
+      <p className="text-[22px] font-bold text-foreground leading-none">
+        {isUnlimited ? "∞" : formatNumber(value)}
+        {!isUnlimited && limit > 0 && (
+          <span className="text-[14px] font-normal text-muted-foreground">/{formatNumber(limit)}</span>
+        )}
+      </p>
+      {!isUnlimited && limit > 0 && (
+        <SimpleProgress value={percentage} color={color} isWarning={isWarning} />
+      )}
+      <p className="text-[11px] text-muted-foreground/70">{subLabel}</p>
+    </div>
+  );
+}
+
 function UsageSkeleton() {
   return (
     <div className="space-y-5">
       <div>
-        <Skeleton className="h-4 w-20 mb-1" />
-        <Skeleton className="h-3 w-52" />
+        <div className="h-4 w-20 mb-1 bg-muted animate-pulse rounded" />
+        <div className="h-3 w-52 bg-muted animate-pulse rounded" />
       </div>
       <div className="grid grid-cols-2 gap-2">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
+          <div key={i} className="h-24 rounded-lg border border-border/60 bg-muted/20 animate-pulse" />
         ))}
       </div>
       <div className="space-y-1.5">
-        <Skeleton className="h-3 w-32 mb-1" />
-        <Skeleton className="h-32 w-full rounded-lg" />
+        <div className="h-3 w-32 bg-muted animate-pulse rounded" />
+        <div className="h-32 w-full bg-muted animate-pulse rounded-lg" />
       </div>
     </div>
   );
@@ -52,10 +114,34 @@ export const UsageSection = React.memo(function UsageSection({
   }
 
   const stats = [
-    { label: t("messages"), value: (accountData?.monthlyUsage?.messages || 0).toLocaleString(), sub: t("thisMonth") },
-    { label: t("chats"), value: (accountData?.monthlyUsage?.chats || 0).toLocaleString(), sub: t("thisMonth") },
-    { label: t("totalChats"), value: (accountData?.usage?.chats || 0).toLocaleString(), sub: t("allTime") },
-    { label: t("totalProjects"), value: (accountData?.usage?.projects || 0).toLocaleString(), sub: t("allTime") },
+    {
+      label: t("messages"),
+      value: accountData.monthlyUsage?.messages || 0,
+      limit: accountData.limits?.messages || 0,
+      color: "bg-blue-500",
+      subLabel: accountData.resetDate ? `Resets ${formatDate(accountData.resetDate)}` : t("thisMonth"),
+    },
+    {
+      label: t("chats"),
+      value: accountData.usage?.chats || 0,
+      limit: accountData.limits?.chats || 0,
+      color: "bg-purple-500",
+      subLabel: t("allTime"),
+    },
+    {
+      label: t("projects"),
+      value: accountData.usage?.projects || 0,
+      limit: accountData.limits?.projects || 0,
+      color: "bg-amber-400",
+      subLabel: t("allTime"),
+    },
+    {
+      label: t("memories"),
+      value: accountData.usage?.memories || 0,
+      limit: -1, // Memories don't have a hard limit display
+      color: "bg-green-500",
+      subLabel: t("allTime"),
+    },
   ] as const;
 
   return (
@@ -71,21 +157,19 @@ export const UsageSection = React.memo(function UsageSection({
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-2">
-        {stats.map(({ label, value, sub }) => (
-          <div
+        {stats.map(({ label, value, limit, color, subLabel }) => (
+          <UsageCard
             key={label}
-            className="rounded-lg border border-border/60 bg-muted/20 p-3.5 space-y-0.5"
-          >
-            <p className="text-[11px] text-muted-foreground">{label}</p>
-            <p className="text-[22px] font-bold text-foreground leading-none">
-              {value}
-            </p>
-            <p className="text-[11px] text-muted-foreground/70">{sub}</p>
-          </div>
+            label={label}
+            value={value}
+            limit={limit}
+            color={color}
+            subLabel={subLabel}
+          />
         ))}
       </div>
 
-      {/* Top activity */}
+      {/* Monthly activity breakdown */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
           {t("activityBreakdown")}
@@ -95,6 +179,7 @@ export const UsageSection = React.memo(function UsageSection({
             { color: "bg-blue-500", label: t("messagesThisMonth"), count: (accountData?.monthlyUsage?.messages || 0).toLocaleString() },
             { color: "bg-purple-500", label: t("chatsThisMonth"), count: (accountData?.monthlyUsage?.chats || 0).toLocaleString() },
             { color: "bg-amber-400", label: t("projects"), count: (accountData?.usage?.projects || 0).toLocaleString() },
+            { color: "bg-green-500", label: t("memories"), count: (accountData?.usage?.memories || 0).toLocaleString() },
           ].map(({ color, label, count }) => (
             <div
               key={label}

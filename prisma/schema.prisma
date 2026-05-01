@@ -853,6 +853,21 @@ model ExportJob {
 }
 
 // ---------------------------------------------------------------------------
+// User Usage Stats (Monthly message tracking)
+// ---------------------------------------------------------------------------
+
+model UserUsageStats {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  usedMessages Int      @default(0) // monthly message count
+  month        Int // 1-12
+  year         Int
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, month, year])
+}
+
+// ---------------------------------------------------------------------------
 // RAG Embeddings (pgvector)
 // ---------------------------------------------------------------------------
 
