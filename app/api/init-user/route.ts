@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import prisma from "@/lib/prisma";
 import redis from "@/lib/redis";
 import { queueEmail } from "@/services/queue.service";
@@ -7,6 +8,12 @@ import { queueEmail } from "@/services/queue.service";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult.resetAt);
+  }
+
   const cookieHeader = request.headers.get("cookie") ?? "";
 
   if (cookieHeader.includes("user_initialized=")) {

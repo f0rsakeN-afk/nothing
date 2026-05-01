@@ -9,6 +9,12 @@ import { stackServerApp } from "@/src/stack/server";
 import redis, { KEYS, TTL } from "@/lib/redis";
 import { validateRequestOrigin, csrfErrorResponse } from "@/lib/csrf";
 import { routing } from "./routing";
+import {
+  generateDeviceFingerprint,
+  registerDeviceForUser,
+  calculateRequestRiskScore,
+  type AnomalyAlert,
+} from "@/services/security.service";
 
 const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog", "/onboarding"];
 const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models", "/api/mcp", "/api/plans", "/api/polar/plans", "/api/changelog"];
@@ -154,6 +160,62 @@ export default async function proxy(request: NextRequest) {
       response.headers.set("x-user-id", userData.id);
       response.headers.set("x-user-email", userData.email);
       response.headers.set("x-user-stack-id", stackUser.id);
+
+      // Get user's plan tier for rate limit multipliers
+      try {
+        const { default: prisma } = await import("@/lib/prisma");
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userData.id },
+          select: { userPlan: { select: { tier: true } } },
+        });
+        if (dbUser?.userPlan?.tier) {
+          response.headers.set("x-user-tier", dbUser.userPlan.tier);
+        }
+      } catch {
+        // Ignore - tier will default to FREE
+      }
+
+      // Device fingerprinting and anomaly detection
+      try {
+        const { deviceId, isNewDevice, anomaly } = await registerDeviceForUser(
+          userData.id,
+          request
+        );
+
+        response.headers.set("x-device-id", deviceId);
+        response.headers.set("x-new-device", isNewDevice ? "1" : "0");
+
+        // If anomaly detected, add risk header
+        if (anomaly) {
+          response.headers.set("x-risk-score", String(anomaly.severity === "critical" ? 100 : anomaly.severity === "high" ? 75 : 50));
+        }
+
+        // Calculate overall request risk score
+        const { score: riskScore, factors: riskFactors } = await calculateRequestRiskScore(
+          userData.id,
+          request
+        );
+
+        if (riskScore > 30) {
+          response.headers.set("x-risk-score", String(riskScore));
+          response.headers.set("x-risk-factors", riskFactors.join(","));
+
+          // Block critical risk requests
+          if (riskScore >= 80) {
+            return NextResponse.json(
+              {
+                error: "Request blocked due to security concerns",
+                code: "SECURITY_RISK_HIGH",
+                retryAfter: 300, // 5 minutes
+              },
+              { status: 429 }
+            );
+          }
+        }
+      } catch {
+        // Security checks failed, allow request (don't block on security failures)
+      }
+
       setSecurityHeaders(response);
 
       // Admin route protection - check role for admin paths
@@ -244,6 +306,16 @@ function setSecurityHeaders(response: NextResponse) {
     "max-age=31536000; includeSubDomains",
   );
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Content Security Policy
+  response.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.stack.auth.com https://*.polar.sh"
+  );
+  // Permissions Policy
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+  );
 }
 
 export const config = {

@@ -1,15 +1,14 @@
 import redis from "@/lib/redis";
 import { KEYS, TTL } from "@/lib/redis";
 
-const TRENDING_KEY = "trending:prompts";
 const TRENDING_WINDOW = 7 * 24 * 60 * 60; // 7 days
 
 export async function trackPromptUsage(prompt: string): Promise<void> {
   try {
     const key = `prompt:${prompt.toLowerCase().slice(0, 100)}`;
-    await redis.zincrby(TRENDING_KEY, 1, key);
+    await redis.zincrby(KEYS.trendingPrompts, 1, key);
     // Set expiry on first track
-    await redis.expire(TRENDING_KEY, TRENDING_WINDOW);
+    await redis.expire(KEYS.trendingPrompts, TRENDING_WINDOW);
   } catch (error) {
     console.error("[trending] track error:", error);
   }
@@ -18,7 +17,7 @@ export async function trackPromptUsage(prompt: string): Promise<void> {
 export async function getTrendingPrompts(limit = 20): Promise<string[]> {
   try {
     // Get top prompts from sorted set (highest score first)
-    const results = await redis.zrevrange(TRENDING_KEY, 0, limit - 1);
+    const results = await redis.zrevrange(KEYS.trendingPrompts, 0, limit - 1);
 
     // Decode the prompt keys back to original prompts
     const prompts = results
@@ -34,7 +33,7 @@ export async function getTrendingPrompts(limit = 20): Promise<string[]> {
 
 export async function getTrendingStats(): Promise<{ prompt: string; count: number }[]> {
   try {
-    const results = await redis.zrevrange(TRENDING_KEY, 0, 49, "WITHSCORES");
+    const results = await redis.zrevrange(KEYS.trendingPrompts, 0, 49, "WITHSCORES");
 
     const stats: { prompt: string; count: number }[] = [];
     for (let i = 0; i < results.length; i += 2) {

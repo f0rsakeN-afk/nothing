@@ -9,7 +9,7 @@ import {
 } from "@/services/memory.service";
 import { checkMemoryLimit, getUserLimits } from "@/services/limit.service";
 import { createMemoryEmbeddings, deleteMemoryEmbeddings } from "@/lib/stack-server";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import {
   unauthorizedError,
   notFoundError,
@@ -28,7 +28,7 @@ import { updateMemory as updateMemoryService } from "@/services/memory.service";
 
 export async function GET(request: NextRequest) {
   try {
-    const rateLimitResult = await checkApiRateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult);
     }
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const rateLimitResult = await checkApiRateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult);
     }
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const rateLimitResult = await checkApiRateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult);
     }
@@ -171,7 +171,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const rateLimitResult = await checkApiRateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult);
     }

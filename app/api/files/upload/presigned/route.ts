@@ -6,11 +6,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import { getMultipartPresignedUrls } from "@/services/s3.service";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

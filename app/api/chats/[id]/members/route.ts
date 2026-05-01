@@ -7,7 +7,7 @@ import {
   invalidateMemberCache,
   invalidateRoleCache,
 } from "@/lib/chat-access";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { publishMemberAdded } from "@/services/chat-pubsub.service";
 
 const PRESENCE_TTL = 60; // 60 seconds - must match presence route
@@ -105,7 +105,7 @@ export async function POST(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "chat");
+    const rateLimit = await checkRateLimitWithAuth(request, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

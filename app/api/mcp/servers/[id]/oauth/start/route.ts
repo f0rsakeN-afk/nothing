@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { buildMcpOAuthAuthorizationUrl } from '@/lib/mcp/oauth';
 import { validateMcpOAuthConfig } from '@/lib/mcp/server-config';
 import { injectManagedOAuthCredentials } from '@/lib/mcp/managed-credentials';
-import { checkApiRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimitWithAuth, rateLimitResponse } from '@/lib/rate-limit';
 
 function isProUser(planTier: string | null | undefined) {
   return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
@@ -16,7 +16,7 @@ export async function POST(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request);
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

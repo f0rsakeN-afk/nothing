@@ -10,7 +10,7 @@ import {
   normalizeMcpScopes,
   validateMcpOAuthConfig,
 } from '@/lib/mcp/server-config';
-import { checkApiRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimitWithAuth, rateLimitResponse } from '@/lib/rate-limit';
 
 const optionalUrlField = z.preprocess(
   (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
@@ -93,7 +93,7 @@ function serializeMcpServer(server: {
 export async function GET(request: Request) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request);
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request);
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

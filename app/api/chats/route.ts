@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserChats, createChat } from "@/lib/stack-server";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
-import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { createChatSchema } from "@/schemas/validation";
 import { logger } from "@/lib/logger";
 import { publishChatCreated } from "@/services/chat-pubsub.service";
@@ -11,7 +11,7 @@ import { limitExceededResponse } from "@/lib/limits/middleware";
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = await rateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult.resetAt);
     }
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting - stricter for chat creation
-    const rateLimitResult = await rateLimit(request, "chat");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "chat");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult.resetAt);
     }

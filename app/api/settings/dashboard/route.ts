@@ -8,12 +8,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import prisma from "@/lib/prisma";
 import { getUserSettings } from "@/services/settings.service";
 import { getAccountData } from "@/services/account.service";
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult.resetAt);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

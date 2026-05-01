@@ -12,7 +12,7 @@ import { updateAccountSchema } from "@/schemas/validation";
 import { getAccountData, invalidateAccountCache } from "@/services/account.service";
 import { invalidateUserPreferencesCache } from "@/services/preferences.service";
 import { invalidateUserLimitsCache } from "@/services/limit.service";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 import {
   unauthorizedError,
@@ -24,7 +24,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }
@@ -151,7 +151,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOrCreateUser, AccountDeactivatedError } from '@/lib/auth';
 import { Lexer, type Token } from 'marked';
 import { logger } from '@/lib/logger';
+import { checkRateLimitWithAuth, rateLimitError } from '@/lib/rate-limit';
 import {
   Document,
   Packer,
@@ -362,6 +363,11 @@ export async function POST(req: NextRequest) {
     const user = await getOrCreateUser(req);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimitWithAuth(req, "export");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
     }
 
     const body = parseExportBody(await req.json());

@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { checkBranchLimit, getUserLimits } from "@/services/limit.service";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "chat");
+    const rateLimit = await checkRateLimitWithAuth(request, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

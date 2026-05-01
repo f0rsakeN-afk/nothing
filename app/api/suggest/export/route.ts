@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import promptsData from "@/data/prompts.json";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

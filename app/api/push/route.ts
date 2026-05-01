@@ -12,7 +12,7 @@ import {
   getVapidPublicKey,
   isPushConfigured,
 } from "@/services/push-notification.service";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError, unauthorizedError } from "@/lib/api-response";
 
 /**
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

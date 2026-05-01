@@ -9,14 +9,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import { searchMessages, type SearchFilters } from "@/services/search.service";
-import { checkSearchRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
     // Check rate limit
-    const rateLimit = await checkSearchRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request, "search");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

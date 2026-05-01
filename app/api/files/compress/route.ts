@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import { compressImage, isImageBuffer } from "@/services/image-compression.service";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "upload");
+    const rateLimit = await checkRateLimitWithAuth(request, "upload");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

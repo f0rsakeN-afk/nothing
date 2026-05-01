@@ -8,7 +8,7 @@ import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { invalidateProjectContext } from "@/services/project-context.service";
 import { deleteFileEmbeddings } from "@/lib/stack-server";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 export async function DELETE(
@@ -17,7 +17,7 @@ export async function DELETE(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

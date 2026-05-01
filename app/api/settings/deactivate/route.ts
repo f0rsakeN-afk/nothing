@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import prisma from "@/lib/prisma";
 import {
   unauthorizedError,
@@ -15,6 +16,12 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult.resetAt);
+    }
+
     const user = await stackServerApp.getUser({ tokenStore: request });
     if (!user) {
       return unauthorizedError();

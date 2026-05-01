@@ -3,14 +3,14 @@ import { getChatMessages, addChatMessage } from "@/lib/stack-server";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { requireChatAccess, PERMISSIONS, getChatRole } from "@/lib/chat-access";
 import { publishMessageNew } from "@/services/chat-pubsub.service";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -52,6 +52,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

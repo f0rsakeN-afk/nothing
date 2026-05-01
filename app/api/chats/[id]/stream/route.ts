@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { redisPubSub } from "@/lib/redis";
 import { CHANNELS } from "@/lib/redis";
 import prisma from "@/lib/prisma";
@@ -21,6 +22,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult.resetAt);
+  }
+
   let user;
   try {
     user = await getOrCreateUser(request);

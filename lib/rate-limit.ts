@@ -65,12 +65,32 @@ export async function checkExportRateLimit(request: NextRequest, userTier: strin
 }
 
 /**
+ * Check rate limit with automatic user tier from proxy headers
+ * Use this instead of checkApiRateLimit when the request comes through proxy
+ */
+export async function checkRateLimitWithAuth(
+  request: NextRequest | Request,
+  tier: "default" | "auth" | "chat" | "search" | "upload" | "export" = "default"
+): Promise<RateLimitResult> {
+  const userTier = request.headers.get("x-user-tier") || "FREE";
+  return rateLimit(request, tier, userTier);
+}
+
+/**
+ * Get user tier from request headers
+ */
+export function getUserTierFromRequest(request: NextRequest | Request): string {
+  return request.headers.get("x-user-tier") || "FREE";
+}
+
+/**
  * Get rate limit analytics for a user
  */
 export { getRateLimitAnalytics };
 
 /**
- * Re-export rateLimitResponse for convenience
+ * Re-export rateLimitResponse and rateLimitError for convenience
  */
-export { rateLimitResponse };
+export { rateLimitResponse } from "@/services/rate-limit.service";
+export { rateLimitError } from "@/lib/api-response";
 

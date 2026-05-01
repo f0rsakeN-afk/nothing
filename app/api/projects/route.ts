@@ -12,7 +12,7 @@ import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
 import { checkLimit } from "@/services/limits/service";
 import { limitExceededResponse } from "@/lib/limits/middleware";
 import redis, { KEYS, TTL } from "@/lib/redis";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import {
   unauthorizedError,
   notFoundError,
@@ -40,7 +40,7 @@ interface ProjectCache {
 
 export async function GET(request: NextRequest) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

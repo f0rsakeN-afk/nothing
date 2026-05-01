@@ -60,6 +60,8 @@ export const KEYS = {
   userChatsArchived: (userId: string) => `chats:user:${userId}:archived`,
   userRateLimit: (userId: string) => `user:${userId}:rate_limit`,
   userChatCreation: (userId: string) => `user:${userId}:chat_creation`,
+  ipGlobal: (ip: string) => `ip:${ip}:global`,
+  authFailures: (ip: string) => `ip:${ip}:auth_failures`,
   imageCache: (url: string) => `img:${Buffer.from(url).toString("base64").slice(0, 64)}`,
   statusCheck: (service: string) => `status:${service}:checks`,
   statusSLA: () => `status:sla`,
@@ -102,6 +104,23 @@ export const KEYS = {
   changelogEntries: () => "changelog:entries",
   changelogList: (...args: (string | number)[]) => `changelog:list:${args.join(":")}`,
   chatInvitations: (chatId: string) => `chat:${chatId}:invitations`,
+  // Role caching
+  chatRoleCache: (chatId: string, userId: string) => `chat:${chatId}:role:${userId}`,
+  // Trending
+  trendingPrompts: "trending:prompts",
+  // MCP elicitation
+  elicitationPending: (elicitationId: string) => `elicitation:pending:${elicitationId}`,
+  // Security - device fingerprinting
+  deviceFingerprint: (fingerprint: string) => `device:${fingerprint}`,
+  deviceUserList: (deviceId: string) => `device:${deviceId}:users`,
+  // Security - anomaly logging
+  anomalyLog: (type: string) => `anomaly:${type}`,
+  // Security - request signing (nonce tracking for replay prevention)
+  requestNonce: (nonce: string) => `nonce:${nonce}`,
+  // Security - suspicious IPs
+  suspiciousIP: (ip: string) => `ip:${ip}:suspicious`,
+  // Security - known devices per user
+  userDevices: (userId: string) => `user:${userId}:devices`,
 } as const;
 
 // TTL constants (in seconds)
@@ -134,6 +153,9 @@ export const TTL = {
   activeStreams: 60, // 1 minute for active stream tracking (short, refreshed frequently)
   resumeReady: 5 * 60, // 5 minutes for resume ready signal
   streamVersion: 24 * 60 * 60, // 24 hours for stream version tracking
+  // Role caching
+  chatRole: 60, // 1 minute for chat role cache
+  chatMembers: 30, // 30 seconds for chat members cache
   // Admin route caches
   adminChats: 30, // 30 seconds for admin chat list
   adminUsers: 30, // 30 seconds for admin user list
@@ -147,6 +169,12 @@ export const TTL = {
   changelogEntries: 60, // 1 minute for changelog entries
   changelogList: 30, // 30 seconds for changelog list
   chatInvitations: 60, // 1 minute for chat invitations
+  // Security TTLs
+  deviceFingerprint: 7 * 24 * 60 * 60, // 7 days for device fingerprints
+  anomalyLog: 30 * 24 * 60 * 60, // 30 days for anomaly logs
+  requestNonce: 5 * 60, // 5 minutes for nonce expiry
+  suspiciousIP: 60 * 60, // 1 hour for suspicious IP flags
+  userDevices: 7 * 24 * 60 * 60, // 7 days for user device list
 } as const;
 
 // Pub/Sub channel helpers

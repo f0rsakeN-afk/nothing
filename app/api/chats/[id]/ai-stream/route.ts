@@ -13,7 +13,7 @@ import { createUIMessageStream, JsonToSseTransformStream } from "ai";
 import { differenceInSeconds } from "date-fns";
 import { createClient } from "redis";
 import { logger } from "@/lib/logger";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export async function GET(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

@@ -4,12 +4,19 @@ import { getChatById, updateChat, deleteChat } from "@/lib/stack-server";
 import { validateAuth } from "@/lib/auth";
 import { requireChatAccess, getChatRole, PERMISSIONS } from "@/lib/chat-access";
 import { publishChatRenamed, publishChatArchived, publishChatDeleted } from "@/services/chat-pubsub.service";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult.resetAt);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,6 +51,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult.resetAt);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -102,6 +115,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult.resetAt);
+    }
+
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

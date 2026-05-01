@@ -7,7 +7,7 @@ import {
   invalidateMemberCache,
   invalidateRoleCache,
 } from "@/lib/chat-access";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { publishMemberRemoved } from "@/services/chat-pubsub.service";
 
 /**
@@ -23,7 +23,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

@@ -3,12 +3,12 @@ import { feedbackSchema } from "@/schemas/feedback.schema";
 import { stackServerApp } from "@/src/stack/server";
 import { NextRequest, NextResponse } from "next/server";
 import { treeifyError } from "zod";
-import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = await rateLimit(req, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(req, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult.resetAt);
     }

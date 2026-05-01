@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
+import { checkLimit } from "@/services/limits/service";
+import { limitExceededResponse } from "@/lib/limits/middleware";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "chat");
+    const rateLimit = await checkRateLimitWithAuth(request, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -16,6 +18,12 @@ export async function POST(
     const user = await validateAuth(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check chat limit before forking
+    const limitCheck = await checkLimit(user.id, "CHAT");
+    if (!limitCheck.allowed) {
+      return limitExceededResponse(limitCheck);
     }
 
     const { id } = await params;

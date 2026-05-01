@@ -11,7 +11,7 @@ import { getChatContext, queueSummarization } from "@/services/summarize.service
 import { getCircuitBreaker, CircuitBreakerOpenError } from "@/services/circuit-breaker.service";
 import { publishMessageNew } from "@/services/chat-pubsub.service";
 import { notifyNewMessage } from "@/services/push-notification.service";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { webSearch, type SearchResult } from "@/lib/web-search";
 import {
   startResumableStream,
@@ -460,8 +460,8 @@ export async function POST(req: NextRequest) {
   const streamVersion = Date.now();
 
   try {
-    // Check rate limit
-    const rateLimit = await checkApiRateLimit(req, "chat");
+    // Check rate limit with user tier from proxy headers
+    const rateLimit = await checkRateLimitWithAuth(req, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

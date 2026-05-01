@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { contactSchema } from "@/lib/validations/contact.validation";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-  const rateLimitResult = await checkApiRateLimit(request, "default");
+  const rateLimitResult = await checkRateLimitWithAuth(request, "default");
   if (!rateLimitResult.success) {
     return rateLimitResponse(rateLimitResult);
   }

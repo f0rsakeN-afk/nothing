@@ -6,7 +6,7 @@ import {
   invalidateMemberCache,
   invalidateRoleCache,
 } from "@/lib/chat-access";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { publishMemberAdded, publishMemberRemoved, publishMemberRoleChanged } from "@/services/chat-pubsub.service";
 
 /**
@@ -24,7 +24,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -139,7 +139,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -267,7 +267,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

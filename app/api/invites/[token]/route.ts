@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import redis, { KEYS, CHANNELS } from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { invalidateMemberCache, invalidateRoleCache } from "@/lib/chat-access";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { publishMemberAdded } from "@/services/chat-pubsub.service";
 
 /**
@@ -112,7 +112,7 @@ export async function POST(
 ) {
   try {
     // Rate limit accept attempts
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -251,7 +251,7 @@ export async function DELETE(
 ) {
   try {
     // Rate limit to prevent brute force
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

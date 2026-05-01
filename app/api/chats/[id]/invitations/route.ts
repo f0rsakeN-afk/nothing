@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import redis, { KEYS, CHANNELS } from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { requireChatAccess, invalidateMemberCache, generateInviteToken } from "@/lib/chat-access";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 const INVITATIONS_CACHE_TTL = 30; // 30 seconds
 
@@ -23,7 +23,7 @@ export async function POST(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "chat");
+    const rateLimit = await checkRateLimitWithAuth(request, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -188,7 +188,7 @@ export async function GET(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

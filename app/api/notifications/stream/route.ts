@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser } from "@/lib/auth";
 import { redisPubSub } from "@/lib/redis";
 import { CHANNELS } from "@/lib/redis";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // Rate limiting for SSE stream connections
-  const rateLimit = await checkApiRateLimit(request, "default");
+  const rateLimit = await checkRateLimitWithAuth(request, "default");
   if (!rateLimit.success) {
     return rateLimitError(rateLimit);
   }

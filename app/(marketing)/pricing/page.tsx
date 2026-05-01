@@ -21,6 +21,7 @@ async function fetchPlansData() {
   // Transform array to object keyed by tier
   const plansObj = plans.reduce((acc: Record<string, Plan>, plan: Plan) => {
     acc[plan.tier.toLowerCase()] = {
+      tier: plan.tier,
       name: plan.name,
       price: plan.price,
       credits: 0,
@@ -41,6 +42,7 @@ async function fetchPlansData() {
 }
 
 interface Plan {
+  tier: string;
   name: string;
   price: number;
   credits: number;

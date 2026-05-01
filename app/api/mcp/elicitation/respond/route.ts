@@ -3,7 +3,7 @@ import { validateAuth } from "@/lib/auth";
 import { pendingElicitations } from "@/services/mcp-elicitation.service";
 import redis from "@/lib/redis";
 import { z } from "zod";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 const ELICITATION_RESPONSE_KEY_PREFIX = "mcp:elicitation:response:";
 const ELICITATION_PENDING_KEY_PREFIX = "mcp:elicitation:pending:";
@@ -26,7 +26,7 @@ const respondSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

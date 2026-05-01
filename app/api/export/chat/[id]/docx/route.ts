@@ -7,6 +7,7 @@ import {
   convertInchesToTwip, IStylesOptions,
 } from 'docx';
 import { logger } from '@/lib/logger';
+import { checkRateLimitWithAuth, rateLimitError } from '@/lib/rate-limit';
 
 const MAX_EXPORT_MESSAGES = 1000;
 
@@ -18,6 +19,11 @@ export async function GET(
     const user = await getOrCreateUser(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimitWithAuth(request, "export");
+    if (!rateLimit.success) {
+      return rateLimitError(rateLimit);
     }
 
     const { id } = await params;

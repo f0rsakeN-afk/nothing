@@ -5,7 +5,7 @@ import { createMCPClient } from '@ai-sdk/mcp';
 import { getMcpAuthHeaders } from '@/lib/mcp/auth-headers';
 import { validateMcpServerUrl } from '@/lib/mcp/server-config';
 import { injectManagedOAuthCredentials } from '@/lib/mcp/managed-credentials';
-import { checkApiRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { checkRateLimitWithAuth, rateLimitResponse } from '@/lib/rate-limit';
 
 function isProUser(planTier: string | null | undefined) {
   return planTier === 'PRO' || planTier === 'ENTERPRISE' || planTier === 'BASIC';
@@ -17,7 +17,7 @@ export async function GET(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request);
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }
@@ -96,7 +96,7 @@ export async function PATCH(
 ) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request);
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

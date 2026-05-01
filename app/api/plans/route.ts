@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { validateAuth } from "@/lib/auth";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import prisma from "@/lib/prisma";
 import redis from "@/lib/redis";
 import { KEYS, TTL } from "@/lib/redis";
@@ -14,6 +15,12 @@ const PLANS_CACHE_TTL = 300; // 5 minutes
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult.resetAt);
+    }
+
     // Auth is optional - only needed to show user's current plan
     const user = await validateAuth(request);
 

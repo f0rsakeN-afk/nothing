@@ -11,13 +11,13 @@ import { stackServerApp } from "@/src/stack/server";
 import { webSearch } from "@/lib/web-search";
 import { scrapeUrls, type ScrapedContent } from "@/lib/scraper";
 import { logger } from "@/lib/logger";
-import { checkSearchRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
-    // Check rate limit
-    const rateLimit = await checkSearchRateLimit(request);
+    // Check rate limit with user tier from proxy headers
+    const rateLimit = await checkRateLimitWithAuth(request, "search");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

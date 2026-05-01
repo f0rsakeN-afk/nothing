@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { notFoundError, internalError, validationError, unauthorizedError } from "@/lib/api-response";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 import { z } from "zod";
 
@@ -20,7 +20,7 @@ const onboardingSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

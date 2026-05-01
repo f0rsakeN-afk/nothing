@@ -4,7 +4,7 @@
  */
 
 import prisma from "./prisma";
-import redis, { KEYS } from "./redis";
+import redis, { KEYS, TTL } from "./redis";
 import { ChatRole } from "@/src/generated/prisma/client";
 import crypto from "crypto";
 
@@ -14,10 +14,6 @@ const ROLE_HIERARCHY: Record<ChatRole, number> = {
   EDITOR: 2,
   VIEWER: 1,
 };
-
-// Cache TTLs
-const ROLE_CACHE_TTL = 60; // 1 minute - role changes should be infrequent
-const MEMBERS_CACHE_TTL = 30; // 30 seconds
 
 /**
  * Generate a cryptographically secure invitation token
@@ -34,7 +30,7 @@ export async function getChatRole(
   userId: string,
   chatId: string
 ): Promise<ChatRole | null> {
-  const cacheKey = `chat:${chatId}:role:${userId}`;
+  const cacheKey = KEYS.chatRoleCache(chatId, userId);
 
   // Try cache first
   try {
@@ -72,7 +68,7 @@ export async function getChatRole(
 
   if (isOwner) {
     try {
-      await redis.setex(cacheKey, ROLE_CACHE_TTL, "OWNER");
+      await redis.setex(cacheKey, TTL.chatRole, "OWNER");
     } catch {
       // Redis unavailable
     }
@@ -83,7 +79,7 @@ export async function getChatRole(
   if (!member) return null;
 
   try {
-    await redis.setex(cacheKey, ROLE_CACHE_TTL, member.role);
+    await redis.setex(cacheKey, TTL.chatRole, member.role);
   } catch {
     // Redis unavailable
   }
@@ -180,7 +176,7 @@ export async function getChatMembers(
   // Cache first page only
   if (!cursor) {
     try {
-      await redis.setex(cacheKey, MEMBERS_CACHE_TTL, JSON.stringify({ members: results, nextCursor }));
+      await redis.setex(cacheKey, TTL.chatMembers, JSON.stringify({ members: results, nextCursor }));
     } catch {
       // Redis unavailable
     }
@@ -209,7 +205,7 @@ export async function getMemberCount(chatId: string): Promise<number> {
   });
 
   try {
-    await redis.setex(cacheKey, MEMBERS_CACHE_TTL, count.toString());
+    await redis.setex(cacheKey, TTL.chatMembers, count.toString());
   } catch {
     // Redis unavailable
   }

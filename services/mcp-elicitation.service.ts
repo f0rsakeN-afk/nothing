@@ -5,6 +5,7 @@
  */
 
 import redis from "@/lib/redis";
+import { KEYS } from "@/lib/redis";
 
 type ElicitResult = { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> };
 
@@ -14,15 +15,10 @@ type ElicitResult = { action: "accept" | "decline" | "cancel"; content?: Record<
 export const pendingElicitations = new Map<string, (result: ElicitResult) => void>();
 
 const ELICITATION_RESPONSE_KEY_PREFIX = "mcp:elicitation:response:";
-const ELICITATION_PENDING_KEY_PREFIX = "mcp:elicitation:pending:";
 const ELICITATION_TIMEOUT_MS = 5 * 60 * 1000;
 
 function getElicitationResponseKey(elicitationId: string) {
   return `${ELICITATION_RESPONSE_KEY_PREFIX}${elicitationId}`;
-}
-
-function getElicitationPendingKey(elicitationId: string) {
-  return `${ELICITATION_PENDING_KEY_PREFIX}${elicitationId}`;
 }
 
 /**
@@ -31,7 +27,6 @@ function getElicitationPendingKey(elicitationId: string) {
 export function waitForElicitation(elicitationId: string): Promise<ElicitResult> {
   return new Promise<ElicitResult>((resolve) => {
     const responseKey = getElicitationResponseKey(elicitationId);
-    const pendingKey = getElicitationPendingKey(elicitationId);
     let interval: ReturnType<typeof setInterval> | null = null;
     let settled = false;
 
@@ -48,7 +43,7 @@ export function waitForElicitation(elicitationId: string): Promise<ElicitResult>
     });
 
     // Mark as pending so responders can validate/diagnose lifecycle.
-    void redis.set(pendingKey, "1", "EX", Math.ceil(ELICITATION_TIMEOUT_MS / 1000) + 60);
+    void redis.set(KEYS.elicitationPending(elicitationId), "1", "EX", Math.ceil(ELICITATION_TIMEOUT_MS / 1000) + 60);
 
     const pollRedis = async () => {
       try {

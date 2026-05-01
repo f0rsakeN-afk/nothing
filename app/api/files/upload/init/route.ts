@@ -8,12 +8,12 @@ import { stackServerApp } from "@/src/stack/server";
 import { createMultipartUploadInit, calculateParts, getFileSizeLimit, isContentTypeSupported } from "@/services/s3.service";
 import prisma from "@/lib/prisma";
 import { getUserLimits } from "@/services/limit.service";
-import { checkUploadRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
     // Check rate limit
-    const rateLimit = await checkUploadRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request, "upload");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

@@ -12,8 +12,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { notFoundError, unauthorizedError, internalError } from "@/lib/api-response";
-import { checkExportRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
+import { checkExportLimit } from "@/services/limit.service";
 import {
   createExportJob,
   getExportJobStatus,
@@ -25,7 +26,7 @@ const EXPORT_COOLDOWN_HOURS = 1;
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkExportRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request, "export");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }
@@ -42,6 +43,15 @@ export async function POST(request: NextRequest) {
 
     if (!prismaUser) {
       return notFoundError("User");
+    }
+
+    // Check export limit based on plan
+    const exportCheck = await checkExportLimit(prismaUser.id);
+    if (!exportCheck.allowed) {
+      return NextResponse.json({
+        error: exportCheck.error,
+        code: "EXPORT_NOT_ALLOWED",
+      }, { status: 403 });
     }
 
     // Check if user already has a pending/processing export
@@ -105,7 +115,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkExportRateLimit(request);
+    const rateLimit = await checkRateLimitWithAuth(request, "export");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

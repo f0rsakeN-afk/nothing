@@ -121,6 +121,11 @@ export function MarketingHeader() {
       description: "Explore multiple directions in one conversation",
       href: "/features/chat-branches",
     },
+    {
+      title: "Limits & Features",
+      description: "See all plan limits and capabilities",
+      href: "/limits",
+    },
   ];
 
   return (

@@ -6,14 +6,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser, AccountDeactivatedError } from "@/lib/auth";
-import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = await rateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult.resetAt);
     }

@@ -4,7 +4,7 @@ import { trackPromptUsage } from "@/services/trending.service";
 import { logger } from "@/lib/logger";
 import { internalError, validationError } from "@/lib/api-response";
 import { suggestQuerySchema } from "@/lib/validations/api.validation";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 
 type TrieNode = {
@@ -165,7 +165,7 @@ buildIndexes();
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

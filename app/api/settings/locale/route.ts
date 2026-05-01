@@ -11,7 +11,7 @@ import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { routing, type Locale } from "@/routing";
 import { invalidateUserSettingsCache } from "@/services/settings.service";
-import { checkApiRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth } from "@/lib/rate-limit";
 import { rateLimitError } from "@/lib/api-response";
 import {
   unauthorizedError,
@@ -28,7 +28,7 @@ const updateLocaleSchema = z.object({
 export async function PATCH(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimit = await checkApiRateLimit(request, "default");
+    const rateLimit = await checkRateLimitWithAuth(request, "default");
     if (!rateLimit.success) {
       return rateLimitError(rateLimit);
     }

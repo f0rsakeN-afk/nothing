@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import redis from "@/lib/redis";
 import { validateAuth, AccountDeactivatedError } from "@/lib/auth";
 import { requireChatAccess } from "@/lib/chat-access";
-import { checkApiRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 
 /**
  * DELETE /api/chats/:id/invitations/:invitationId - Cancel a pending invitation
@@ -14,7 +14,7 @@ export async function DELETE(
 ) {
   try {
     // Rate limit to prevent brute force
-    const rateLimit = await checkApiRateLimit(request, "chat");
+    const rateLimit = await checkRateLimitWithAuth(request, "chat");
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.resetAt);
     }

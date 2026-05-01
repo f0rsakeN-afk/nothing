@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
-import { rateLimit, rateLimitResponse } from "@/services/rate-limit.service";
+import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
 import { notFoundError, internalError, validationError } from "@/lib/api-response";
 import { createReportSchema } from "@/lib/validations/api.validation";
 import { validateRequestOrigin, csrfErrorResponse } from "@/lib/csrf";
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     if (csrfError) return csrfError;
 
     // Rate limiting
-    const rateLimitResult = await rateLimit(request, "default");
+    const rateLimitResult = await checkRateLimitWithAuth(request, "default");
     if (!rateLimitResult.success) {
       return rateLimitResponse(rateLimitResult.resetAt);
     }
