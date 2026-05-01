@@ -193,3 +193,15 @@ export async function isAdminOrModerator(userId: string): Promise<boolean> {
   });
   return user?.role === "ADMIN" || user?.role === "MODERATOR";
 }
+
+/**
+ * Check if user has admin role
+ * Use after validateAuth() or getOrCreateUser()
+ */
+export async function isAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  return user?.role === "ADMIN";
+}

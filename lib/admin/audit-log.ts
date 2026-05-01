@@ -56,7 +56,8 @@ export type AuditAction =
   | "ADMIN_INCIDENTS_LIST"
   | "ADMIN_INCIDENT_CREATE"
   | "ADMIN_INCIDENT_UPDATE"
-  | "ADMIN_INCIDENT_DELETE";
+  | "ADMIN_INCIDENT_DELETE"
+  | "ADMIN_CACHE_FLUSH";
 
 interface AuditLogParams {
   action: AuditAction;

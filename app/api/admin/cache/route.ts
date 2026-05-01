@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       pattern,
     });
   } catch (error) {
-    logger.error("Admin cache flush error:", error);
+    logger.error("Admin cache flush error:", error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: { type: "internal_error", message: "Failed to flush cache" } },
       { status: 500 },
