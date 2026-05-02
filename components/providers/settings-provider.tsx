@@ -4,7 +4,8 @@ import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Settings {
-  theme: string;
+  mode: string;
+  colorScheme: string;
   language: string;
   autoTitle: boolean;
   enterToSend: boolean;
@@ -32,7 +33,8 @@ interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: "system",
+  mode: "system",
+  colorScheme: "civic",
   language: "en",
   autoTitle: true,
   enterToSend: false,

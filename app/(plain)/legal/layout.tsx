@@ -1,4 +1,5 @@
 import { Footer } from "@/components/marketing/shared/footer";
+import { ColorSchemeManager } from "@/components/shared/ColorSchemeManager";
 
 export default function LegalLayout({
   children,
@@ -7,6 +8,7 @@ export default function LegalLayout({
 }) {
   return (
     <>
+      <ColorSchemeManager />
       {children}
       <Footer />
     </>

@@ -13,15 +13,31 @@ import {
 import { LogOut } from "lucide-react";
 import { useStackApp } from "@stackframe/stack";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 interface LogoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const STORAGE_KEY = "eryx-settings";
+
 export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
   const t = useTranslations();
   const app = useStackApp();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    // Clear localStorage settings
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+
+    app.signOut();
+    onOpenChange(false);
+    router.push("/");
+  };
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent size="sm">
@@ -39,10 +55,7 @@ export function LogoutDialog({ open, onOpenChange }: LogoutDialogProps) {
           <AlertDialogAction
             className={"text-white"}
             render={<Button variant="destructive" />}
-            onClick={() => {
-              app.signOut();
-              onOpenChange(false);
-            }}
+            onClick={handleSignOut}
           >
             {t("auth.signOut")}
           </AlertDialogAction>

@@ -437,7 +437,8 @@ model Customize {
 model Settings {
   id               String   @id @default(cuid())
   userId           String   @unique
-  theme            String   @default("system")
+  mode             String   @default("system")
+  colorScheme      String   @default("civic")
   language         String   @default("en")
   autoTitle        Boolean  @default(true)
   enterToSend      Boolean  @default(false)

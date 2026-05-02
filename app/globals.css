@@ -4,16 +4,16 @@
 @import "@xyflow/react/dist/style.css";
 
 @custom-variant dark (&:is(.dark *));
-@custom-variant theme1 (&:is(.theme-1 *));
-@custom-variant theme2 (&:is(.theme-2 *));
-@custom-variant theme3 (&:is(.theme-3 *));
-@custom-variant theme4 (&:is(.theme-4 *));
-@custom-variant theme5 (&:is(.theme-5 *));
-@custom-variant theme6 (&:is(.theme-6 *));
-@custom-variant theme7 (&:is(.theme-7 *));
-@custom-variant theme8 (&:is(.theme-8 *));
-@custom-variant theme9 (&:is(.theme-9 *));
-@custom-variant theme10 (&:is(.theme-10 *));
+@custom-variant civic (&:is(.civic *));
+@custom-variant studio (&:is(.studio *));
+@custom-variant dawn (&:is(.dawn *));
+@custom-variant dusk (&:is(.dusk *));
+@custom-variant code (&:is(.code *));
+@custom-variant nebula (&:is(.nebula *));
+@custom-variant ember (&:is(.ember *));
+@custom-variant aura (&:is(.aura *));
+@custom-variant pulse (&:is(.pulse *));
+@custom-variant forge (&:is(.forge *));
 
 @theme inline {
   --color-background: var(--background);
@@ -243,7 +243,7 @@
 /* ─── Full Themes ──────────────────────────────────────────────────────── */
 /* These replace the entire color palette while keeping Eryx fonts */
 
-.theme-1 {
+.civic {
   --background: oklch(0.9195 0.0169 88.0030);
   --foreground: oklch(0.2350 0 0);
   --card: oklch(0.9530 0.0156 86.4257);
@@ -292,7 +292,7 @@
   --shadow-2xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-1.dark {
+.civic.dark {
   --background: oklch(0.1913 0 0);
   --foreground: oklch(0.9173 0.0133 82.4015);
   --card: oklch(0.2264 0 0);
@@ -341,7 +341,7 @@
   --shadow-2xl: 0px 6px 15px 0px hsl(0 0% 0% / 0.75);
 }
 
-.theme-2 {
+.studio {
   --background: oklch(0.9755 0.0067 97.3510);
   --foreground: oklch(0.2178 0 0);
   --card: oklch(1.0000 0 0);
@@ -390,7 +390,7 @@
   --shadow-2xl: 0px 8px 15px 0px hsl(0 0% 0% / 0.13);
 }
 
-.theme-2.dark {
+.studio.dark {
   --background: oklch(0.1904 0.0040 106.7692);
   --foreground: oklch(0.9755 0.0067 97.3510);
   --card: oklch(0.2343 0.0038 106.6863);
@@ -439,7 +439,7 @@
   --shadow-2xl: 0px 10px 25px 0px hsl(0 0% 0% / 1.00);
 }
 
-.theme-3 {
+.dawn {
   --background: oklch(0.9801 0.0034 67.7835);
   --foreground: oklch(0.2006 0.0138 34.3909);
   --card: oklch(1.0000 0 0);
@@ -488,7 +488,7 @@
   --shadow-2xl: 0 1px 3px 0px hsl(21.2903 75.6098% 8.0392% / 0.15);
 }
 
-.theme-3.dark {
+.dawn.dark {
   --background: oklch(0.1433 0.0059 41.0395);
   --foreground: oklch(0.8939 0.0129 56.2350);
   --card: oklch(0.1809 0.0054 39.3496);
@@ -537,7 +537,7 @@
   --shadow-2xl: 0 1px 4px 0px hsl(0 100.0000% 0.1961% / 1.00);
 }
 
-.theme-4 {
+.dusk {
   --background: oklch(0.9901 0.0161 95.2193);
   --foreground: oklch(0.2138 0.0019 286.2347);
   --card: oklch(0.9901 0.0161 95.2193);
@@ -586,7 +586,7 @@
   --shadow-2xl: 0px 4px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-4.dark {
+.dusk.dark {
   --background: oklch(0.2103 0.0059 285.8852);
   --foreground: oklch(0.9851 0 0);
   --card: oklch(0.2103 0.0059 285.8852);
@@ -635,7 +635,7 @@
   --shadow-2xl: 0px 4px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-5 {
+.code {
   --background: oklch(1 0 0);
   --foreground: oklch(0.1450 0 0);
   --card: oklch(1 0 0);
@@ -684,7 +684,7 @@
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-5.dark {
+.code.dark {
   --background: oklch(0.1450 0 0);
   --foreground: oklch(0.9850 0 0);
   --card: oklch(0.2050 0 0);
@@ -733,7 +733,7 @@
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-6 {
+.nebula {
   --background: oklch(0.9777 0.0041 301.4256);
   --foreground: oklch(0.3651 0.0325 287.0807);
   --card: oklch(1.0000 0 0);
@@ -782,7 +782,7 @@
   --shadow-2xl: 1px 2px 5px 1px hsl(0 0% 0% / 0.15);
 }
 
-.theme-6.dark {
+.nebula.dark {
   --background: oklch(0.2166 0.0215 292.8474);
   --foreground: oklch(0.9053 0.0245 293.5570);
   --card: oklch(0.2544 0.0301 292.7315);
@@ -831,7 +831,7 @@
   --shadow-2xl: 1px 2px 5px 1px hsl(0 0% 0% / 0.15);
 }
 
-.theme-7 {
+.ember {
   --background: oklch(0.9702 0 0);
   --foreground: oklch(0.3562 0 0);
   --card: oklch(1.0000 0 0);
@@ -880,7 +880,7 @@
   --shadow-2xl: 0 1px 12px 0px hsl(0 0% 23.5294% / 0.20);
 }
 
-.theme-7.dark {
+.ember.dark {
   --background: oklch(0.3562 0 0);
   --foreground: oklch(0.9702 0 0);
   --card: oklch(0.3250 0 0);
@@ -929,7 +929,7 @@
   --shadow-2xl: 0 1px 12px 0px hsl(0 0% 0% / 0.63);
 }
 
-.theme-8 {
+.aura {
   --background: oklch(0.9901 0.0161 95.2193);
   --foreground: oklch(0.2138 0.0019 286.2347);
   --card: oklch(0.9901 0.0161 95.2193);
@@ -978,7 +978,7 @@
   --shadow-2xl: 0px 4px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-8.dark {
+.aura.dark {
   --background: oklch(0.2103 0.0059 285.8852);
   --foreground: oklch(0.9851 0 0);
   --card: oklch(0.2103 0.0059 285.8852);
@@ -1027,7 +1027,7 @@
   --shadow-2xl: 0px 4px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.theme-9 {
+.pulse {
   --background: oklch(0.9777 0.0041 301.4256);
   --foreground: oklch(0.3651 0.0325 287.0807);
   --card: oklch(1.0000 0 0);
@@ -1076,7 +1076,7 @@
   --shadow-2xl: 1px 2px 5px 1px hsl(0 0% 0% / 0.15);
 }
 
-.theme-9.dark {
+.pulse.dark {
   --background: oklch(0.2166 0.0215 292.8474);
   --foreground: oklch(0.9053 0.0245 293.5570);
   --card: oklch(0.2544 0.0301 292.7315);
@@ -1125,7 +1125,7 @@
   --shadow-2xl: 1px 2px 5px 1px hsl(0 0% 0% / 0.15);
 }
 
-.theme-10 {
+.forge {
   --background: oklch(0.9702 0 0);
   --foreground: oklch(0.3562 0 0);
   --card: oklch(1.0000 0 0);
@@ -1174,7 +1174,7 @@
   --shadow-2xl: 0 1px 12px 0px hsl(0 0% 23.5294% / 0.20);
 }
 
-.theme-10.dark {
+.forge.dark {
   --background: oklch(0.3562 0 0);
   --foreground: oklch(0.9702 0 0);
   --card: oklch(0.3250 0 0);

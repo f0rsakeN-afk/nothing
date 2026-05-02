@@ -711,6 +711,9 @@
     "memory": "메모리",
     "files": "파일",
     "apps": "앱",
+    "limits": "제한",
+    "about": "정보",
+    "contact": "문의",
     "comingSoon": "곧 출시"
   },
   "sidebar": {
