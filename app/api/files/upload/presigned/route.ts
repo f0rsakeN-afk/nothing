@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import { getMultipartPresignedUrls } from "@/services/s3.service";
 import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
+import { presignedUrlQuerySchema } from "@/lib/schemas";
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,16 +22,25 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const uploadId = searchParams.get("uploadId");
-    const objectKey = searchParams.get("objectKey");
-    const totalParts = parseInt(searchParams.get("totalParts") || "1");
+    const queryParams = {
+      uploadId: searchParams.get("uploadId") || "",
+      objectKey: searchParams.get("objectKey") || "",
+      totalParts: searchParams.get("totalParts") || "1",
+    };
 
-    if (!uploadId || !objectKey) {
+    const result = presignedUrlQuerySchema.safeParse(queryParams);
+    if (!result.success) {
+      const errors = result.error.issues.map((e) => ({
+        field: e.path.map(String).join("."),
+        message: e.message,
+      }));
       return NextResponse.json(
-        { error: "Missing required params: uploadId, objectKey" },
+        { error: "Validation failed", code: "VALIDATION_ERROR", details: errors },
         { status: 400 }
       );
     }
+
+    const { uploadId, objectKey, totalParts } = result.data;
 
     // Get presigned URLs for each part
     const presignedParts = await getMultipartPresignedUrls(

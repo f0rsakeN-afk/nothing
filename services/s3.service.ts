@@ -33,6 +33,10 @@ const CONTENT_TYPE_MAP: Record<string, string> = {
   "application/pdf": "pdf",
   "application/json": "json",
   "text/csv": "csv",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
 };
 
 export interface PresignedPart {
@@ -240,4 +244,49 @@ export function isContentTypeSupported(contentType: string): boolean {
  */
 export function getExtension(contentType: string): string {
   return CONTENT_TYPE_MAP[contentType] || "bin";
+}
+
+/**
+ * MIME type to extension mapping
+ */
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "text/plain": "txt",
+  "text/markdown": "md",
+  "application/pdf": "pdf",
+  "application/json": "json",
+  "text/csv": "csv",
+};
+
+/**
+ * Validate and normalize content type
+ * Rejects non-allowlisted types even if they pass mime type check
+ */
+export function validateContentType(contentType: string): {
+  valid: boolean;
+  normalized?: string;
+  error?: string
+} {
+  const normalized = contentType.toLowerCase().trim();
+
+  // First check against allowlist
+  if (!(normalized in CONTENT_TYPE_MAP)) {
+    return { valid: false, error: `Unsupported content type: ${normalized}` };
+  }
+
+  // Double-check by verifying it's a known safe type
+  const allowedTypes = [
+    "text/plain", "text/markdown", "application/pdf",
+    "application/json", "text/csv",
+    "image/jpeg", "image/png", "image/gif", "image/webp"
+  ];
+
+  if (!allowedTypes.includes(normalized)) {
+    return { valid: false, error: `Unsupported content type: ${normalized}` };
+  }
+
+  return { valid: true, normalized };
 }

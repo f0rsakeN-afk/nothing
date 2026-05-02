@@ -24,6 +24,14 @@ export interface UserSettings {
   analytics: boolean;
   usageData: boolean;
   crashReports: boolean;
+  hapticsEnabled: boolean;
+  showChips: boolean;
+  showTagline: boolean;
+  showMemory: boolean;
+  showFiles: boolean;
+  showApps: boolean;
+  showSearch: boolean;
+  showNewChat: boolean;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -44,6 +52,14 @@ const DEFAULT_SETTINGS: UserSettings = {
   analytics: true,
   usageData: false,
   crashReports: true,
+  hapticsEnabled: true,
+  showChips: true,
+  showTagline: true,
+  showMemory: true,
+  showFiles: true,
+  showApps: true,
+  showSearch: true,
+  showNewChat: true,
 };
 
 /**
@@ -87,6 +103,14 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         analytics: settings.analytics,
         usageData: settings.usageData,
         crashReports: settings.crashReports,
+        hapticsEnabled: settings.hapticsEnabled,
+        showChips: settings.showChips,
+        showTagline: settings.showTagline,
+        showMemory: settings.showMemory,
+        showFiles: settings.showFiles,
+        showApps: settings.showApps,
+        showSearch: settings.showSearch,
+        showNewChat: settings.showNewChat,
       }
     : { ...DEFAULT_SETTINGS };
 

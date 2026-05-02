@@ -76,6 +76,13 @@ export const settingsSchema = z.object({
   usageData: z.boolean().optional(),
   crashReports: z.boolean().optional(),
   hapticsEnabled: z.boolean().optional(),
+  showChips: z.boolean().optional(),
+  showTagline: z.boolean().optional(),
+  showMemory: z.boolean().optional(),
+  showFiles: z.boolean().optional(),
+  showApps: z.boolean().optional(),
+  showSearch: z.boolean().optional(),
+  showNewChat: z.boolean().optional(),
 });
 
 export const updateSettingsSchema = settingsSchema.partial();

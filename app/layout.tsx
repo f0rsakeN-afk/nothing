@@ -13,6 +13,7 @@ import { getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
 import { Providers } from "./providers";
 import { routing } from "@/routing";
+import { SettingsProvider } from "@/components/providers/settings-provider";
 
 // Force dynamic rendering so cookie is read on every request
 export const dynamic = "force-dynamic";
@@ -109,18 +110,20 @@ export default async function RootLayout({
           <StackProviderWrapper>
             <ThemeProvider defaultTheme="dark" attribute="class">
               <NextIntlClientProvider locale={locale} messages={messages}>
-                <Providers>
-                  <Toaster position="top-center" />
-                  {children}
-                  <UmamiScript
-                    websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || ""}
-                    src={
-                      process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ||
-                      "https://analytics.eryx.ai/script.js"
-                    }
-                  />
-                  <CookieConsentBanner />
-                </Providers>
+                <SettingsProvider>
+                  <Providers>
+                    <Toaster position="top-center" />
+                    {children}
+                    <UmamiScript
+                      websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || ""}
+                      src={
+                        process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ||
+                        "https://analytics.eryx.ai/script.js"
+                      }
+                    />
+                    <CookieConsentBanner />
+                  </Providers>
+                </SettingsProvider>
               </NextIntlClientProvider>
             </ThemeProvider>
           </StackProviderWrapper>

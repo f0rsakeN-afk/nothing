@@ -18,6 +18,7 @@ import {
   internalError,
   validationError,
 } from "@/lib/api-response";
+import { handleApiError } from "@/lib/error-handling";
 import {
   memoryQuerySchema,
   createMemorySchema,
@@ -56,8 +57,7 @@ export async function GET(request: NextRequest) {
     const result = await getMemories(user.id, { limit, category });
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Memory GET error:", error);
-    return internalError("Failed to fetch memories");
+    return handleApiError("MemoryGet", error, { requestPath: "/api/memory", method: "GET" });
   }
 }
 
@@ -124,8 +124,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(memory);
   } catch (error) {
-    console.error("Memory POST error:", error);
-    return internalError("Failed to add memory");
+    return handleApiError("MemoryCreate", error, { requestPath: "/api/memory", method: "POST" });
   }
 }
 
@@ -164,8 +163,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(memory);
   } catch (error) {
-    console.error("Memory PUT error:", error);
-    return internalError("Failed to update memory");
+    return handleApiError("MemoryUpdate", error, { requestPath: "/api/memory", method: "PUT" });
   }
 }
 
@@ -195,7 +193,6 @@ export async function DELETE(request: NextRequest) {
     await deleteMemory(idParsed.data.id, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Memory DELETE error:", error);
-    return internalError("Failed to delete memory");
+    return handleApiError("MemoryDelete", error, { requestPath: "/api/memory", method: "DELETE" });
   }
 }

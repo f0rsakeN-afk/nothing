@@ -16,7 +16,7 @@ import {
   type AnomalyAlert,
 } from "@/services/security.service";
 
-const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog", "/onboarding"];
+const PUBLIC_PATHS = ["/", "/home", "/apps", "/about", "/contact", "/status", "/changelog", "/onboarding", "/limits"];
 const PUBLIC_API_PATHS = ["/api/auth", "/api/init-user", "/api/models", "/api/mcp", "/api/plans", "/api/polar/plans", "/api/changelog"];
 const ADMIN_PATHS = ["/admin"];
 const ADMIN_API_PREFIX = "/api/admin";
@@ -309,7 +309,7 @@ function setSecurityHeaders(response: NextResponse) {
   // Content Security Policy
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.stack.auth.com https://*.polar.sh"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.eryx.ai; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.stack-auth.com https://*.polar.sh"
   );
   // Permissions Policy
   response.headers.set(

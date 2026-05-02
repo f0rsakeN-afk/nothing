@@ -7,7 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
-import { notFoundError, internalError, validationError } from "@/lib/api-response";
+import { notFoundError, validationError } from "@/lib/api-response";
+import { handleApiError } from "@/lib/error-handling";
 import { createReportSchema } from "@/lib/validations/api.validation";
 import { validateRequestOrigin, csrfErrorResponse } from "@/lib/csrf";
 
@@ -66,10 +67,9 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Report submission error:", error);
-    return NextResponse.json(
-      { error: "Failed to submit report." },
-      { status: 500 }
-    );
+    return handleApiError("ReportSubmission", error, {
+      requestPath: "/api/report",
+      method: "POST",
+    });
   }
 }

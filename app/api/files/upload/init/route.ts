@@ -4,8 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { stackServerApp } from "@/src/stack/server";
-import { createMultipartUploadInit, calculateParts, getFileSizeLimit, isContentTypeSupported } from "@/services/s3.service";
+import { createMultipartUploadInit, calculateParts, getFileSizeLimit } from "@/services/s3.service";
+import { initUploadSchema } from "@/lib/schemas";
 import prisma from "@/lib/prisma";
 import { getUserLimits } from "@/services/limit.service";
 import { checkRateLimitWithAuth, rateLimitResponse } from "@/lib/rate-limit";
@@ -23,23 +25,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { fileName, fileType, fileSize, projectId } = body;
-
-    if (!fileName || !fileType || !fileSize) {
+    let body: z.infer<typeof initUploadSchema>;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: "Missing required fields: fileName, fileType, fileSize" },
+        { error: "Invalid JSON body", code: "INVALID_JSON" },
         { status: 400 }
       );
     }
 
-    // Validate content type
-    if (!isContentTypeSupported(fileType)) {
+    const result = initUploadSchema.safeParse(body);
+    if (!result.success) {
+      const errors = result.error.issues.map((e) => ({
+        field: e.path.map(String).join("."),
+        message: e.message,
+      }));
       return NextResponse.json(
-        { error: `Unsupported file type: ${fileType}` },
+        { error: "Validation failed", code: "VALIDATION_ERROR", details: errors },
         { status: 400 }
       );
     }
+
+    const { fileName, fileType, fileSize, projectId } = result.data;
+
+    // Normalize projectId - convert null to undefined
+    const normalizedProjectId = projectId || undefined;
 
     // Get user's plan limits
     const limits = await getUserLimits(user.id);
@@ -124,7 +135,7 @@ export async function POST(request: NextRequest) {
     // Initialize S3 multipart upload
     const { uploadId, objectKey } = await createMultipartUploadInit(
       user.id,
-      projectId,
+      normalizedProjectId,
       fileId,
       fileName,
       fileType
