@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { stackServerApp } from "@/src/stack/server";
 import prisma from "@/lib/prisma";
 import { updateSettingsSchema } from "@/schemas/validation";
@@ -35,6 +36,13 @@ const DEFAULT_SETTINGS = {
   usageData: false,
   crashReports: true,
   hapticsEnabled: true,
+  showChips: true,
+  showTagline: true,
+  showMemory: true,
+  showFiles: true,
+  showApps: true,
+  showSearch: true,
+  showNewChat: true,
 };
 
 export async function GET(request: NextRequest) {
@@ -130,12 +138,21 @@ export async function PATCH(request: NextRequest) {
           usageData: data.usageData ?? DEFAULT_SETTINGS.usageData,
           crashReports: data.crashReports ?? DEFAULT_SETTINGS.crashReports,
           hapticsEnabled: data.hapticsEnabled ?? DEFAULT_SETTINGS.hapticsEnabled,
+          showChips: data.showChips ?? DEFAULT_SETTINGS.showChips,
+          showTagline: data.showTagline ?? DEFAULT_SETTINGS.showTagline,
+          showMemory: data.showMemory ?? DEFAULT_SETTINGS.showMemory,
+          showFiles: data.showFiles ?? DEFAULT_SETTINGS.showFiles,
+          showApps: data.showApps ?? DEFAULT_SETTINGS.showApps,
+          showSearch: data.showSearch ?? DEFAULT_SETTINGS.showSearch,
+          showNewChat: data.showNewChat ?? DEFAULT_SETTINGS.showNewChat,
         },
       });
     }
 
     // Invalidate cache so next request gets fresh data
     await invalidateUserSettingsCache(prismaUser.id);
+    // Also bust Next.js Data Cache for the root path to ensure immediate consistency
+    revalidatePath("/");
 
     return NextResponse.json({
       theme: settings.theme,
@@ -156,6 +173,13 @@ export async function PATCH(request: NextRequest) {
       usageData: settings.usageData,
       crashReports: settings.crashReports,
       hapticsEnabled: settings.hapticsEnabled,
+      showChips: settings.showChips,
+      showTagline: settings.showTagline,
+      showMemory: settings.showMemory,
+      showFiles: settings.showFiles,
+      showApps: settings.showApps,
+      showSearch: settings.showSearch,
+      showNewChat: settings.showNewChat,
     });
   } catch (error) {
     console.error("Update settings error:", error);

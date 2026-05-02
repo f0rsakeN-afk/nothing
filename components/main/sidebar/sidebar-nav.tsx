@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import React from "react";
 import Link from "next/link";
-import { FolderOpen, Plus, Search, Library, Trash2, Brain, Blocks, FileText, ShieldCheck, Info } from "lucide-react";
+import { FolderOpen, Plus, Search, Library, Trash2, Brain, Blocks, FileText, ShieldCheck, Info, Cpu } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useUser } from "@stackframe/stack";
+import { useSettings } from "@/components/providers/settings-provider";
 
 type NavItem = {
   id: string;
@@ -25,6 +26,7 @@ type NavItem = {
   comingSoon: boolean;
   authOnly: boolean;
   unauthOnly?: boolean;
+  visibilityKey?: "showNewChat" | "showSearch" | "showMemory" | "showFiles" | "showApps";
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -36,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
     primary: true,
     comingSoon: false,
     authOnly: false,
+    visibilityKey: "showNewChat",
   },
   {
     id: "search",
@@ -45,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     primary: false,
     comingSoon: false,
     authOnly: true,
+    visibilityKey: "showSearch",
   },
   {
     id: "memory",
@@ -54,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
     primary: false,
     comingSoon: false,
     authOnly: true,
+    visibilityKey: "showMemory",
   },
   {
     id: "files",
@@ -63,6 +68,17 @@ const NAV_ITEMS: NavItem[] = [
     primary: false,
     comingSoon: false,
     authOnly: true,
+    visibilityKey: "showFiles",
+  },
+  {
+    id: "limits",
+    labelKey: "nav.limits",
+    icon: Cpu,
+    href: "/limits",
+    primary: false,
+    comingSoon: false,
+    authOnly: false,
+    unauthOnly: true,
   },
   {
     id: "apps",
@@ -72,6 +88,7 @@ const NAV_ITEMS: NavItem[] = [
     primary: false,
     comingSoon: false,
     authOnly: false,
+    visibilityKey: "showApps",
   },
   {
     id: "terms",
@@ -119,19 +136,43 @@ interface SidebarNavProps {
   onSearchOpen: () => void;
 }
 
+const DEFAULT_VISIBILITY = {
+  showNewChat: true,
+  showSearch: true,
+  showMemory: true,
+  showFiles: true,
+  showApps: true,
+};
+
 export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
   const t = useTranslations();
   const { state, closeMobileSidebar } = useSidebar();
   const user = useUser();
   const isCollapsed = state === "collapsed";
+  const { settings } = useSettings();
+
+  const visibility = {
+    showNewChat: settings.showNewChat ?? DEFAULT_VISIBILITY.showNewChat,
+    showSearch: settings.showSearch ?? DEFAULT_VISIBILITY.showSearch,
+    showMemory: settings.showMemory ?? DEFAULT_VISIBILITY.showMemory,
+    showFiles: settings.showFiles ?? DEFAULT_VISIBILITY.showFiles,
+    showApps: settings.showApps ?? DEFAULT_VISIBILITY.showApps,
+  };
 
   const visibleItems = useMemo(
     () => NAV_ITEMS.filter((item) => {
-      if (item.authOnly) return !!user;
-      if (item.unauthOnly) return !user;
+      // Auth-based filtering
+      if (item.authOnly && !user) return false;
+      if (item.unauthOnly && user) return false;
+
+      // Visibility toggle for configurable items (logged-in users only)
+      if (item.visibilityKey && user) {
+        return visibility[item.visibilityKey] ?? true;
+      }
+
       return true;
     }),
-    [user],
+    [user, visibility],
   );
 
   return (

@@ -455,6 +455,13 @@ model Settings {
   usageData        Boolean  @default(false)
   crashReports     Boolean  @default(true)
   hapticsEnabled   Boolean  @default(true)
+  showChips        Boolean  @default(true)
+  showTagline      Boolean  @default(true)
+  showMemory       Boolean  @default(true)
+  showFiles        Boolean  @default(true)
+  showApps         Boolean  @default(true)
+  showSearch       Boolean  @default(true)
+  showNewChat      Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

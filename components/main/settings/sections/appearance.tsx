@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/components/providers/settings-provider";
 import { useHaptics } from "@/hooks/use-web-haptics";
 
 const THEMES = [
@@ -39,104 +38,16 @@ function SettingRow({
   );
 }
 
-interface Settings {
-  theme: string;
-  compactMode: boolean;
-  reducedMotion: boolean;
-}
-
-async function fetchSettings(): Promise<Settings> {
-  const res = await fetch("/api/settings");
-  if (!res.ok) throw new Error("Failed to fetch settings");
-  return res.json();
-}
-
-async function updateSetting(key: string, value: boolean | string): Promise<Settings> {
-  const res = await fetch("/api/settings", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ [key]: value }),
-  });
-  if (!res.ok) throw new Error("Failed to update settings");
-  return res.json();
-}
-
-interface AppearanceSectionProps {
-  settings?: Settings;
-}
-
-export function AppearanceSection({ settings: propSettings }: AppearanceSectionProps) {
+export function AppearanceSection() {
   const { theme, setTheme } = useTheme();
+  const { settings, updateSetting } = useSettings();
   const { trigger } = useHaptics();
-  const queryClient = useQueryClient();
-  const [localSettings, setLocalSettings] = useState<Settings | null>(null);
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
-    queryFn: fetchSettings,
-    enabled: !propSettings,
-    staleTime: 30000,
-  });
-
-  const mutation = useMutation({
-    mutationFn: async ({ key, value }: { key: string; value: boolean | string }) => {
-      return updateSetting(key, value);
-    },
-    onSuccess: (newData) => {
-      queryClient.setQueryData(["settings"], newData);
-      setLocalSettings(newData);
-    },
-  });
-
-  const onUpdate = useCallback((key: keyof Settings, value: boolean | string) => {
-    mutation.mutate({ key, value });
-  }, [mutation]);
 
   const handleThemeSelect = useCallback((id: string) => {
     trigger("success");
     setTheme(id);
-    onUpdate("theme", id);
-  }, [setTheme, onUpdate, trigger]);
-
-  const displaySettings = localSettings || propSettings || settings;
-
-  if ((!propSettings && isLoading) || !displaySettings) {
-    return (
-      <div className="space-y-5">
-        <div>
-          <Skeleton className="h-4 w-28 mb-1" />
-          <Skeleton className="h-3 w-44" />
-        </div>
-        <div>
-          <Skeleton className="h-3 w-16 mb-2" />
-          <div className="grid grid-cols-3 gap-2">
-            <Skeleton className="h-20 rounded-lg" />
-            <Skeleton className="h-20 rounded-lg" />
-            <Skeleton className="h-20 rounded-lg" />
-          </div>
-        </div>
-        <div>
-          <Skeleton className="h-3 w-20 mb-1" />
-          <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-3.5 w-28 mb-1" />
-                <Skeleton className="h-3 w-48" />
-              </div>
-              <Skeleton className="h-5 w-9 rounded-full" />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-3.5 w-28 mb-1" />
-                <Skeleton className="h-3 w-44" />
-              </div>
-              <Skeleton className="h-5 w-9 rounded-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    updateSetting("theme", id);
+  }, [setTheme, updateSetting, trigger]);
 
   return (
     <div className="space-y-5">
@@ -184,8 +95,8 @@ export function AppearanceSection({ settings: propSettings }: AppearanceSectionP
             description="Reduce spacing between messages for a denser layout."
           >
             <Switch
-              checked={displaySettings.compactMode}
-              onCheckedChange={(val) => onUpdate("compactMode", val)}
+              checked={settings.compactMode}
+              onCheckedChange={(val) => updateSetting("compactMode", val)}
               size="sm"
             />
           </SettingRow>
@@ -194,8 +105,94 @@ export function AppearanceSection({ settings: propSettings }: AppearanceSectionP
             description="Minimize animations throughout the interface."
           >
             <Switch
-              checked={displaySettings.reducedMotion}
-              onCheckedChange={(val) => onUpdate("reducedMotion", val)}
+              checked={settings.reducedMotion}
+              onCheckedChange={(val) => updateSetting("reducedMotion", val)}
+              size="sm"
+            />
+          </SettingRow>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
+          Home Screen
+        </p>
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
+          <SettingRow
+            label="Show chips"
+            description="Show profession chips on the home screen."
+          >
+            <Switch
+              checked={settings.showChips}
+              onCheckedChange={(val) => updateSetting("showChips", val)}
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Show tagline"
+            description="Show the tagline on the home screen."
+          >
+            <Switch
+              checked={settings.showTagline}
+              onCheckedChange={(val) => updateSetting("showTagline", val)}
+              size="sm"
+            />
+          </SettingRow>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">
+          Sidebar
+        </p>
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-3 divide-y divide-border/40">
+          <SettingRow
+            label="New Chat"
+            description="Show New Chat button in the sidebar."
+          >
+            <Switch
+              checked={settings.showNewChat}
+              onCheckedChange={(val) => updateSetting("showNewChat", val)}
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Search"
+            description="Show Search in the sidebar."
+          >
+            <Switch
+              checked={settings.showSearch}
+              onCheckedChange={(val) => updateSetting("showSearch", val)}
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Memory"
+            description="Show Memory in the sidebar."
+          >
+            <Switch
+              checked={settings.showMemory}
+              onCheckedChange={(val) => updateSetting("showMemory", val)}
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Files"
+            description="Show Files in the sidebar."
+          >
+            <Switch
+              checked={settings.showFiles}
+              onCheckedChange={(val) => updateSetting("showFiles", val)}
+              size="sm"
+            />
+          </SettingRow>
+          <SettingRow
+            label="Apps"
+            description="Show Apps in the sidebar."
+          >
+            <Switch
+              checked={settings.showApps}
+              onCheckedChange={(val) => updateSetting("showApps", val)}
               size="sm"
             />
           </SettingRow>

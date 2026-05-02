@@ -136,7 +136,7 @@ export const TTL = {
   bruteForce: 5 * 60, // 5 minutes for brute force tracking
   userPreferences: 30 * 60, // 30 minutes for user preferences/customize
   userLimits: 5 * 60, // 5 minutes for user limits
-  userSettings: 30 * 60, // 30 minutes for user settings
+  userSettings: 60 * 60, // 1 hour for user settings (extended for performance)
   userCredits: 5 * 60, // 5 minutes for credits
   userAccount: 5 * 60, // 5 minutes for account data
   userMemories: 5 * 60, // 5 minutes for memories list

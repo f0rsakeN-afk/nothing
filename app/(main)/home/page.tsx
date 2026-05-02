@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { ChatInput } from "@/components/main/home/chat-input";
 import { Chip } from "@/components/main/home/chip";
 import { PromptModal } from "@/components/main/home/prompt-modal";
-import { getChipsByProfession, type ChipData } from "@/components/main/home/data";
+import {
+  getChipsByProfession,
+  type ChipData,
+} from "@/components/main/home/data";
 import { getTimeBasedHeading } from "@/components/main/home/data/headings";
 // import { CreditsButton } from "@/components/main/header/credits-button";
 // import { NotificationsButton } from "@/components/main/header/notifications-button";
@@ -28,7 +31,8 @@ export default function HomePage() {
 
   const { data: authStatus, isLoading: authLoading } = useAuthStatus();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const { pendingPrompt, setPendingPrompt, clearPendingPrompt } = usePendingPrompt();
+  const { pendingPrompt, setPendingPrompt, clearPendingPrompt } =
+    usePendingPrompt();
   const { profession } = useProfession();
 
   useEffect(() => {
@@ -99,11 +103,11 @@ export default function HomePage() {
             {heading}
           </h1>
 
-           <div className="mb-6 xl:hidden flex flex-wrap items-center justify-center gap-2">
+          <div className="mb-6 xl:hidden flex flex-wrap items-center justify-center gap-2">
             {getChipsByProfession(profession).map((chip) => (
               <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
             ))}
-          </div> 
+          </div>
         </div>
 
         <div className="w-full max-w-2xl">
@@ -120,11 +124,11 @@ export default function HomePage() {
           />
         </div>
 
-         <div className="mt-6 hidden xl:flex flex-wrap items-center justify-center gap-2">
-            {getChipsByProfession(profession).map((chip) => (
-              <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
-            ))}
-          </div> 
+        <div className="mt-6 hidden xl:flex flex-wrap items-center justify-center gap-2">
+          {getChipsByProfession(profession).map((chip) => (
+            <Chip key={chip.label} chip={chip} onOpen={setActiveChip} />
+          ))}
+        </div>
       </div>
 
       <PromptModal
@@ -140,10 +144,7 @@ export default function HomePage() {
 
       <ShortcutHandler />
 
-      <AuthDialog
-        open={authDialogOpen}
-        onOpenChange={setAuthDialogOpen}
-      />
+      <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }
