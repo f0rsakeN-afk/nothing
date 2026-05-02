@@ -58,7 +58,7 @@ export const updateCustomizeSchema = customizeSchema.partial();
 
 // Settings schemas
 export const settingsSchema = z.object({
-  theme: z.enum(["light", "dark", "system"]).optional(),
+  theme: z.enum(["light", "dark", "system", "theme-1", "theme-2", "theme-3", "theme-4", "theme-5", "theme-6", "theme-7", "theme-8", "theme-9", "theme-10"]).optional(),
   language: z.string().max(10).optional(),
   autoTitle: z.boolean().optional(),
   enterToSend: z.boolean().optional(),
