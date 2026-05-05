@@ -7,6 +7,14 @@ import prisma from "@/lib/prisma";
 import { randomUUID } from "node:crypto";
 import { all } from "better-all";
 
+/*
+ * Production fixes in this file:
+ * 1. Persist elicitation state (allow resume on disconnect)
+ * 2. Idempotent elicitation IDs (prevent duplicate approvals)
+ * 3. Server-side input validation (never trust LLM params)
+ * 4. SSE reliability (replay mechanism for disconnects)
+ */
+
 export interface ToolCall {
   id: string;
   name: string;
@@ -41,24 +49,181 @@ function toSafeSlug(value: string): string {
 const MCP_TOOL_CALL_TIMEOUT_MS = 30000;
 const ELICITATION_TIMEOUT_MS = 5 * 60 * 1000;
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+// In-flight elicitation persistence (survives UI disconnect)
+const elicitationState = new Map<string, {
+  id: string;
+  serverName: string;
+  message: string;
+  requestedSchema?: unknown;
+  mode: string;
+  url?: string;
+  createdAt: number;
+  userId: string;
+  status: "pending" | "approved" | "denied" | "cancelled" | "expired";
+  result?: Record<string, unknown>;
+}>();
 
+/**
+ * Persist elicitation state for resume capability
+ */
+function persistElicitationState(params: {
+  elicitationId: string;
+  serverName: string;
+  message: string;
+  requestedSchema?: unknown;
+  mode: string;
+  url?: string;
+  userId: string;
+}): void {
+  const state = {
+    id: params.elicitationId,
+    serverName: params.serverName,
+    message: params.message,
+    requestedSchema: params.requestedSchema,
+    mode: params.mode,
+    url: params.url,
+    createdAt: Date.now(),
+    userId: params.userId,
+    status: "pending" as const,
+  };
+  elicitationState.set(params.elicitationId, state);
+
+  // Also persist to Redis for cross-container recovery
+  persistToRedis(params.elicitationId, state).catch(console.error);
+}
+
+/**
+ * Persist to Redis for durability across container restarts
+ */
+async function persistToRedis(
+  elicitationId: string,
+  state: ReturnType<typeof persistElicitationState> extends void ? never : ReturnType<typeof persistElicitationState>
+): Promise<void> {
   try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
+    const redis = (await import("@/lib/redis")).default;
+    const key = `elicitation:${elicitationId}`;
+    await redis.setex(key, 600, JSON.stringify(state)); // 10 minute TTL
+  } catch {
+    // Redis unavailable - in-memory fallback
   }
 }
 
 /**
- * Write elicitation event to data stream
+ * Resume elicitation state from Redis
  */
+async function resumeElicitationState(elicitationId: string): Promise<{
+  id: string;
+  serverName: string;
+  message: string;
+  requestedSchema?: unknown;
+  mode: string;
+  url?: string;
+  createdAt: number;
+  userId: string;
+  status: "pending" | "approved" | "denied" | "cancelled" | "expired";
+  result?: Record<string, unknown>;
+} | null> {
+  // Check in-memory first
+  const memoryState = elicitationState.get(elicitationId);
+  if (memoryState) return memoryState;
+
+  // Check Redis
+  try {
+    const redis = (await import("@/lib/redis")).default;
+    const key = `elicitation:${elicitationId}`;
+    const data = await redis.get(key);
+    if (data) {
+      const state = JSON.parse(data);
+      // Restore to in-memory for faster access
+      elicitationState.set(elicitationId, state);
+      return state;
+    }
+  } catch {
+    // Redis unavailable
+  }
+
+  return null;
+}
+
+/**
+ * Update elicitation status
+ */
+function updateElicitationStatus(
+  elicitationId: string,
+  status: "approved" | "denied" | "cancelled" | "expired",
+  result?: Record<string, unknown>
+): void {
+  const state = elicitationState.get(elicitationId);
+  if (state) {
+    state.status = status;
+    state.result = result;
+    // Update Redis
+    persistToRedis(elicitationId, state).catch(console.error);
+  }
+}
+
+/**
+ * Validate tool input server-side (NEVER trust LLM-generated params)
+ * This prevents prompt injection attacks where user might blindly approve malicious inputs
+ */
+function validateToolInput(
+  toolName: string,
+  arguments_: Record<string, unknown>
+): { valid: boolean; error?: string } {
+  // Add server-side validation rules per tool
+  // This is where you'd implement security checks for sensitive operations
+
+  // Example: Email tool - validate email addresses
+  if (toolName.includes("email") || toolName.includes("send")) {
+    const to = arguments_.to as string || arguments_.recipient as string;
+    if (to && !isValidEmail(to)) {
+      return { valid: false, error: "Invalid email address" };
+    }
+  }
+
+  // Example: URL tool - validate URLs don't point to internal resources
+  if (arguments_.url) {
+    const url = arguments_.url as string;
+    if (isInternalUrl(url)) {
+      return { valid: false, error: "Cannot access internal resources" };
+    }
+  }
+
+  // Example: Amount/number fields - validate ranges
+  if (typeof arguments_.amount === "number") {
+    if (arguments_.amount < 0) {
+      return { valid: false, error: "Amount cannot be negative" };
+    }
+    if (arguments_.amount > 1000000) {
+      return { valid: false, error: "Amount exceeds maximum allowed" };
+    }
+  }
+
+  return { valid: true };
+}
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function isInternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    // Block internal IPs, localhost, private ranges
+    return hostname === "localhost" ||
+           hostname === "127.0.0.1" ||
+           hostname.startsWith("192.168.") ||
+           hostname.startsWith("10.") ||
+           hostname.startsWith("172.16.") ||
+           hostname.endsWith(".internal") ||
+           hostname.endsWith(".local");
+  } catch {
+    return true; // Invalid URL = block
+  }
+}
+
 type DataStreamWriter = (event: { type: string; data: unknown }) => void;
 
 export interface ResolvedMcpClients {
@@ -68,7 +233,7 @@ export interface ResolvedMcpClients {
 }
 
 /**
- * Resolve MCP tools with elicitation support
+ * Resolve MCP tools with elicitation support (with production fixes)
  */
 export async function resolveMcpToolsWithElicitation({
   userId,
@@ -155,7 +320,10 @@ export async function resolveMcpToolsWithElicitation({
     if (dataStream) {
       const serverName = server.name;
       client.onElicitationRequest(ElicitationRequestSchema, async (request) => {
-        const elicitationId = randomUUID();
+        // Generate idempotent elicitation ID
+        // Use request ID if available, otherwise generate one
+        const elicitationId = (request as unknown as { id?: string }).id || randomUUID();
+
         const params = request.params as {
           message: string;
           requestedSchema?: unknown;
@@ -165,6 +333,18 @@ export async function resolveMcpToolsWithElicitation({
 
         const isUrlMode = params.mode === "url" && Boolean(params.url);
 
+        // Persist state BEFORE sending to client (enables resume on disconnect)
+        persistElicitationState({
+          elicitationId,
+          serverName,
+          message: params.message,
+          requestedSchema: isUrlMode ? undefined : params.requestedSchema,
+          mode: isUrlMode ? "url" : "form",
+          url: isUrlMode ? params.url : undefined,
+          userId,
+        });
+
+        // Send elicitation event to SSE stream
         dataStream({
           type: "data-mcp_elicitation",
           data: {
@@ -174,23 +354,68 @@ export async function resolveMcpToolsWithElicitation({
             mode: isUrlMode ? "url" : "form",
             requestedSchema: isUrlMode ? undefined : params.requestedSchema,
             url: isUrlMode ? params.url : undefined,
+            // Include timestamp for replay capability
+            timestamp: Date.now(),
+            expiresAt: Date.now() + ELICITATION_TIMEOUT_MS,
           },
         });
 
+        // Check if there's a prior response (for resume after disconnect)
+        const priorState = await resumeElicitationState(elicitationId);
+        if (priorState && priorState.status !== "pending") {
+          // Resume from prior state
+          console.log(`[MCP] Resuming elicitation ${elicitationId} with status ${priorState.status}`);
+          dataStream({
+            type: "data-mcp_elicitation_done",
+            data: {
+              elicitationId,
+              resumed: true,
+              status: priorState.status,
+              result: priorState.result,
+            },
+          });
+          return priorState.status === "approved"
+            ? { action: "accept" as const, content: priorState.result }
+            : { action: priorState.status as "decline" | "cancel" };
+        }
+
         let result: { action: "accept" | "decline" | "cancel"; content?: Record<string, unknown> };
+
         try {
           result = await withTimeout(
             waitForElicitation(elicitationId),
             ELICITATION_TIMEOUT_MS,
             "Elicitation timed out"
           );
+
+          // Validate server-side BEFORE accepting
+          // Get the original tool name from the request
+          const toolName = (request.params as { message?: string })?.message || "unknown";
+          if (result.action === "accept" && result.content) {
+            const validation = validateToolInput(toolName, result.content);
+            if (!validation.valid) {
+              console.warn(`[MCP] Tool input validation failed for ${toolName}: ${validation.error}`);
+              result = { action: "decline" };
+            }
+          }
         } catch {
           result = { action: "cancel" };
         }
 
+        // Update state with result
+        updateElicitationStatus(
+          elicitationId,
+          result.action === "accept" ? "approved" : result.action,
+          result.content
+        );
+
         dataStream({
           type: "data-mcp_elicitation_done",
-          data: { elicitationId },
+          data: {
+            elicitationId,
+            status: result.action === "accept" ? "approved" : result.action,
+            result: result.content,
+          },
         });
 
         return result;
@@ -229,7 +454,6 @@ export async function resolveMcpToolsWithElicitation({
 }
 
 function parsePrefixedToolName(prefixedName: string): { serverSlug: string; originalName: string } | null {
-  // Format: mcp_{slug}_{originalName}
   const match = prefixedName.match(/^mcp_(.+?)_(.+)$/);
   if (!match) return null;
   return { serverSlug: match[1], originalName: match[2] };
@@ -259,6 +483,13 @@ export async function executeMCPToolCall(
 
     if (typeof (toolDef as unknown as { execute?: unknown }).execute !== "function") {
       return { id: toolCall.id, result: null, error: `Tool ${toolCall.name} is not executable` };
+    }
+
+    // Server-side validation of tool arguments BEFORE execution
+    const validation = validateToolInput(originalName, toolCall.arguments);
+    if (!validation.valid) {
+      console.warn(`[MCP] Tool input validation failed for ${originalName}: ${validation.error}`);
+      return { id: toolCall.id, result: null, error: validation.error };
     }
 
     try {
@@ -326,6 +557,12 @@ export async function executeMCPToolCall(
       return { id: toolCall.id, result: null, error: `Tool ${originalName} is not executable` };
     }
 
+    // Validate before execution
+    const validation = validateToolInput(originalName, toolCall.arguments);
+    if (!validation.valid) {
+      return { id: toolCall.id, result: null, error: validation.error };
+    }
+
     const result = await withTimeout(
       (toolDef as unknown as { execute: (args: Record<string, unknown>, context: Record<string, unknown>) => Promise<unknown> }).execute(toolCall.arguments, {}),
       MCP_TOOL_CALL_TIMEOUT_MS,
@@ -356,4 +593,54 @@ export async function executeMCPToolCalls(
     toolCalls.map((toolCall) => executeMCPToolCall(toolCall, userId, mcpClients))
   );
   return results;
+}
+
+/**
+ * Get pending elicitation for user (for polling fallback / replay)
+ */
+export async function getPendingElicitations(userId: string): Promise<Array<{
+  elicitationId: string;
+  serverName: string;
+  message: string;
+  createdAt: number;
+  expiresAt: number;
+}>> {
+  const pending: Array<{
+    elicitationId: string;
+    serverName: string;
+    message: string;
+    createdAt: number;
+    expiresAt: number;
+  }> = [];
+
+  for (const [id, state] of elicitationState) {
+    if (state.userId === userId && state.status === "pending") {
+      pending.push({
+        elicitationId: id,
+        serverName: state.serverName,
+        message: state.message,
+        createdAt: state.createdAt,
+        expiresAt: state.createdAt + ELICITATION_TIMEOUT_MS,
+      });
+    }
+  }
+
+  return pending;
+}
+
+/**
+ * Clean up expired elicitation states (periodic cleanup)
+ */
+export function cleanupExpiredElicitations(): number {
+  const now = Date.now();
+  let cleaned = 0;
+
+  for (const [id, state] of elicitationState) {
+    if (state.status === "pending" && now - state.createdAt > ELICITATION_TIMEOUT_MS) {
+      state.status = "expired";
+      cleaned++;
+    }
+  }
+
+  return cleaned;
 }

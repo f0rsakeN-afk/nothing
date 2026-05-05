@@ -6,7 +6,6 @@ import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/components/providers/settings-provider";
-import { useHaptics } from "@/hooks/use-web-haptics";
 
 interface ThemeOption {
   id: string;
@@ -22,65 +21,65 @@ const BASE_THEMES: ThemeOption[] = [
   { id: "dark", label: "Dark", icon: Moon, swatch: ["oklch(0.2178 0 0)", "oklch(0.7058 0 0)", "oklch(0.3715 0 0)"] },
 ];
 
-const FULL_THEMES: ThemeOption[] = [
+const COLOR_SCHEMES: ThemeOption[] = [
   {
-    id: "theme-1",
+    id: "civic",
     label: "Civic",
-    swatch: ["oklch(0.9530 0.0156 86.4257)", "oklch(0.3012 0 0)", "oklch(0.9169 0.0175 99.6160)"],
+    swatch: ["oklch(0.9195 0.0169 88.0030)", "oklch(0.2350 0 0)", "oklch(0.3012 0 0)"],
     description: "Clean civic aesthetic",
   },
   {
-    id: "theme-2",
+    id: "studio",
     label: "Studio",
-    swatch: ["oklch(1.0000 0 0)", "oklch(0.7414 0.0738 84.5946)", "oklch(0.5680 0.2002 26.4057)"],
+    swatch: ["oklch(0.9755 0.0067 97.3510)", "oklch(0.2178 0 0)", "oklch(0.7414 0.0738 84.5946)"],
     description: "Minimal workspace feel",
   },
   {
-    id: "theme-3",
+    id: "dawn",
     label: "Dawn",
-    swatch: ["oklch(1.0000 0 0)", "oklch(0.4732 0.1247 46.2007)", "oklch(0.5343 0.1951 26.9711)"],
+    swatch: ["oklch(0.9801 0.0034 67.7835)", "oklch(0.2006 0.0138 34.3909)", "oklch(0.4732 0.1247 46.2007)"],
     description: "Warm dawn tones",
   },
   {
-    id: "theme-4",
+    id: "dusk",
     label: "Dusk",
-    swatch: ["oklch(0.9901 0.0161 95.2193)", "oklch(0.5854 0.1022 167.0051)", "oklch(0.5379 0.2186 25.9751)"],
+    swatch: ["oklch(0.9901 0.0161 95.2193)", "oklch(0.2138 0.0019 286.2347)", "oklch(0.5854 0.1022 167.0051)"],
     description: "Soft dusk palette",
   },
   {
-    id: "theme-5",
+    id: "code",
     label: "Code",
-    swatch: ["oklch(1 0 0)", "oklch(0.4701 0.0461 197.6998)", "oklch(0.4590 0.1690 27.1078)"],
+    swatch: ["oklch(1 0 0)", "oklch(0.1450 0 0)", "oklch(0.4701 0.0461 197.6998)"],
     description: "IDE-inspired monochrome",
   },
   {
-    id: "theme-6",
+    id: "nebula",
     label: "Nebula",
-    swatch: ["oklch(1.0000 0 0)", "oklch(0.6104 0.0767 299.7335)", "oklch(0.6332 0.1578 22.6734)"],
+    swatch: ["oklch(0.9777 0.0041 301.4256)", "oklch(0.3651 0.0325 287.0807)", "oklch(0.6104 0.0767 299.7335)"],
     description: "Cosmic purple haze",
   },
   {
-    id: "theme-7",
+    id: "ember",
     label: "Ember",
-    swatch: ["oklch(1.0000 0 0)", "oklch(0.6892 0.2004 22.3840)", "oklch(0.6892 0.2004 22.3840)"],
+    swatch: ["oklch(0.9702 0 0)", "oklch(0.3562 0 0)", "oklch(0.6892 0.2004 22.3840)"],
     description: "Warm ember glow",
   },
   {
-    id: "theme-8",
+    id: "aura",
     label: "Aura",
-    swatch: ["oklch(0.9901 0.0161 95.2193)", "oklch(0.5854 0.1022 167.0051)", "oklch(0.8093 0.0985 252.2024)"],
+    swatch: ["oklch(0.9901 0.0161 95.2193)", "oklch(0.2138 0.0019 286.2347)", "oklch(0.5854 0.1022 167.0051)"],
     description: "Ethereal green-blue",
   },
   {
-    id: "theme-9",
+    id: "pulse",
     label: "Pulse",
-    swatch: ["oklch(1.0000 0 0)", "oklch(0.6104 0.0767 299.7335)", "oklch(0.7058 0.0777 302.0489)"],
+    swatch: ["oklch(0.9777 0.0041 301.4256)", "oklch(0.3651 0.0325 287.0807)", "oklch(0.6104 0.0767 299.7335)"],
     description: "Pink pulse energy",
   },
   {
-    id: "theme-10",
+    id: "forge",
     label: "Forge",
-    swatch: ["oklch(1.0000 0 0)", "oklch(0.6892 0.2004 22.3840)", "oklch(0.7624 0.1418 18.8218)"],
+    swatch: ["oklch(0.9702 0 0)", "oklch(0.3562 0 0)", "oklch(0.6892 0.2004 22.3840)"],
     description: "Dark forge heat",
   },
 ];
@@ -120,20 +119,26 @@ function SettingRow({
 }
 
 export function AppearanceSection() {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
   const { settings, updateSetting } = useSettings();
-  const { trigger } = useHaptics();
 
-  const handleThemeSelect = useCallback(
+  const handleModeSelect = useCallback(
     (id: string) => {
-      trigger("success");
       setTheme(id);
-      updateSetting("theme", id);
+      updateSetting("mode", id);
     },
-    [setTheme, updateSetting, trigger]
+    [setTheme, updateSetting]
   );
 
-  const isActive = (id: string) => theme === id;
+  const handleColorSchemeSelect = useCallback(
+    (id: string) => {
+      updateSetting("colorScheme", id);
+    },
+    [updateSetting]
+  );
+
+  const isModeActive = (id: string) => settings.mode === id;
+  const isColorSchemeActive = (id: string) => settings.colorScheme === id;
 
   return (
     <div className="space-y-5">
@@ -148,16 +153,16 @@ export function AppearanceSection() {
 
       <div>
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-2">
-          Base Theme
+          Mode
         </p>
         <div className="grid grid-cols-3 gap-2">
           {BASE_THEMES.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => handleThemeSelect(id)}
+              onClick={() => handleModeSelect(id)}
               className={cn(
                 "flex flex-col items-center gap-2 rounded-lg border p-3 text-center transition-all",
-                isActive(id)
+                isModeActive(id)
                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                   : "border-border hover:border-border/80 hover:bg-muted/40"
               )}
@@ -166,14 +171,14 @@ export function AppearanceSection() {
                 <Icon
                   className={cn(
                     "h-4 w-4",
-                    isActive(id) ? "text-primary" : "text-muted-foreground"
+                    isModeActive(id) ? "text-primary" : "text-muted-foreground"
                   )}
                 />
               )}
               <span
                 className={cn(
                   "text-[12px] font-medium",
-                  isActive(id) ? "text-foreground" : "text-muted-foreground"
+                  isModeActive(id) ? "text-foreground" : "text-muted-foreground"
                 )}
               >
                 {label}
@@ -185,16 +190,16 @@ export function AppearanceSection() {
 
       <div>
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-2">
-          Color Themes
+          Color Theme
         </p>
         <div className="grid grid-cols-4 gap-2">
-          {FULL_THEMES.map(({ id, label, swatch, description }) => (
+          {COLOR_SCHEMES.map(({ id, label, swatch, description }) => (
             <button
               key={id}
-              onClick={() => handleThemeSelect(id)}
+              onClick={() => handleColorSchemeSelect(id)}
               className={cn(
                 "flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition-all",
-                isActive(id)
+                isColorSchemeActive(id)
                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                   : "border-border hover:border-border/80 hover:bg-muted/40"
               )}
@@ -203,12 +208,12 @@ export function AppearanceSection() {
               <span
                 className={cn(
                   "text-[10px] font-medium leading-tight",
-                  isActive(id) ? "text-foreground" : "text-muted-foreground"
+                  isColorSchemeActive(id) ? "text-foreground" : "text-muted-foreground"
                 )}
               >
                 {label}
               </span>
-              {description && isActive(id) && (
+              {description && isColorSchemeActive(id) && (
                 <span className="text-[9px] text-muted-foreground leading-tight">
                   {description}
                 </span>

@@ -14,6 +14,7 @@ import { cookies } from "next/headers";
 import { Providers } from "./providers";
 import { routing } from "@/routing";
 import { SettingsProvider } from "@/components/providers/settings-provider";
+import { ColorSchemeManager } from "@/components/shared/ColorSchemeManager";
 
 // Force dynamic rendering so cookie is read on every request
 export const dynamic = "force-dynamic";
@@ -110,8 +111,9 @@ export default async function RootLayout({
           <StackProviderWrapper>
             <ThemeProvider defaultTheme="dark" attribute="class">
               <NextIntlClientProvider locale={locale} messages={messages}>
-                <SettingsProvider>
-                  <Providers>
+                <Providers>
+                  <SettingsProvider>
+                    <ColorSchemeManager />
                     <Toaster position="top-center" />
                     {children}
                     <UmamiScript
@@ -122,8 +124,8 @@ export default async function RootLayout({
                       }
                     />
                     <CookieConsentBanner />
-                  </Providers>
-                </SettingsProvider>
+                  </SettingsProvider>
+                </Providers>
               </NextIntlClientProvider>
             </ThemeProvider>
           </StackProviderWrapper>

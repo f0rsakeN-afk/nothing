@@ -310,7 +310,7 @@ export default function LimitsPage() {
       {/* Note */}
       <section className="py-16 px-6 border-t border-border/40">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground tracking-wider">
             All limits are subject to fair use policy. Rate limits are implemented using a per-minute sliding window algorithm.
             Account limits are checked against actual usage in real-time.
           </p>

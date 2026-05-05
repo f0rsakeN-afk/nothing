@@ -7,7 +7,8 @@ import prisma from "@/lib/prisma";
 import redis, { KEYS, TTL } from "@/lib/redis";
 
 export interface UserSettings {
-  theme: string;
+  mode: string;
+  colorScheme: string;
   language: string;
   autoTitle: boolean;
   enterToSend: boolean;
@@ -35,7 +36,8 @@ export interface UserSettings {
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
-  theme: "system",
+  mode: "system",
+  colorScheme: "civic",
   language: "en",
   autoTitle: true,
   enterToSend: false,
@@ -86,7 +88,8 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
 
   const userSettings: UserSettings = settings
     ? {
-        theme: settings.theme,
+        mode: settings.mode,
+        colorScheme: settings.colorScheme,
         language: settings.language,
         autoTitle: settings.autoTitle,
         enterToSend: settings.enterToSend,

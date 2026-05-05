@@ -711,6 +711,9 @@
     "memory": "Memoria",
     "files": "File",
     "apps": "App",
+    "limits": "Limiti",
+    "about": "Info",
+    "contact": "Contattaci",
     "comingSoon": "Prossimamente"
   },
   "sidebar": {

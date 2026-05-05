@@ -18,7 +18,8 @@ import {
 } from "@/lib/api-response";
 
 const DEFAULT_SETTINGS = {
-  theme: "system",
+  mode: "system",
+  colorScheme: "civic",
   language: "en",
   autoTitle: true,
   enterToSend: false,
@@ -120,7 +121,8 @@ export async function PATCH(request: NextRequest) {
       settings = await prisma.settings.create({
         data: {
           userId: prismaUser.id,
-          theme: data.theme as typeof DEFAULT_SETTINGS.theme || DEFAULT_SETTINGS.theme,
+          mode: data.mode as typeof DEFAULT_SETTINGS.mode || DEFAULT_SETTINGS.mode,
+          colorScheme: data.colorScheme || DEFAULT_SETTINGS.colorScheme,
           language: data.language || DEFAULT_SETTINGS.language,
           autoTitle: data.autoTitle ?? DEFAULT_SETTINGS.autoTitle,
           enterToSend: data.enterToSend ?? DEFAULT_SETTINGS.enterToSend,
@@ -155,7 +157,8 @@ export async function PATCH(request: NextRequest) {
     revalidatePath("/");
 
     return NextResponse.json({
-      theme: settings.theme,
+      mode: settings.mode,
+      colorScheme: settings.colorScheme,
       language: settings.language,
       autoTitle: settings.autoTitle,
       enterToSend: settings.enterToSend,

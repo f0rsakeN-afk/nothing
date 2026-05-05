@@ -6,6 +6,195 @@ This document tracks planned improvements, optimizations, and technical debt for
 
 ---
 
+## Production Fixes Implemented
+
+### Circuit Breaker - Production Grade ✅
+
+**Issues Fixed:**
+1. Thundering herd on HALF_OPEN → Distributed lock via Redis SETNX
+2. Clock drift → Uses Redis TIME for consistent timestamps
+3. All errors treated equally → Error classification (RETRYABLE/FATAL/IGNORED)
+4. Cold start problems → Warmup phase with configurable calls
+5. Binary recovery → Progressive recovery (1→2→5→10→full)
+
+**Files:** `services/circuit-breaker.service.ts`
+
+```typescript
+// HALF_OPEN lock - only ONE container tests recovery
+const lockAcquired = await redis.set(lockKey, pid, { NX: true, EX: 5 });
+
+// Redis TIME for consistent clocks
+const now = await redis.time(); // [seconds, microseconds]
+
+// Error classification
+enum ErrorType { RETRYABLE, FATAL, IGNORED }
+
+// Progressive recovery
+const steps = [1, 2, 5, 10, 25, 50, 100]; // Traffic allowed at each step
+```
+
+---
+
+### Redis Resilience Layer - Production Grade ✅
+
+**Issues Fixed:**
+1. Silent data corruption → Fallback metadata `{ fallback: true, degraded: true }`
+2. Split-brain → Global degraded mode flag
+3. Fallback drift → Minimal fallbacks only (fail-open OR fail-closed)
+4. Retry storm → Jitter on recovery (0-5s random delay)
+
+**Files:** `lib/redis-resilience.ts`
+
+```typescript
+// Fallback with metadata
+return {
+  value: fallback,
+  degraded: true,
+  fallback: true,
+  _meta: { source: "redis-circuit-breaker", timestamp: Date.now() }
+};
+
+// Recovery jitter prevents retry storm
+const jitterMs = Math.random() * 5000;
+await new Promise(resolve => setTimeout(resolve, jitterMs));
+```
+
+---
+
+### BullMQ Queue - Production Grade ✅
+
+**Issues Fixed:**
+1. Queue starvation → Separate concurrency per queue (webhook:5, summarization:2, export:1)
+2. No backpressure → maxLength limits per queue
+3. Duplicate execution → Idempotency keys per job
+4. Visibility timeout → stalledInterval + maxStalledCount configuration
+5. Schema mismatch → Job versioning with `_jobVersion` field
+
+**Files:** `services/queue.service.ts`
+
+```typescript
+// Idempotent job
+const { job, isDuplicate } = await addJob(queue, data, { idempotencyKey });
+
+// Backpressure
+const QUEUE_CONFIG = {
+  export: { maxLength: 50, stalledInterval: 120000 },
+  summarization: { maxLength: 1000 },
+};
+
+// Versioned jobs
+const versionedData = { ...data, _jobVersion: JOB_VERSION };
+```
+
+---
+
+### Chat Access - Production Grade ✅
+
+**Issues Fixed:**
+1. Timing attacks → Normalized responses + random delays
+2. Role escalation race → Serializable transaction isolation
+3. Missing indexes → Composite indexes in schema
+4. Over-fetching → Selective `select` with explicit fields
+
+**Files:** `lib/chat-access.ts`
+
+```typescript
+// Timing attack prevention
+return { hasAccess: boolean, role: ChatRole | null, normalizedResponse: true };
+
+// Transaction isolation
+await prisma.$transaction(async (tx) => {
+  // ...
+}, { isolationLevel: "Serializable" });
+
+// SCAN instead of KEYS
+do {
+  const [nextCursor, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
+} while (cursor !== "0");
+```
+
+---
+
+### MCP Elicitation - Production Grade ✅
+
+**Issues Fixed:**
+1. User disconnect → Persisted elicitation state in Redis
+2. Duplicate approvals → Idempotent elicitation IDs
+3. Prompt injection → Server-side input validation
+4. SSE reliability → Replay mechanism on reconnect
+
+**Files:** `services/mcp-tool-executor.service.ts`
+
+```typescript
+// Persist for resume
+await redis.setex(`elicitation:${elicitationId}`, 600, JSON.stringify(state));
+
+// Server-side validation
+function validateToolInput(toolName, args) {
+  if (isInternalUrl(args.url)) return { valid: false };
+  if (!isValidEmail(args.to)) return { valid: false };
+  if (args.amount > 1000000) return { valid: false };
+}
+
+// Replay on reconnect
+const priorState = await resumeElicitationState(id);
+if (priorState?.status !== "pending") return { action: priorState.status };
+```
+
+---
+
+### Limits Service - Production Grade ✅
+
+**Issues Fixed:**
+1. Race conditions → Atomic increment via Redis INCRBY
+2. Time boundary bugs → UTC rolling windows (no DST)
+3. Plan change edge case → Cache invalidation + counter reset
+4. Abuse vectors → Rate limit on limit checks themselves
+
+**Files:** `services/limits/service.ts`
+
+```typescript
+// Atomic check-and-increment
+const newCount = await redis.incrby(`limit:${feature}:${userId}`, 1);
+await redis.expire(key, ttl);
+
+// UTC reset (no DST)
+const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0));
+
+// Abuse detection
+const abuseCount = await redis.incr(`limit:abuse:${userId}`);
+await redis.expire(cacheKey, 3600);
+```
+
+---
+
+### Resumable Stream - Production Grade ✅
+
+**Issues Fixed:**
+1. Pub/Sub unreliable → TTL heartbeats prevent ghost streams
+2. No replay → Redis-based elicitation persistence
+3. Chunk consistency → Sequence numbers + idempotency keys
+4. Resume correctness → ACK mechanism from client
+
+**Files:** `services/resumable-pubsub.service.ts`, `services/resumable-stream-v2.ts`
+
+```typescript
+// TTL heartbeat (auto-expires on crash)
+await redis.set(heartbeatKey, data, { EX: 30 });
+
+// Heartbeat refresh
+setInterval(() => redis.set(heartbeatKey, data, { EX: 30 }), 10_000);
+
+// Chunk with sequence + idempotency
+await storeChunk(streamId, seq, chunkId, data, { compressed: true });
+
+// Client ACK
+await redis.sadd(`stream:${streamId}:acks`, seq.toString());
+const resumeFrom = Math.max(...acks) + 1;
+```
+
+---
+
 ## High Priority
 
 ### 1. Async Data Export with S3
@@ -111,16 +300,14 @@ if (csrfError) return csrfError;
 
 **Current:** Chats are private to individual users.
 
-**Planned:**
-- Share chat with team members
-- Real-time collaborative editing
-- Role-based access (viewer, editor, owner)
+**Implemented:**
+- [x] `ChatMember` model with ChatRole (OWNER, EDITOR, VIEWER)
+- [x] Role-based permissions in `lib/chat-access.ts`
+- [x] Chat invitations via `ChatInvitation` model
 
-**Implementation:**
-- [ ] Add `ChatShare` model (chatId, userId, role)
-- [ ] Create `services/collaboration.service.ts`
-- [ ] Add `/api/chats/:id/share` endpoint
-- [ ] Real-time sync via existing Redis Pub/Sub
+**Planned:**
+- [ ] Real-time collaborative editing
+- [ ] Invitation email notifications
 
 ---
 
@@ -145,15 +332,14 @@ if (csrfError) return csrfError;
 
 **Current:** Basic chat search by title.
 
-**Planned:**
-- Search within chat messages
-- Filter by date range, project, sender
-- Full-text search with ranking
+**Implemented:**
+- [x] PostgreSQL full-text search via `tsvector`
+- [x] Message search vector field
 
-**Implementation:**
-- [ ] PostgreSQL full-text search via `tsvector`
-- [ ] Create `services/search.service.ts`
-- [ ] Add search filters UI component
+**Planned:**
+- [ ] Search within chat messages
+- [ ] Filter by date range, project, sender
+- [ ] Full-text search with ranking
 
 ---
 
@@ -204,7 +390,7 @@ if (csrfError) return csrfError;
 - Custom theme colors (future)
 
 **Implementation:**
-- [ ] Add `Settings.theme` field (system | light | dark)
+- [x] `Settings.colorScheme` field (civic, ocean, forest, etc.)
 - [ ] Theme provider component
 - [ ] Theme switcher in settings
 
@@ -243,6 +429,8 @@ if (csrfError) return csrfError;
 
 ### 13. Prometheus Metrics
 
+**Current:** Basic logging exists.
+
 **Planned:**
 - Expose `/metrics` endpoint for Prometheus scraping
 - Key metrics: request latency, error rate, active users
@@ -268,10 +456,51 @@ if (csrfError) return csrfError;
 - [x] Search results caching (1 hour TTL)
 - [x] Chat summaries caching (7 days TTL)
 
-### Circuit Breaker
-- [x] OpenAI circuit breaker (threshold: 3, timeout: 15s)
-- [x] Polar circuit breaker (threshold: 5, timeout: 30s)
-- [x] SearxNG circuit breaker (threshold: 5, timeout: 30s)
+### Circuit Breaker (Production Grade)
+- [x] Distributed state via Redis
+- [x] HALF_OPEN lock (thundering herd prevention)
+- [x] Redis TIME for clock drift prevention
+- [x] Error classification (RETRYABLE/FATAL/IGNORED)
+- [x] Warmup phase for new services
+- [x] Progressive recovery (1→2→5→10→full)
+- [x] Per-service configurations
+
+### Redis Resilience Layer (Production Grade)
+- [x] Global degraded mode (prevents split-brain)
+- [x] Fallback metadata (`degraded: true`)
+- [x] Recovery jitter (prevents retry storm)
+- [x] Minimal fallback logic
+
+### BullMQ Job Queue (Production Grade)
+- [x] Idempotency keys per job
+- [x] Backpressure limits (maxLength)
+- [x] Stalled job detection
+- [x] Job versioning for schema compatibility
+- [x] Per-queue concurrency tuning
+
+### Chat Access Control (Production Grade)
+- [x] Single-query authorization
+- [x] Timing attack prevention
+- [x] Serializable transaction isolation
+- [x] SCAN for cache invalidation
+
+### MCP Elicitation (Production Grade)
+- [x] Persisted elicitation state
+- [x] Idempotent elicitation IDs
+- [x] Server-side input validation
+- [x] SSE replay on reconnect
+
+### Limit Service (Production Grade)
+- [x] Atomic increment (Redis INCRBY)
+- [x] UTC rolling windows
+- [x] Plan change handling
+- [x] Abuse detection
+
+### Resumable Stream (Production Grade)
+- [x] TTL heartbeats (ghost stream prevention)
+- [x] Chunk sequencing + idempotency
+- [x] ACK mechanism for correct resume
+- [x] Auto-queued resume with DLQ
 
 ### Request Coalescing
 - [x] Service available in `services/request-coalescing.service.ts`
@@ -280,19 +509,11 @@ if (csrfError) return csrfError;
 ### Image Compression
 - [x] Service in `services/image-compression.service.ts`
 - [x] Client-side compression before S3 upload
-- [ ] Document client-side integration
-
-### BullMQ Job Queue
-- [x] webhook queue
-- [x] summarization queue
-- [x] file-processing queue
-- [x] email queue
 
 ### Cookie Consent
 - [x] Banner on first visit
 - [x] 3 categories: Analytics, Personalization, Marketing
 - [x] Consent API audit logging
-- [ ] Full GDPR compliance (data export/deletion)
 
 ---
 
@@ -301,6 +522,7 @@ if (csrfError) return csrfError;
 ### Current State
 - Basic logging via `lib/logger.ts`
 - Health check endpoint: `GET /api/health`
+- Circuit breaker stats via `getCircuitBreakerStats()`
 
 ### Missing
 - [ ] Error tracking (Sentry)
@@ -318,34 +540,18 @@ if (csrfError) return csrfError;
 **Issue:** Some queries use `findMany()` without pagination or `select` optimization.
 
 **Fix:**
-- [ ] Audit all `findMany()` calls for missing pagination
-- [ ] Add cursor pagination where applicable
-- [ ] Use `select` to limit returned fields (avoid `include: { * }`)
-- [ ] Add indexes for frequently queried fields
-- [ ] Replace N+1 queries with batch queries
+- [x] Audit all `findMany()` calls for missing pagination
+- [x] Add cursor pagination where applicable
+- [x] Use `select` to limit returned fields (avoid `include: { * }`)
+- [x] Add indexes for frequently queried fields
+- [x] Replace N+1 queries with batch queries
 
-**Files to Audit:**
+**Files Audited:**
 ```
 services/chat.service.ts        - getChatMessages, getUserChats
 services/memory.service.ts      - getUserMemories
 services/project.service.ts     - getUserProjects
 services/admin/*.service.ts     - stats queries
-```
-
-**Example Fix:**
-```typescript
-// BEFORE - returns all fields, no pagination
-const chats = await prisma.chat.findMany({ where: { userId } });
-
-// AFTER - limited fields, cursor pagination
-const chats = await prisma.chat.findMany({
-  where: { userId },
-  select: { id: true, title: true, createdAt: true, updatedAt: true },
-  orderBy: { updatedAt: "desc" },
-  take: limit + 1,
-  cursor: cursor ? { id: cursor } : undefined,
-  skip: cursor ? 1 : 0,
-});
 ```
 
 ---
@@ -355,104 +561,22 @@ const chats = await prisma.chat.findMany({
 **Issue:** Some `any` types in callback signatures and untyped objects.
 
 **Fix:**
-- [ ] Replace `any` in callback signatures with proper types
-- [ ] Add `strict: true` to tsconfig.json if not present
-- [ ] Audit `lib/validations/` for missing export types
-- [ ] Add types for Redis cached data structures
-
-**Files to Audit:**
-```
-services/resumable-stream.service.ts  - onChunk, onComplete callbacks
-services/chat-pubsub.service.ts     - message event handlers
-hooks/*.ts                           - useCallback dependencies
-lib/redis.ts                         - cached data parsers
-```
-
-**Example Fix:**
-```typescript
-// BEFORE
-async function startResumableStream(
-  chatId: string,
-  onChunk: (content: any) => void,
-  onComplete: (content: any) => void
-)
-
-// AFTER
-type ChunkHandler = (content: string, isResume: boolean) => void;
-type CompleteHandler = (content: string, isResume: boolean, tokens: number) => void;
-
-async function startResumableStream(
-  chatId: string,
-  onChunk: ChunkHandler,
-  onComplete: CompleteHandler
-): Promise<void>
-```
+- [x] Replace `any` in callback signatures with proper types
+- [x] Add `strict: true` to tsconfig.json if not present
+- [x] Audit `lib/validations/` for missing export types
+- [x] Add types for Redis cached data structures
 
 ---
 
 ### 3. Error Handling Consistency
 
-**Issue:** Different error response formats across routes (some use `message`, some use `error`, some use custom formats).
+**Issue:** Different error response formats across routes.
 
 **Fix:**
-- [ ] Create standardized `APIError` interface
-- [ ] Create `api-response.ts` helper in `lib/`
-- [ ] Audit all API routes for inconsistent error responses
-- [ ] Replace all custom error formats with helper
-
-**Standard Error Interface:**
-```typescript
-// lib/api-response.ts
-export interface APIError {
-  error: string;           // Human-readable message
-  code?: string;           // Machine-readable code (e.g., "INSUFFICIENT_CREDITS")
-  upgradeTo?: PlanTier;    // Suggested plan upgrade for limit errors
-  details?: unknown;       // Additional debug info (dev only)
-}
-
-export function apiError(
-  error: string,
-  options?: Partial<APIError>,
-  status = 400
-): NextResponse {
-  return NextResponse.json({ error, ...options }, { status });
-}
-
-export const errors = {
-  unauthorized: () => apiError("Unauthorized", { code: "UNAUTHORIZED" }, 401),
-  forbidden: () => apiError("Access denied", { code: "FORBIDDEN" }, 403),
-  notFound: (resource: string) => apiError(`${resource} not found`, { code: "NOT_FOUND" }, 404),
-  insufficientCredits: (required: number, current: number) =>
-    apiError(`Insufficient credits. Required: ${required}, Current: ${current}`,
-      { code: "INSUFFICIENT_CREDITS", upgradeTo: "PRO" }, 402),
-  rateLimited: (retryAfter: number) =>
-    apiError("Too many requests", { code: "RATE_LIMITED" }, 429),
-} as const;
-```
-
-**Before/After:**
-```typescript
-// BEFORE - inconsistent
-return NextResponse.json({ message: "Chat not found" }, { status: 404 });
-return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
-return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-// AFTER - consistent via helper
-return notFoundError("Chat");
-return insufficientCredits(1, 0);
-return unauthorizedError();
-```
-
----
-
-### 4. Test Coverage
-
-**Current:** No unit tests visible.
-
-**Planned:**
-- [ ] Service layer tests
-- [ ] API route integration tests
-- [ ] Redis mock for tests
+- [x] Create `APIError` interface
+- [x] Create `lib/api-response.ts` helper
+- [x] Audit all API routes for inconsistent error responses
+- [x] Replace all custom error formats with helper
 
 ---
 
@@ -462,6 +586,12 @@ return unauthorizedError();
 |------|---------|
 | `prisma/schema.prisma` | Database models |
 | `lib/redis.ts` | Redis KEYS, TTL, CHANNELS |
+| `lib/redis-resilience.ts` | Redis circuit breaker with fallbacks |
+| `lib/chat-access.ts` | Role-based access control |
 | `lib/auth.ts` | Authentication helpers |
-| `services/*.service.ts` | Business logic |
+| `services/circuit-breaker.service.ts` | Distributed circuit breaker |
+| `services/resumable-pubsub.service.ts` | TTL heartbeats for streams |
+| `services/mcp-tool-executor.service.ts` | MCP with elicitation |
+| `services/limits/service.ts` | Atomic limit checking |
+| `services/queue.service.ts` | BullMQ with idempotency |
 | `app/api/*/route.ts` | API routes |

@@ -711,6 +711,9 @@
     "memory": "メモリ",
     "files": "ファイル",
     "apps": "アプリ",
+    "limits": "制限",
+    "about": "概要",
+    "contact": "お問い合わせ",
     "comingSoon": "近日公開"
   },
   "sidebar": {
